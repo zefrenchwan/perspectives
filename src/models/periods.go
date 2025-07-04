@@ -2,11 +2,17 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
 
+// TIME_FORMAT defines how to serialize and deserialize time data
 const TIME_FORMAT = time.RFC3339
+
+// TIME_PRECISION is the accepted thresold to define when two times are the same
+const TIME_PRECISION = time.Second
+
 const INTERVAL_BOUNDARY_LEFT = "]"
 const INTERVAL_BOUNDARY_RIGHT = "["
 const INTERVAL_PARTS_SEPARATOR = ";"
@@ -30,6 +36,37 @@ type Period struct {
 	leftMoment time.Time
 	// right finite border
 	rightMoment time.Time
+}
+
+// PeriodEquals tests if two periods are the same
+func PeriodEquals(a, b Period) bool {
+	if a.empty != b.empty {
+		return false
+	} else if a.empty {
+		return true
+	} else if a.leftFinite != b.leftFinite {
+		return false
+	} else if a.rightFinite != b.rightFinite {
+		return false
+	}
+
+	if a.leftFinite {
+		if a.leftIncluded != b.leftIncluded {
+			return false
+		} else if a.leftMoment.Compare(b.leftMoment) != 0 {
+			return false
+		}
+	}
+
+	if a.rightFinite {
+		if a.rightIncluded != b.rightIncluded {
+			return false
+		} else if !a.rightMoment.Equal(b.rightMoment) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // PeriodFromString parses an interval of time
@@ -104,7 +141,7 @@ func PeriodFromString(interval string) (Period, error) {
 		return Period{empty: false, leftFinite: true, rightFinite: false, leftIncluded: leftIn, leftMoment: leftVal}, nil
 	}
 
-	comparison := leftVal.UTC().Compare(rightVal.UTC())
+	comparison := leftVal.Compare(rightVal)
 	if comparison > 0 {
 		return empty, errors.New("min value is more than max value")
 	} else if comparison == 0 && (!leftIn || !rightIn) {
@@ -150,6 +187,27 @@ func (p *Period) AsString() string {
 	return result
 }
 
+// PeriodRawValue returns value as raw data
+func (p *Period) PeriodRawValue() string {
+	return fmt.Sprintf("Period: [ empty %t finite: %t %t included: %t %t values: %s %s ]",
+		p.empty,
+		p.leftFinite, p.rightFinite,
+		p.leftIncluded, p.rightIncluded,
+		p.leftMoment.Format(TIME_FORMAT), p.rightMoment.Format(TIME_FORMAT),
+	)
+
+}
+
+// IsEmpty returns true if period is empty (never)
+func (p *Period) IsEmpty() bool {
+	return p.empty
+}
+
+// IsFull returns true if the period is forever
+func (p *Period) IsFull() bool {
+	return !p.leftFinite && !p.rightFinite
+}
+
 // RelativePositionComparison is a tehnical type to deal with intervals comparison
 type RelativePositionComparison uint8
 
@@ -185,7 +243,7 @@ func comparePeriodsBounds(ref, other Period) (RelativePositionComparison, Relati
 		leftResult = LEFT_POSITION_STRICT
 	} else {
 		// both values are finite
-		leftComparison := ref.leftMoment.UTC().Compare(other.leftMoment.UTC())
+		leftComparison := ref.leftMoment.Compare(other.leftMoment)
 		if leftComparison < 0 {
 			leftResult = RelativePositionComparison(LEFT_POSITION_STRICT)
 		} else if leftComparison > 0 {
@@ -207,7 +265,7 @@ func comparePeriodsBounds(ref, other Period) (RelativePositionComparison, Relati
 	} else if !other.rightFinite {
 		rightResult = RelativePositionComparison(LEFT_POSITION_STRICT)
 	} else {
-		rightComparison := ref.leftMoment.UTC().Compare(other.rightMoment.UTC())
+		rightComparison := ref.leftMoment.Compare(other.rightMoment)
 		if rightComparison < 0 {
 			rightResult = RelativePositionComparison(LEFT_POSITION_STRICT)
 		} else if rightComparison > 0 {
@@ -250,8 +308,8 @@ func NewFinitePeriod(min, max time.Time, minIncluded, maxIncluded bool) Period {
 		rightFinite:   true,
 		leftIncluded:  minIncluded,
 		rightIncluded: maxIncluded,
-		leftMoment:    min,
-		rightMoment:   max,
+		leftMoment:    min.Truncate(TIME_PRECISION),
+		rightMoment:   max.Truncate(TIME_PRECISION),
 	}
 }
 
@@ -262,7 +320,7 @@ func NewPeriodSince(leftLimit time.Time, leftIn bool) Period {
 		rightFinite:  false,
 		leftFinite:   true,
 		leftIncluded: leftIn,
-		leftMoment:   leftLimit,
+		leftMoment:   leftLimit.Truncate(TIME_PRECISION),
 	}
 }
 
@@ -273,6 +331,6 @@ func NewPeriodUntil(rightLimit time.Time, rightIn bool) Period {
 		leftFinite:    false,
 		rightFinite:   true,
 		rightIncluded: rightIn,
-		rightMoment:   rightLimit,
+		rightMoment:   rightLimit.Truncate(TIME_PRECISION),
 	}
 }
