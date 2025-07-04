@@ -1,6 +1,18 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"strings"
+	"time"
+)
+
+const TIME_FORMAT = time.RFC3339
+const INTERVAL_BOUNDARY_LEFT = "]"
+const INTERVAL_BOUNDARY_RIGHT = "["
+const INTERVAL_PARTS_SEPARATOR = ";"
+const INTERVAL_EMPTY = "]["
+const INTERVAL_VALUE_LEFT_INFINITY = "-oo"
+const INTERVAL_VALUE_RIGHT_INFINITY = "+oo"
 
 // Period is an interval of time
 type Period struct {
@@ -18,6 +30,124 @@ type Period struct {
 	leftMoment time.Time
 	// right finite border
 	rightMoment time.Time
+}
+
+// PeriodFromString parses an interval of time
+func PeriodFromString(interval string) (Period, error) {
+	if interval == INTERVAL_EMPTY {
+		return Period{empty: true}, nil
+	}
+
+	var empty Period
+	parts := strings.Split(interval, INTERVAL_PARTS_SEPARATOR)
+	letters := strings.Split(interval, "")
+	size := len(interval)
+
+	if len(parts) != 2 {
+		return empty, errors.New("malformed interval around separator")
+	} else if len(parts[0]) <= 2 {
+		return empty, errors.New("invalid left part, insufficient size")
+	} else if len(parts[1]) <= 2 {
+		return empty, errors.New("invalid right part, insufficient size")
+	}
+
+	leftBound, rightBound := letters[0], letters[size-1]
+	leftPart, _ := strings.CutPrefix(parts[0], leftBound)
+	rightPart, _ := strings.CutSuffix(parts[1], rightBound)
+
+	// parse parts and raise error if intervals are malformed
+	if leftBound != INTERVAL_BOUNDARY_LEFT && leftBound != INTERVAL_BOUNDARY_RIGHT {
+		return empty, errors.New("invalid interval boundaries")
+	} else if rightBound != INTERVAL_BOUNDARY_LEFT && rightBound != INTERVAL_BOUNDARY_RIGHT {
+		return empty, errors.New("invalid interval boundaries")
+	} else if leftPart == INTERVAL_VALUE_RIGHT_INFINITY {
+		return empty, errors.New("invalid infinite left part")
+	} else if rightPart == INTERVAL_VALUE_LEFT_INFINITY {
+		return empty, errors.New("invalid infinite right part")
+	} else if leftPart == INTERVAL_VALUE_LEFT_INFINITY && leftBound != INTERVAL_BOUNDARY_LEFT {
+		return empty, errors.New("invalid infinite left boundary")
+	} else if rightPart == INTERVAL_VALUE_RIGHT_INFINITY && rightBound != INTERVAL_BOUNDARY_RIGHT {
+		return empty, errors.New("invalid infinite right boundary")
+	}
+
+	leftInfinite, rightInfinite := leftPart == INTERVAL_VALUE_LEFT_INFINITY, rightPart == INTERVAL_VALUE_RIGHT_INFINITY
+	if leftInfinite && rightInfinite {
+		return Period{empty: false, leftFinite: false, rightFinite: false}, nil
+	}
+
+	leftIn, rightIn := leftBound == INTERVAL_BOUNDARY_RIGHT, rightBound == INTERVAL_BOUNDARY_LEFT
+	var leftVal, rightVal time.Time
+
+	// parse values if any
+	if !leftInfinite {
+		value, errLV := time.Parse(TIME_FORMAT, leftPart)
+		if errLV != nil {
+			return empty, errLV
+		} else {
+			leftVal = value
+		}
+	}
+
+	if !rightInfinite {
+		value, errRV := time.Parse(TIME_FORMAT, rightPart)
+		if errRV != nil {
+			return empty, errRV
+		} else {
+			rightVal = value
+		}
+	}
+
+	// and (finally) make the interval
+	if leftInfinite {
+		return Period{empty: false, leftFinite: false, rightFinite: true, rightIncluded: rightIn, rightMoment: rightVal}, nil
+	} else if rightInfinite {
+		return Period{empty: false, leftFinite: true, rightFinite: false, leftIncluded: leftIn, leftMoment: leftVal}, nil
+	}
+
+	comparison := leftVal.UTC().Compare(rightVal.UTC())
+	if comparison > 0 {
+		return empty, errors.New("min value is more than max value")
+	} else if comparison == 0 && (!leftIn || !rightIn) {
+		return empty, errors.New("min value equals max value but boundaries are not included")
+	}
+
+	// finite interval build
+	return Period{empty: false, leftFinite: true, rightFinite: true, leftIncluded: leftIn, rightIncluded: rightIn, leftMoment: leftVal, rightMoment: rightVal}, nil
+}
+
+// AsString returns the interval as a string
+func (p *Period) AsString() string {
+	var result string
+	if p.empty {
+		return INTERVAL_EMPTY
+	}
+
+	if p.leftFinite {
+		if p.leftIncluded {
+			result = INTERVAL_BOUNDARY_RIGHT
+		} else {
+			result = INTERVAL_BOUNDARY_LEFT
+		}
+
+		result = result + p.leftMoment.Format(TIME_FORMAT)
+	} else {
+		result = INTERVAL_BOUNDARY_LEFT + INTERVAL_VALUE_LEFT_INFINITY
+	}
+
+	result = result + INTERVAL_PARTS_SEPARATOR
+
+	if p.rightFinite {
+		result = result + p.rightMoment.Format(TIME_FORMAT)
+		if p.rightIncluded {
+			result = result + INTERVAL_BOUNDARY_LEFT
+		} else {
+			result = result + INTERVAL_BOUNDARY_RIGHT
+		}
+	} else {
+		result = result + INTERVAL_VALUE_RIGHT_INFINITY + INTERVAL_BOUNDARY_RIGHT
+	}
+
+	return result
 }
 
 // RelativePositionComparison is a tehnical type to deal with intervals comparison
@@ -97,6 +227,11 @@ func comparePeriodsBounds(ref, other Period) (RelativePositionComparison, Relati
 // NewFullPeriod returns ]-oo,+oo[
 func NewFullPeriod() Period {
 	return Period{empty: false, leftFinite: false, rightFinite: false}
+}
+
+// NewEmptyPeriod builds an empty period
+func NewEmptyPeriod() Period {
+	return Period{empty: true}
 }
 
 // NewFinitePeriod builds a new finite interval
