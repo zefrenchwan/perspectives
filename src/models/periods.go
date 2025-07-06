@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 )
@@ -20,8 +22,8 @@ const INTERVAL_EMPTY = "]["
 const INTERVAL_VALUE_LEFT_INFINITY = "-oo"
 const INTERVAL_VALUE_RIGHT_INFINITY = "+oo"
 
-// Period is an interval of time
-type Period struct {
+// interval is an interval of time
+type interval struct {
 	// empty is true for empty sets, overrides every other info
 	empty bool
 	// leftFinite is true if left boundary is finite, valid only for non empty
@@ -38,8 +40,8 @@ type Period struct {
 	rightMoment time.Time
 }
 
-// PeriodEquals tests if two periods are the same
-func PeriodEquals(a, b Period) bool {
+// intervalEquals tests if two periods are the same
+func intervalEquals(a, b interval) bool {
 	if a.empty != b.empty {
 		return false
 	} else if a.empty {
@@ -69,16 +71,54 @@ func PeriodEquals(a, b Period) bool {
 	return true
 }
 
-// PeriodFromString parses an interval of time
-func PeriodFromString(interval string) (Period, error) {
-	if interval == INTERVAL_EMPTY {
-		return Period{empty: true}, nil
+// isFull returns true if interval is the full space
+func (i interval) isFull() bool {
+	return !i.empty && !i.leftFinite && !i.rightFinite
+}
+
+// compareByLexicographicOrder tests if intervals are less or equa
+func (i interval) compareByLexicographicOrder(other interval) int {
+	if i.empty && other.empty {
+		return 0
+	} else if i.empty {
+		return -1
+	} else if other.empty {
+		return 1
 	}
 
-	var empty Period
-	parts := strings.Split(interval, INTERVAL_PARTS_SEPARATOR)
-	letters := strings.Split(interval, "")
-	size := len(interval)
+	left, right := compareIntervalsBounds(i, other)
+	switch {
+	case left == relativePositionComparison(left_position_strict):
+		return -1
+	case left == relativePositionComparison(left_position_same_value_different_bounds):
+		return -1
+	case left == relativePositionComparison(right_position_same_value_different_bounds):
+		return 1
+	case left == relativePositionComparison(right_position_same_value_different_bounds):
+		return 1
+	case right == relativePositionComparison(left_position_strict):
+		return -1
+	case right == relativePositionComparison(left_position_same_value_different_bounds):
+		return -1
+	case right == relativePositionComparison(right_position_same_value_different_bounds):
+		return 1
+	case right == relativePositionComparison(right_position_same_value_different_bounds):
+		return 1
+	default:
+		return 0
+	}
+}
+
+// intervalFromString parses an interval of time
+func intervalFromString(rawData string) (interval, error) {
+	if rawData == INTERVAL_EMPTY {
+		return interval{empty: true}, nil
+	}
+
+	var empty interval
+	parts := strings.Split(rawData, INTERVAL_PARTS_SEPARATOR)
+	letters := strings.Split(rawData, "")
+	size := len(rawData)
 
 	if len(parts) != 2 {
 		return empty, errors.New("malformed interval around separator")
@@ -109,7 +149,7 @@ func PeriodFromString(interval string) (Period, error) {
 
 	leftInfinite, rightInfinite := leftPart == INTERVAL_VALUE_LEFT_INFINITY, rightPart == INTERVAL_VALUE_RIGHT_INFINITY
 	if leftInfinite && rightInfinite {
-		return Period{empty: false, leftFinite: false, rightFinite: false}, nil
+		return interval{empty: false, leftFinite: false, rightFinite: false}, nil
 	}
 
 	leftIn, rightIn := leftBound == INTERVAL_BOUNDARY_RIGHT, rightBound == INTERVAL_BOUNDARY_LEFT
@@ -136,9 +176,9 @@ func PeriodFromString(interval string) (Period, error) {
 
 	// and (finally) make the interval
 	if leftInfinite {
-		return Period{empty: false, leftFinite: false, rightFinite: true, rightIncluded: rightIn, rightMoment: rightVal}, nil
+		return interval{empty: false, leftFinite: false, rightFinite: true, rightIncluded: rightIn, rightMoment: rightVal}, nil
 	} else if rightInfinite {
-		return Period{empty: false, leftFinite: true, rightFinite: false, leftIncluded: leftIn, leftMoment: leftVal}, nil
+		return interval{empty: false, leftFinite: true, rightFinite: false, leftIncluded: leftIn, leftMoment: leftVal}, nil
 	}
 
 	comparison := leftVal.Compare(rightVal)
@@ -149,33 +189,33 @@ func PeriodFromString(interval string) (Period, error) {
 	}
 
 	// finite interval build
-	return Period{empty: false, leftFinite: true, rightFinite: true, leftIncluded: leftIn, rightIncluded: rightIn, leftMoment: leftVal, rightMoment: rightVal}, nil
+	return interval{empty: false, leftFinite: true, rightFinite: true, leftIncluded: leftIn, rightIncluded: rightIn, leftMoment: leftVal, rightMoment: rightVal}, nil
 }
 
-// AsString returns the interval as a string
-func (p *Period) AsString() string {
+// toString returns the interval as a string
+func (i interval) toString() string {
 	var result string
-	if p.empty {
+	if i.empty {
 		return INTERVAL_EMPTY
 	}
 
-	if p.leftFinite {
-		if p.leftIncluded {
+	if i.leftFinite {
+		if i.leftIncluded {
 			result = INTERVAL_BOUNDARY_RIGHT
 		} else {
 			result = INTERVAL_BOUNDARY_LEFT
 		}
 
-		result = result + p.leftMoment.Format(TIME_FORMAT)
+		result = result + i.leftMoment.Format(TIME_FORMAT)
 	} else {
 		result = INTERVAL_BOUNDARY_LEFT + INTERVAL_VALUE_LEFT_INFINITY
 	}
 
 	result = result + INTERVAL_PARTS_SEPARATOR
 
-	if p.rightFinite {
-		result = result + p.rightMoment.Format(TIME_FORMAT)
-		if p.rightIncluded {
+	if i.rightFinite {
+		result = result + i.rightMoment.Format(TIME_FORMAT)
+		if i.rightIncluded {
 			result = result + INTERVAL_BOUNDARY_LEFT
 		} else {
 			result = result + INTERVAL_BOUNDARY_RIGHT
@@ -187,122 +227,218 @@ func (p *Period) AsString() string {
 	return result
 }
 
-// PeriodRawValue returns value as raw data
-func (p *Period) PeriodRawValue() string {
+// toRawString returns value as raw data
+func (i interval) toRawString() string {
 	return fmt.Sprintf("Period: [ empty %t finite: %t %t included: %t %t values: %s %s ]",
-		p.empty,
-		p.leftFinite, p.rightFinite,
-		p.leftIncluded, p.rightIncluded,
-		p.leftMoment.Format(TIME_FORMAT), p.rightMoment.Format(TIME_FORMAT),
+		i.empty,
+		i.leftFinite, i.rightFinite,
+		i.leftIncluded, i.rightIncluded,
+		i.leftMoment.Format(TIME_FORMAT), i.rightMoment.Format(TIME_FORMAT),
 	)
-
 }
 
-// IsEmpty returns true if period is empty (never)
-func (p *Period) IsEmpty() bool {
-	return p.empty
+// complement returns the complement of the interval.
+// It may be a full interval, empty, one infinite interval, or two.
+// i union its complements should be full interval
+func (i interval) complement() []interval {
+	if i.empty {
+		return []interval{{empty: false, leftFinite: false, rightFinite: false}}
+	} else if !i.leftFinite && !i.rightFinite {
+		return []interval{{empty: true}}
+	} else if !i.leftFinite {
+		return []interval{{
+			empty: false, leftFinite: true, rightFinite: false,
+			leftIncluded: !i.rightIncluded, leftMoment: i.rightMoment},
+		}
+	} else if !i.rightFinite {
+		return []interval{{
+			empty: false, leftFinite: false, rightFinite: true,
+			rightIncluded: !i.leftIncluded, rightMoment: i.leftMoment},
+		}
+	} else {
+		return []interval{
+			{
+				empty: false, leftFinite: false, rightFinite: true,
+				rightIncluded: !i.leftIncluded, rightMoment: i.leftMoment,
+			},
+			{
+				empty: false, rightFinite: false, leftFinite: true,
+				leftIncluded: !i.rightIncluded, leftMoment: i.rightMoment,
+			},
+		}
+	}
 }
 
-// IsFull returns true if the period is forever
-func (p *Period) IsFull() bool {
-	return !p.leftFinite && !p.rightFinite
+// relativePositionComparison is a tehnical type to deal with intervals comparison
+type relativePositionComparison uint8
+
+const left_position_strict = 0x1
+const left_position_same_value_different_bounds uint8 = 0x2
+const equals_infinite_position uint8 = 0x3
+const equals_finite_position uint8 = 0x4
+const right_position_same_value_different_bounds uint8 = 0x5
+const right_position_strict uint8 = 0x6
+const both_values_empty uint8 = 0x7
+const empty_with_value uint8 = 0x8
+const value_with_empty uint8 = 0x9
+
+// isLeft returns true if ref is lower than other
+func (r relativePositionComparison) isLeft() bool {
+	return r == relativePositionComparison(left_position_strict) || r == relativePositionComparison(left_position_same_value_different_bounds)
 }
 
-// RelativePositionComparison is a tehnical type to deal with intervals comparison
-type RelativePositionComparison uint8
+// isRight returns true if ref is more than other
+func (r relativePositionComparison) isRight() bool {
+	return r == relativePositionComparison(right_position_strict) || r == relativePositionComparison(right_position_same_value_different_bounds)
+}
 
-const LEFT_POSITION_STRICT = 0x1
-const LEFT_POSITION_SAME_VALUE_DIFFERENT_BOUNDS uint8 = 0x2
-const EQUALS_INFINITE_POSITION uint8 = 0x3
-const EQUALS_FINITE_POSITION uint8 = 0x4
-const RIGHT_POSITION_SAME_VALUE_DIFFERENT_BOUNDS uint8 = 0x5
-const RIGHT_POSITION_STRICT uint8 = 0x6
-const BOTH_VALUES_EMPTY uint8 = 0x7
-const EMPTY_WITH_VALUE uint8 = 0x8
-const VALUE_WITH_EMPTY uint8 = 0x9
+// isEqual returns true if ref equals than other
+func (r relativePositionComparison) isEqual() bool {
+	return r == relativePositionComparison(equals_finite_position) || r == relativePositionComparison(equals_infinite_position)
+}
 
-// comparePeriodsBounds compares two intervals boundaries.
+// compareIntervalsBounds compares two intervals boundaries.
 // It returns two values: relative value of left and right values of the interval
-func comparePeriodsBounds(ref, other Period) (RelativePositionComparison, RelativePositionComparison) {
+func compareIntervalsBounds(ref, other interval) (relativePositionComparison, relativePositionComparison) {
 	if ref.empty && other.empty {
-		return RelativePositionComparison(BOTH_VALUES_EMPTY), RelativePositionComparison(BOTH_VALUES_EMPTY)
+		return relativePositionComparison(both_values_empty), relativePositionComparison(both_values_empty)
 	} else if ref.empty {
-		return RelativePositionComparison(EMPTY_WITH_VALUE), RelativePositionComparison(EMPTY_WITH_VALUE)
+		return relativePositionComparison(empty_with_value), relativePositionComparison(empty_with_value)
 	} else if other.empty {
-		return RelativePositionComparison(VALUE_WITH_EMPTY), RelativePositionComparison(VALUE_WITH_EMPTY)
+		return relativePositionComparison(value_with_empty), relativePositionComparison(value_with_empty)
 	}
 
-	var leftResult RelativePositionComparison
-	var rightResult RelativePositionComparison
+	var leftResult relativePositionComparison
+	var rightResult relativePositionComparison
 
 	if !ref.leftFinite && !other.leftFinite {
-		leftResult = RelativePositionComparison(EQUALS_INFINITE_POSITION)
+		leftResult = relativePositionComparison(equals_infinite_position)
 	} else if ref.leftFinite && !other.leftFinite {
-		leftResult = RelativePositionComparison(RIGHT_POSITION_STRICT)
+		leftResult = relativePositionComparison(right_position_strict)
 	} else if !ref.leftFinite && other.leftFinite {
-		leftResult = LEFT_POSITION_STRICT
+		leftResult = left_position_strict
 	} else {
 		// both values are finite
 		leftComparison := ref.leftMoment.Compare(other.leftMoment)
 		if leftComparison < 0 {
-			leftResult = RelativePositionComparison(LEFT_POSITION_STRICT)
+			leftResult = relativePositionComparison(left_position_strict)
 		} else if leftComparison > 0 {
-			leftResult = RelativePositionComparison(RIGHT_POSITION_STRICT)
+			leftResult = relativePositionComparison(right_position_strict)
 		} else if ref.leftIncluded && !other.leftIncluded {
-			leftResult = RelativePositionComparison(RIGHT_POSITION_SAME_VALUE_DIFFERENT_BOUNDS)
+			leftResult = relativePositionComparison(right_position_same_value_different_bounds)
 		} else if !ref.leftIncluded && other.leftIncluded {
-			leftResult = RelativePositionComparison(LEFT_POSITION_SAME_VALUE_DIFFERENT_BOUNDS)
+			leftResult = relativePositionComparison(left_position_same_value_different_bounds)
 		} else {
-			leftResult = RelativePositionComparison(EQUALS_FINITE_POSITION)
+			leftResult = relativePositionComparison(equals_finite_position)
 		}
 	}
 
 	// same on the right side
 	if !ref.rightFinite && !other.rightFinite {
-		rightResult = RelativePositionComparison(EQUALS_INFINITE_POSITION)
+		rightResult = relativePositionComparison(equals_infinite_position)
 	} else if !ref.rightFinite {
-		rightResult = RelativePositionComparison(RIGHT_POSITION_STRICT)
+		rightResult = relativePositionComparison(right_position_strict)
 	} else if !other.rightFinite {
-		rightResult = RelativePositionComparison(LEFT_POSITION_STRICT)
+		rightResult = relativePositionComparison(left_position_strict)
 	} else {
 		rightComparison := ref.leftMoment.Compare(other.rightMoment)
 		if rightComparison < 0 {
-			rightResult = RelativePositionComparison(LEFT_POSITION_STRICT)
+			rightResult = relativePositionComparison(left_position_strict)
 		} else if rightComparison > 0 {
-			rightResult = RelativePositionComparison(RIGHT_POSITION_STRICT)
+			rightResult = relativePositionComparison(right_position_strict)
 		} else if ref.rightIncluded && !other.rightIncluded {
-			rightResult = RelativePositionComparison(RIGHT_POSITION_SAME_VALUE_DIFFERENT_BOUNDS)
+			rightResult = relativePositionComparison(right_position_same_value_different_bounds)
 		} else if !ref.rightIncluded && other.rightIncluded {
-			rightResult = RelativePositionComparison(LEFT_POSITION_SAME_VALUE_DIFFERENT_BOUNDS)
+			rightResult = relativePositionComparison(left_position_same_value_different_bounds)
 		} else {
-			rightResult = RelativePositionComparison(EQUALS_FINITE_POSITION)
+			rightResult = relativePositionComparison(equals_finite_position)
 		}
 	}
 
 	return leftResult, rightResult
 }
 
-// NewFullPeriod returns ]-oo,+oo[
+// intervalsIntersection returns the intersection of all parameters
+func intervalsIntersection(intervals []interval) interval {
+	var remaining []interval
+	var empty bool
+	for _, interval := range intervals {
+		if !interval.empty {
+			remaining = append(remaining, interval)
+		} else {
+			empty = true
+		}
+	}
+
+	if len(remaining) == 0 || empty {
+		return interval{empty: true}
+	}
+
+	var intersection interval
+	for index, value := range remaining {
+		if index == 0 {
+			intersection = value
+			continue
+		}
+
+		// calculate the actual intersection between var intersection and value
+		leftC, rightC := compareIntervalsBounds(intersection, value)
+		switch leftC {
+		case relativePositionComparison(left_position_strict), relativePositionComparison(left_position_same_value_different_bounds):
+			intersection.leftFinite = value.leftFinite
+			intersection.leftIncluded = value.leftIncluded
+			intersection.leftMoment = value.leftMoment
+		}
+		switch rightC {
+		case relativePositionComparison(right_position_strict), relativePositionComparison(right_position_same_value_different_bounds):
+			intersection.rightFinite = value.rightFinite
+			intersection.rightIncluded = value.rightIncluded
+			intersection.rightMoment = value.rightMoment
+		}
+	}
+
+	// then, test if intersection is empty or not
+	if intersection.leftFinite && intersection.rightFinite {
+		comparison := intersection.leftMoment.Compare(intersection.rightMoment)
+		switch {
+		case comparison == 0 && !(intersection.leftIncluded && intersection.rightIncluded):
+			return interval{empty: true}
+		case comparison > 0:
+			return interval{empty: true}
+		}
+	}
+
+	return intersection
+}
+
+// Period is a given period of time.
+// Formally, a finite union of intervals
+type Period struct {
+	intervals []interval
+}
+
+// NewFullPeriod returns a period equivalent to ]-oo,+oo[
 func NewFullPeriod() Period {
-	return Period{empty: false, leftFinite: false, rightFinite: false}
+	value := interval{empty: false, leftFinite: false, rightFinite: false}
+	return Period{intervals: []interval{value}}
 }
 
 // NewEmptyPeriod builds an empty period
 func NewEmptyPeriod() Period {
-	return Period{empty: true}
+	return Period{}
 }
 
-// NewFinitePeriod builds a new finite interval
-// SPECIAL CASES: it may return an empty interval according to mathematical definition
+// NewFinitePeriod builds a period equivalent to a new finite interval (min, max)
+// SPECIAL CASES: it may return an empty period according to mathematical definition
 func NewFinitePeriod(min, max time.Time, minIncluded, maxIncluded bool) Period {
-	comparison := min.UTC().Compare(max.UTC())
+	comparison := min.Compare(max)
 	if comparison == 0 && !(minIncluded && maxIncluded) {
-		return Period{empty: true}
+		return Period{}
 	} else if comparison > 0 {
-		return Period{empty: true}
+		return Period{}
 	}
 
-	return Period{
+	content := interval{
 		empty:         false,
 		leftFinite:    true,
 		rightFinite:   true,
@@ -311,26 +447,77 @@ func NewFinitePeriod(min, max time.Time, minIncluded, maxIncluded bool) Period {
 		leftMoment:    min.Truncate(TIME_PRECISION),
 		rightMoment:   max.Truncate(TIME_PRECISION),
 	}
+
+	return Period{intervals: []interval{content}}
 }
 
-// NewPeriodSince builds (leftLimit, +oo[
+// NewPeriodSince builds a period equivalent to (leftLimit, +oo[
 func NewPeriodSince(leftLimit time.Time, leftIn bool) Period {
-	return Period{
+	content := interval{
 		empty:        false,
 		rightFinite:  false,
 		leftFinite:   true,
 		leftIncluded: leftIn,
 		leftMoment:   leftLimit.Truncate(TIME_PRECISION),
 	}
+
+	return Period{intervals: []interval{content}}
 }
 
-// NewPeriodUntil builds ]-oo,rightLimit)
+// NewPeriodUntil builds a period equivalent to ]-oo,rightLimit)
 func NewPeriodUntil(rightLimit time.Time, rightIn bool) Period {
-	return Period{
+	content := interval{
 		empty:         false,
 		leftFinite:    false,
 		rightFinite:   true,
 		rightIncluded: rightIn,
 		rightMoment:   rightLimit.Truncate(TIME_PRECISION),
 	}
+
+	return Period{intervals: []interval{content}}
+}
+
+// Intersection returns the set intersection between p and other as intervals
+func (p Period) Intersection(other Period) Period {
+	if len(p.intervals) == 0 || len(other.intervals) == 0 {
+		return Period{}
+	}
+
+	var result []interval
+	for _, sourceInterval := range p.intervals {
+		for _, otherInterval := range other.intervals {
+			value := intervalsIntersection([]interval{sourceInterval, otherInterval})
+			if !value.empty {
+				result = append(result, value)
+			}
+		}
+	}
+
+	return Period{result}
+}
+
+// Equals returns true if periods have the same content
+func (p Period) Equals(other Period) bool {
+	if len(p.intervals) != len(other.intervals) {
+		return false
+	}
+
+	for _, value := range p.intervals {
+		if !slices.ContainsFunc(other.intervals, func(a interval) bool { return intervalEquals(a, value) }) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// AsRawString returns the period as a string, concatenation of underlying intervals
+func (p Period) AsRawString() string {
+	var values []string
+	for _, val := range p.intervals {
+		values = append(values, val.toString())
+	}
+
+	sort.Strings(values)
+	return "Period [" + strings.Join(values, ",") + "]"
 }
