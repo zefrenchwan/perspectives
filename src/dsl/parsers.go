@@ -6,14 +6,20 @@ import (
 	"strings"
 )
 
+// COMMENT is the string that opens a comment.
+// Rest of the line is ignored
 const COMMENT = "##"
 
+// ParsingElement is a string that contains something to parse.
+// Note that it is a consecutive suite of non empty chars.
+// It may contain multiple tokens such as end; ("end" + ";")
 type ParsingElement struct {
-	Value    string
-	Line     int
-	Position int
+	Value    string // Value of the element
+	Line     int    // line number in the original source (starts at 0)
+	Position int    // position in line (starts at 0)
 }
 
+// Load reads a content and isolates all the parsed elements
 func Load(reader io.Reader) ([]ParsingElement, error) {
 	var elements []ParsingElement
 
@@ -33,7 +39,7 @@ func Load(reader io.Reader) ([]ParsingElement, error) {
 		var previousSpace bool
 		var buffer []string
 		positionNumber = 0
-		for _, value := range strings.Split(line, "") {
+		for value := range strings.SplitSeq(line, "") {
 			space = spaceTester.MatchString(value)
 			switch {
 			case !space:
