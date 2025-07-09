@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-// COMMENT is the string that opens a comment.
-// Rest of the line is ignored
-const COMMENT = "##"
-
 // ParsingElement is a string that contains something to parse.
 // Note that it is a consecutive suite of non empty chars.
 // It may contain multiple tokens such as end; ("end" + ";")
