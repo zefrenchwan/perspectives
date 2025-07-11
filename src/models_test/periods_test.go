@@ -37,7 +37,41 @@ func TestIntersectionWithOther(t *testing.T) {
 	expected := models.NewFinitePeriod(before, now, true, true)
 	result := otherValue.Intersection(value)
 	if !result.Equals(expected) {
-		t.Logf("intersection with other failed: got %s", result.AsRawString())
+		t.Logf("intersection with other failed: got %s BUT EXPECTED %s", result.AsRawString(), expected.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestUnionWithEmpty(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	value := models.NewPeriodSince(now, true)
+	expected := value
+	result := models.NewEmptyPeriod().Union(value)
+	if !result.Equals(expected) {
+		t.Logf("union with empty failed: got %s", result.AsRawString())
+		t.Fail()
+	}
+
+	result = value.Union(models.NewEmptyPeriod())
+	if !result.Equals(expected) {
+		t.Logf("union with empty failed: got %s", result.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestUnionWithSame(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	value := models.NewPeriodSince(now, true)
+	expected := value
+	result := value.Union(value)
+	if !result.Equals(expected) {
+		t.Logf("union with empty failed: got %s", result.AsRawString())
+		t.Fail()
+	}
+
+	result = value.Union(models.NewEmptyPeriod())
+	if !result.Equals(expected) {
+		t.Logf("union with empty failed: got %s", result.AsRawString())
 		t.Fail()
 	}
 }

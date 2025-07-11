@@ -76,37 +76,75 @@ func (i interval) isFull() bool {
 	return !i.empty && !i.leftFinite && !i.rightFinite
 }
 
-// compareByLexicographicOrder tests if intervals are less or equa
-func (i interval) compareByLexicographicOrder(other interval) int {
-	if i.empty && other.empty {
-		return 0
-	} else if i.empty {
-		return -1
-	} else if other.empty {
-		return 1
+// intervalsIntersection returns the intersection of all parameters
+func intervalsIntersection(intervals []interval) interval {
+	var remaining []interval
+	var empty bool
+	for _, interval := range intervals {
+		if !interval.empty {
+			remaining = append(remaining, interval)
+		} else {
+			empty = true
+		}
 	}
 
-	left, right := compareIntervalsBounds(i, other)
-	switch {
-	case left == relativePositionComparison(left_position_strict):
-		return -1
-	case left == relativePositionComparison(left_position_same_value_different_bounds):
-		return -1
-	case left == relativePositionComparison(right_position_same_value_different_bounds):
-		return 1
-	case left == relativePositionComparison(right_position_same_value_different_bounds):
-		return 1
-	case right == relativePositionComparison(left_position_strict):
-		return -1
-	case right == relativePositionComparison(left_position_same_value_different_bounds):
-		return -1
-	case right == relativePositionComparison(right_position_same_value_different_bounds):
-		return 1
-	case right == relativePositionComparison(right_position_same_value_different_bounds):
-		return 1
-	default:
-		return 0
+	if len(remaining) == 0 || empty {
+		return interval{empty: true}
 	}
+
+	var intersection interval
+	for index, value := range remaining {
+		if index == 0 {
+			intersection = value
+			continue
+		}
+
+		// calculate the actual intersection between intersection and value
+		// Get the max value for left bounds
+		if value.leftFinite {
+			if !intersection.leftFinite {
+				intersection.leftFinite = value.leftFinite
+				intersection.leftIncluded = value.leftIncluded
+				intersection.leftMoment = value.leftMoment
+			} else {
+				comparison := intersection.leftMoment.Compare(value.leftMoment)
+				if comparison < 0 || (comparison == 0 && value.leftIncluded) {
+					intersection.leftFinite = value.leftFinite
+					intersection.leftIncluded = value.leftIncluded
+					intersection.leftMoment = value.leftMoment
+				}
+			}
+		}
+		// Get the min value for right bounds
+		if value.rightFinite {
+			if !intersection.rightFinite {
+				intersection.rightFinite = value.rightFinite
+				intersection.rightIncluded = value.rightIncluded
+				intersection.rightMoment = value.rightMoment
+			} else {
+				comparison := intersection.rightMoment.Compare(value.rightMoment)
+				if comparison > 0 || (comparison == 0 && !value.rightIncluded) {
+					intersection.rightFinite = value.rightFinite
+					intersection.rightIncluded = value.rightIncluded
+					intersection.rightMoment = value.rightMoment
+				}
+			}
+		}
+	}
+
+	// then, test if intersection is empty or not.
+	// Interval is built but may be empty
+	if intersection.leftFinite && intersection.rightFinite {
+		comparison := intersection.leftMoment.Compare(intersection.rightMoment)
+		switch {
+		case comparison == 0 && !(intersection.leftIncluded && intersection.rightIncluded):
+			return interval{empty: true}
+		case comparison > 0:
+			return interval{empty: true}
+		}
+	}
+
+	return intersection
 }
 
 // intervalFromString parses an interval of time
@@ -269,146 +307,169 @@ func (i interval) complement() []interval {
 	}
 }
 
-// relativePositionComparison is a tehnical type to deal with intervals comparison
-type relativePositionComparison uint8
-
-const left_position_strict = 0x1
-const left_position_same_value_different_bounds uint8 = 0x2
-const equals_infinite_position uint8 = 0x3
-const equals_finite_position uint8 = 0x4
-const right_position_same_value_different_bounds uint8 = 0x5
-const right_position_strict uint8 = 0x6
-const both_values_empty uint8 = 0x7
-const empty_with_value uint8 = 0x8
-const value_with_empty uint8 = 0x9
-
-// isLeft returns true if ref is lower than other
-func (r relativePositionComparison) isLeft() bool {
-	return r == relativePositionComparison(left_position_strict) || r == relativePositionComparison(left_position_same_value_different_bounds)
-}
-
-// isRight returns true if ref is more than other
-func (r relativePositionComparison) isRight() bool {
-	return r == relativePositionComparison(right_position_strict) || r == relativePositionComparison(right_position_same_value_different_bounds)
-}
-
-// isEqual returns true if ref equals than other
-func (r relativePositionComparison) isEqual() bool {
-	return r == relativePositionComparison(equals_finite_position) || r == relativePositionComparison(equals_infinite_position)
-}
-
-// compareIntervalsBounds compares two intervals boundaries.
-// It returns two values: relative value of left and right values of the interval
-func compareIntervalsBounds(ref, other interval) (relativePositionComparison, relativePositionComparison) {
-	if ref.empty && other.empty {
-		return relativePositionComparison(both_values_empty), relativePositionComparison(both_values_empty)
-	} else if ref.empty {
-		return relativePositionComparison(empty_with_value), relativePositionComparison(empty_with_value)
-	} else if other.empty {
-		return relativePositionComparison(value_with_empty), relativePositionComparison(value_with_empty)
+// union calculates the union of intervals
+func (i interval) union(other interval) []interval {
+	if i.empty || other.isFull() {
+		return []interval{other}
+	} else if other.empty || i.isFull() {
+		return []interval{i}
 	}
 
-	var leftResult relativePositionComparison
-	var rightResult relativePositionComparison
+	var joinable bool
+	var comparison int
 
-	if !ref.leftFinite && !other.leftFinite {
-		leftResult = relativePositionComparison(equals_infinite_position)
-	} else if ref.leftFinite && !other.leftFinite {
-		leftResult = relativePositionComparison(right_position_strict)
-	} else if !ref.leftFinite && other.leftFinite {
-		leftResult = left_position_strict
-	} else {
-		// both values are finite
-		leftComparison := ref.leftMoment.Compare(other.leftMoment)
-		if leftComparison < 0 {
-			leftResult = relativePositionComparison(left_position_strict)
-		} else if leftComparison > 0 {
-			leftResult = relativePositionComparison(right_position_strict)
-		} else if ref.leftIncluded && !other.leftIncluded {
-			leftResult = relativePositionComparison(right_position_same_value_different_bounds)
-		} else if !ref.leftIncluded && other.leftIncluded {
-			leftResult = relativePositionComparison(left_position_same_value_different_bounds)
+	switch {
+	case !i.leftFinite && !other.leftFinite:
+		joinable = true
+	case !i.rightFinite && !other.rightFinite:
+		joinable = true
+	case !i.leftFinite:
+		comparison = i.leftMoment.Compare(other.leftMoment)
+		if comparison < 0 {
+			joinable = true
+		} else if comparison == 0 {
+			joinable = !(i.rightIncluded || other.leftIncluded)
 		} else {
-			leftResult = relativePositionComparison(equals_finite_position)
+			joinable = false
 		}
-	}
-
-	// same on the right side
-	if !ref.rightFinite && !other.rightFinite {
-		rightResult = relativePositionComparison(equals_infinite_position)
-	} else if !ref.rightFinite {
-		rightResult = relativePositionComparison(right_position_strict)
-	} else if !other.rightFinite {
-		rightResult = relativePositionComparison(left_position_strict)
-	} else {
-		rightComparison := ref.leftMoment.Compare(other.rightMoment)
-		if rightComparison < 0 {
-			rightResult = relativePositionComparison(left_position_strict)
-		} else if rightComparison > 0 {
-			rightResult = relativePositionComparison(right_position_strict)
-		} else if ref.rightIncluded && !other.rightIncluded {
-			rightResult = relativePositionComparison(right_position_same_value_different_bounds)
-		} else if !ref.rightIncluded && other.rightIncluded {
-			rightResult = relativePositionComparison(left_position_same_value_different_bounds)
+	case !other.leftFinite:
+		comparison = other.rightMoment.Compare(i.leftMoment)
+		if comparison < 0 {
+			joinable = true
+		} else if comparison == 0 {
+			joinable = !(other.rightIncluded || i.leftIncluded)
 		} else {
-			rightResult = relativePositionComparison(equals_finite_position)
+			joinable = false
 		}
-	}
-
-	return leftResult, rightResult
-}
-
-// intervalsIntersection returns the intersection of all parameters
-func intervalsIntersection(intervals []interval) interval {
-	var remaining []interval
-	var empty bool
-	for _, interval := range intervals {
-		if !interval.empty {
-			remaining = append(remaining, interval)
+	case !i.rightFinite:
+		comparison = i.leftMoment.Compare(other.rightMoment)
+		if comparison > 0 {
+			joinable = true
+		} else if comparison == 0 {
+			joinable = !(i.leftIncluded || other.rightIncluded)
 		} else {
-			empty = true
+			joinable = false
+		}
+	case !other.rightFinite:
+		comparison = i.rightMoment.Compare(other.leftMoment)
+		if comparison < 0 {
+			joinable = true
+		} else if comparison == 0 {
+			joinable = !(i.leftIncluded || other.rightIncluded)
+		} else {
+			joinable = false
+		}
+	default:
+		comparison = i.rightMoment.Compare(other.leftMoment)
+		if comparison < 0 {
+			joinable = true
+		} else if comparison == 0 {
+			joinable = !(i.rightIncluded || other.leftIncluded)
+		} else {
+			comparison = i.leftMoment.Compare(other.rightMoment)
+			if comparison > 0 {
+				joinable = true
+			} else if comparison == 0 {
+				joinable = !(i.leftIncluded || other.rightIncluded)
+			} else {
+				joinable = false
+			}
 		}
 	}
 
-	if len(remaining) == 0 || empty {
-		return interval{empty: true}
+	if !joinable {
+		return []interval{i, other}
 	}
 
-	var intersection interval
-	for index, value := range remaining {
-		if index == 0 {
-			intersection = value
-			continue
-		}
-
-		// calculate the actual intersection between var intersection and value
-		leftC, rightC := compareIntervalsBounds(intersection, value)
-		switch leftC {
-		case relativePositionComparison(left_position_strict), relativePositionComparison(left_position_same_value_different_bounds):
-			intersection.leftFinite = value.leftFinite
-			intersection.leftIncluded = value.leftIncluded
-			intersection.leftMoment = value.leftMoment
-		}
-		switch rightC {
-		case relativePositionComparison(right_position_strict), relativePositionComparison(right_position_same_value_different_bounds):
-			intersection.rightFinite = value.rightFinite
-			intersection.rightIncluded = value.rightIncluded
-			intersection.rightMoment = value.rightMoment
-		}
-	}
-
-	// then, test if intersection is empty or not
-	if intersection.leftFinite && intersection.rightFinite {
-		comparison := intersection.leftMoment.Compare(intersection.rightMoment)
+	// build the result getting the most extreme values
+	var minFinite, maxFinite, minIncluded, maxIncluded bool
+	var minValue, maxValue time.Time
+	// left bound: pick the less the values
+	minFinite = i.leftFinite && other.leftFinite
+	if minFinite {
+		comparison = i.leftMoment.Compare(other.rightMoment)
 		switch {
-		case comparison == 0 && !(intersection.leftIncluded && intersection.rightIncluded):
-			return interval{empty: true}
+		case comparison < 0:
+			minIncluded, minValue = i.leftIncluded, i.leftMoment
 		case comparison > 0:
-			return interval{empty: true}
+			minIncluded, minValue = other.leftIncluded, other.leftMoment
+		default:
+			minIncluded, minValue = i.leftIncluded || other.leftIncluded, i.leftMoment
+		}
+	}
+	// right bound: pick the more the values
+	maxFinite = i.rightFinite && other.rightFinite
+	if maxFinite {
+		comparison = i.rightMoment.Compare(other.rightMoment)
+		switch {
+		case comparison < 0:
+			maxIncluded, maxValue = other.rightIncluded, other.rightMoment
+		case comparison > 0:
+			maxIncluded, maxValue = i.rightIncluded, i.rightMoment
+		default:
+			maxIncluded, maxValue = i.rightIncluded || other.rightIncluded, i.rightMoment
 		}
 	}
 
-	return intersection
+	// and finally, return
+	return []interval{{
+		empty:      false,
+		leftFinite: minFinite, leftIncluded: minIncluded, leftMoment: minValue,
+		rightFinite: maxFinite, rightIncluded: maxIncluded, rightMoment: maxValue,
+	}}
+}
+
+// intervalsUnionAll returns the union of all values
+func intervalsUnionAll(intervals []interval) []interval {
+	size := len(intervals)
+	if size <= 1 {
+		return intervals
+	}
+
+	// initialize for loop
+	var unions []interval
+	currents := make([]interval, size)
+	copy(currents, intervals)
+	maxRounds := size*size + 1
+	counter := 0
+
+	// make as many unions as possible
+	for {
+		// preventive code, should not happen
+		if counter > maxRounds {
+			return currents
+		}
+
+		sizeBefore := len(currents)
+		for index, current := range currents {
+			if current.empty {
+				continue
+			}
+
+			for otherIndex, otherCurrrent := range currents {
+				if otherCurrrent.empty {
+					continue
+				}
+
+				if index < otherIndex {
+					localUnion := current.union(otherCurrrent)
+					for _, value := range localUnion {
+						if !slices.ContainsFunc(unions, func(i interval) bool { return intervalEquals(i, value) }) {
+							unions = append(unions, value)
+						}
+					}
+				}
+			}
+		}
+
+		sizeAfter := len(unions)
+		if sizeBefore == sizeAfter {
+			return unions
+		} else {
+			currents = unions
+			counter = counter + 1
+		}
+	}
 }
 
 // Period is a given period of time.
@@ -494,6 +555,14 @@ func (p Period) Intersection(other Period) Period {
 	}
 
 	return Period{result}
+}
+
+// Union builds the union of two periods
+func (p Period) Union(other Period) Period {
+	var unions []interval
+	unions = append(unions, p.intervals...)
+	unions = append(unions, other.intervals...)
+	return Period{intervals: intervalsUnionAll(unions)}
 }
 
 // Equals returns true if periods have the same content
