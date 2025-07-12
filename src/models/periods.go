@@ -430,16 +430,9 @@ func intervalsUnionAll(intervals []interval) []interval {
 	var unions []interval
 	currents := make([]interval, size)
 	copy(currents, intervals)
-	maxRounds := size*size + 1
-	counter := 0
 
 	// make as many unions as possible
 	for {
-		// preventive code, should not happen
-		if counter > maxRounds {
-			return currents
-		}
-
 		sizeBefore := len(currents)
 		for index, current := range currents {
 			if current.empty {
@@ -467,7 +460,6 @@ func intervalsUnionAll(intervals []interval) []interval {
 			return unions
 		} else {
 			currents = unions
-			counter = counter + 1
 		}
 	}
 }
