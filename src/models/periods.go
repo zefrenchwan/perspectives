@@ -324,55 +324,55 @@ func (i interval) union(other interval) []interval {
 	case !i.rightFinite && !other.rightFinite:
 		joinable = true
 	case !i.leftFinite:
-		comparison = i.leftMoment.Compare(other.leftMoment)
+		comparison = i.rightMoment.Compare(other.leftMoment)
 		if comparison < 0 {
-			joinable = true
-		} else if comparison == 0 {
-			joinable = !(i.rightIncluded || other.leftIncluded)
-		} else {
 			joinable = false
+		} else if comparison == 0 {
+			joinable = i.rightIncluded || other.leftIncluded
+		} else {
+			joinable = true
 		}
 	case !other.leftFinite:
 		comparison = other.rightMoment.Compare(i.leftMoment)
 		if comparison < 0 {
-			joinable = true
-		} else if comparison == 0 {
-			joinable = !(other.rightIncluded || i.leftIncluded)
-		} else {
 			joinable = false
+		} else if comparison == 0 {
+			joinable = other.rightIncluded || i.leftIncluded
+		} else {
+			joinable = true
 		}
 	case !i.rightFinite:
 		comparison = i.leftMoment.Compare(other.rightMoment)
 		if comparison > 0 {
-			joinable = true
-		} else if comparison == 0 {
-			joinable = !(i.leftIncluded || other.rightIncluded)
-		} else {
 			joinable = false
+		} else if comparison == 0 {
+			joinable = i.leftIncluded || other.rightIncluded
+		} else {
+			joinable = true
 		}
 	case !other.rightFinite:
 		comparison = i.rightMoment.Compare(other.leftMoment)
 		if comparison < 0 {
-			joinable = true
-		} else if comparison == 0 {
-			joinable = !(i.leftIncluded || other.rightIncluded)
-		} else {
 			joinable = false
+		} else if comparison == 0 {
+			joinable = i.leftIncluded || other.rightIncluded
+		} else {
+			joinable = true
 		}
 	default:
 		comparison = i.rightMoment.Compare(other.leftMoment)
 		if comparison < 0 {
-			joinable = true
+			joinable = false
 		} else if comparison == 0 {
-			joinable = !(i.rightIncluded || other.leftIncluded)
+			joinable = i.rightIncluded || other.leftIncluded
 		} else {
 			comparison = i.leftMoment.Compare(other.rightMoment)
 			if comparison > 0 {
-				joinable = true
-			} else if comparison == 0 {
-				joinable = !(i.leftIncluded || other.rightIncluded)
-			} else {
 				joinable = false
+			} else if comparison == 0 {
+				joinable = i.leftIncluded || other.rightIncluded
+			} else {
+				joinable = true
 			}
 		}
 	}

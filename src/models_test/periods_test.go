@@ -65,13 +65,26 @@ func TestUnionWithSame(t *testing.T) {
 	expected := value
 	result := value.Union(value)
 	if !result.Equals(expected) {
-		t.Logf("union with empty failed: got %s", result.AsRawString())
+		t.Logf("union with same failed: got %s", result.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestInfiniteUnion(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	before := time.Now().Add(-24 * time.Hour).Truncate(time.Second)
+	first := models.NewPeriodSince(before, true)
+	second := models.NewPeriodUntil(now, true)
+	expected := models.NewFullPeriod()
+	result := first.Union(second)
+	if !result.Equals(expected) {
+		t.Logf("union to make full failed: got %s", result.AsRawString())
 		t.Fail()
 	}
 
-	result = value.Union(models.NewEmptyPeriod())
+	result = second.Union(first)
 	if !result.Equals(expected) {
-		t.Logf("union with empty failed: got %s", result.AsRawString())
+		t.Logf("union to make full failed: got %s", result.AsRawString())
 		t.Fail()
 	}
 }
