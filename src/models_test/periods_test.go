@@ -7,6 +7,25 @@ import (
 	"github.com/zefrenchwan/perspectives.git/models"
 )
 
+func TestPeriodComplements(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	value := models.NewPeriodSince(now, true)
+	complement := value.Complement()
+	expected := models.NewPeriodUntil(now, false)
+	if !expected.Equals(complement) {
+		t.Logf("Complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
+		t.Fail()
+	}
+
+	value = models.NewPeriodUntil(now, true)
+	complement = value.Complement()
+	expected = models.NewPeriodSince(now, false)
+	if !expected.Equals(complement) {
+		t.Logf("Complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
+		t.Fail()
+	}
+}
+
 func TestIntersectionWithFull(t *testing.T) {
 	value := models.NewFullPeriod()
 	now := time.Now()

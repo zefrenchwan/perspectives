@@ -7,6 +7,20 @@ import (
 	"time"
 )
 
+// sortIntervals copies and sorts values by intervalCompare order
+func sortIntervals(values []interval) []interval {
+	size := len(values)
+	if size == 0 {
+		return []interval{}
+	}
+
+	newValues := make([]interval, size)
+	copy(newValues, values)
+
+	slices.SortStableFunc(newValues, intervalCompare)
+	return newValues
+}
+
 // Period is a given period of time.
 // Formally, a finite union of intervals
 type Period struct {
@@ -94,10 +108,17 @@ func (p Period) Intersection(other Period) Period {
 
 // Union builds the union of two periods
 func (p Period) Union(other Period) Period {
-	var unions []interval
-	unions = append(unions, p.intervals...)
-	unions = append(unions, other.intervals...)
-	return Period{intervals: intervalsUnionAll(unions)}
+	var params []interval
+	params = append(params, p.intervals...)
+	params = append(params, other.intervals...)
+	var result []interval
+	for _, value := range intervalsUnionAll(params) {
+		if !value.empty {
+			result = append(result, value)
+		}
+	}
+
+	return Period{intervals: result}
 }
 
 // Equals returns true if periods have the same content
@@ -135,4 +156,84 @@ func (p Period) Contains(point time.Time) bool {
 	}
 
 	return false
+}
+
+// IsIncludedIn returns true if p is included in other
+func (p Period) IsIncludedIn(other Period) bool {
+	if len(p.intervals) == 0 {
+		return true
+	} else if len(other.intervals) == 0 {
+		return false
+	}
+
+	for _, source := range p.intervals {
+		contained := false
+		for _, other := range other.intervals {
+			if source.isIncludedIn(other) {
+				contained = true
+				break
+			}
+		}
+
+		if !contained {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Complement returns the complement of the period,
+// that is the other period that forms a partition of full space with others
+func (p Period) Complement() Period {
+	if len(p.intervals) == 0 {
+		return NewFullPeriod()
+	}
+
+	var result []interval
+	var previousValue time.Time
+	var previousFinite, previousIncluded bool
+	// using the "completing hole" method: find all intervals so that the union would make full
+	for index, value := range p.intervals {
+		if value.isFull() {
+			return Period{}
+		}
+
+		if index == 0 {
+			// may complete left
+			if value.leftFinite {
+				// left completion
+				completion := interval{
+					empty: false, leftFinite: false,
+					rightFinite: true, rightIncluded: !value.leftIncluded, rightMoment: value.leftMoment,
+				}
+
+				result = append(result, completion)
+			}
+		} else {
+			// complete from previous to value
+			completion := interval{
+				empty: false, leftFinite: true, leftIncluded: !previousIncluded, leftMoment: previousValue,
+				rightFinite: true, rightIncluded: !value.leftIncluded, rightMoment: value.leftMoment,
+			}
+
+			result = append(result, completion)
+		}
+
+		previousFinite, previousIncluded = value.rightFinite, value.rightIncluded
+		previousValue = value.rightMoment
+	}
+
+	if previousFinite {
+		// complete to reach +oo
+		completion := interval{
+			empty: false, rightFinite: false,
+			leftFinite: true, leftIncluded: !previousIncluded, leftMoment: previousValue,
+		}
+
+		result = append(result, completion)
+	}
+
+	// result contains the partition that completes the initial period
+	return Period{intervals: result}
 }

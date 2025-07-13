@@ -70,6 +70,54 @@ func intervalEquals(a, b interval) bool {
 	return true
 }
 
+// intervalCompare compares two intervals by empty, then left border, then right border
+func intervalCompare(a, b interval) int {
+	if a.empty && b.empty {
+		return 0
+	} else if a.empty {
+		return 0
+	} else if b.empty {
+		return 1
+	}
+
+	if a.leftFinite && !b.leftFinite {
+		return -1
+	} else if !a.leftFinite && b.leftFinite {
+		return 1
+	} else if a.leftFinite && b.leftFinite {
+		comparison := a.leftMoment.Compare(b.leftMoment)
+		if comparison != 0 {
+			return comparison
+		} else if a.leftIncluded != b.leftIncluded {
+			if a.leftIncluded {
+				return 1
+			} else {
+				return -1
+			}
+		}
+	}
+
+	// same values on the left side, do the same on the right side
+	if a.rightFinite && !b.rightFinite {
+		return -1
+	} else if !a.rightFinite && b.rightFinite {
+		return 1
+	} else if a.rightFinite && b.rightFinite {
+		comparison := a.rightMoment.Compare(b.rightMoment)
+		if comparison != 0 {
+			return comparison
+		} else if a.rightIncluded == b.rightIncluded {
+			return 0
+		} else if a.rightIncluded {
+			return 1
+		} else {
+			return -1
+		}
+	}
+
+	return 0
+}
+
 // isFull returns true if interval is the full space
 func (i interval) isFull() bool {
 	return !i.empty && !i.leftFinite && !i.rightFinite
@@ -110,6 +158,69 @@ func (i interval) contains(point time.Time) bool {
 	}
 
 	return true
+}
+
+// isIncludedIn returns true if other contains i
+func (i interval) isIncludedIn(other interval) bool {
+	if i.empty {
+		return true
+	} else if other.empty {
+		return false
+	}
+
+	var isIncludedLeft bool
+	// i is in other if
+	// (i.left bound) is more than (other.left bound)
+	// AND
+	// (i.right bound) is less than (other.right bound)
+	if other.leftFinite && !i.leftFinite {
+		// no need to go deeper
+		return false
+	} else if !i.leftFinite && !other.leftFinite {
+		isIncludedLeft = true
+	} else if !other.leftFinite && i.leftFinite {
+		isIncludedLeft = true
+	} else {
+		comparison := i.leftMoment.Compare(other.leftMoment)
+		switch {
+		case comparison < 0:
+			return false
+		case comparison > 0:
+			isIncludedLeft = true
+		case comparison == 0:
+			if i.leftIncluded {
+				isIncludedLeft = other.leftIncluded
+			} else {
+				isIncludedLeft = true
+			}
+		}
+	}
+
+	// no need to go deeper
+	if !isIncludedLeft {
+		return false
+	}
+
+	// same on the right side
+	if other.rightFinite && !i.rightFinite {
+		return false
+	} else if !other.rightFinite {
+		return isIncludedLeft
+	} else {
+		comparison := i.rightMoment.Compare(other.rightMoment)
+		switch {
+		case comparison < 0:
+			return isIncludedLeft
+		case comparison > 0:
+			return false
+		case other.rightIncluded:
+			return isIncludedLeft
+		case !other.rightIncluded:
+			return isIncludedLeft && !i.rightIncluded
+		default:
+			return false
+		}
+	}
 }
 
 // intervalsIntersection returns the intersection of all parameters
@@ -497,5 +608,26 @@ func intervalsUnionAll(intervals []interval) []interval {
 		} else {
 			currents = unions
 		}
+	}
+}
+
+// remove removes other from i
+// A - B = A inter (FULL - other)
+// And if FULL - OTHER = X U Y then
+// A inter (X U Y) = (A inter X) U (A inter Y)
+func (i interval) remove(other interval) []interval {
+	if other.empty {
+		return nil
+	} else if i.empty {
+		return nil
+	}
+
+	complements := other.complement()
+	leftOperand := intervalsIntersection([]interval{i, complements[0]})
+	if len(complements) == 1 {
+		return []interval{leftOperand}
+	} else {
+		rightOperand := intervalsIntersection([]interval{i, complements[1]})
+		return leftOperand.union(rightOperand)
 	}
 }
