@@ -88,3 +88,56 @@ func TestInfiniteUnion(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPeriodContains(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	before := time.Now().Add(-24 * time.Hour).Truncate(time.Second)
+	// period is [before, +oo[
+	period := models.NewPeriodSince(before, true)
+	// before is in period
+	if !period.Contains(before) {
+		t.Log("Failed to test when value is boundary included")
+		t.Fail()
+	}
+
+	// interval is [before, +oo[ and before < now, it should belong
+	if !period.Contains(now) {
+		t.Log("Failed to test outside value")
+		t.Fail()
+	}
+
+	// period is ]before, +oo[
+	period = models.NewPeriodSince(before, false)
+	// before is not in interval before it is excluded
+	if period.Contains(before) {
+		t.Log("Failed to test when value is boundary excluded")
+		t.Fail()
+	}
+	// interval is ]before,+oo[ and before < now
+	if !period.Contains(now) {
+		t.Log("Failed to test outside value")
+		t.Fail()
+	}
+
+	// period is ]-oo, now]
+	period = models.NewPeriodUntil(now, true)
+	// before < now, so expecting period to contain in
+	if !period.Contains(before) {
+		t.Log("Failed to test when value is strictly included")
+		t.Fail()
+	}
+
+	// now is included, so expecting to belong
+	if !period.Contains(now) {
+		t.Log("Failed to test bound value included")
+		t.Fail()
+	}
+
+	// period is ]-oo, now[
+	period = models.NewPeriodUntil(now, false)
+	// period should not contain now, because now is excluded
+	if period.Contains(now) {
+		t.Log("Failed to test bound value excluded")
+		t.Fail()
+	}
+}
