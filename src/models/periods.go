@@ -96,7 +96,7 @@ func (p Period) Intersection(other Period) Period {
 	var result []interval
 	for _, sourceInterval := range p.intervals {
 		for _, otherInterval := range other.intervals {
-			value := intervalsIntersection([]interval{sourceInterval, otherInterval})
+			value := sourceInterval.intersection(otherInterval)
 			if !value.empty {
 				result = append(result, value)
 			}
@@ -236,4 +236,32 @@ func (p Period) Complement() Period {
 
 	// result contains the partition that completes the initial period
 	return Period{intervals: result}
+}
+
+// Remove a period from another
+func (p Period) Remove(other Period) Period {
+	if len(p.intervals) == 0 {
+		return other
+	} else if len(other.intervals) == 0 {
+		return p
+	}
+
+	size := len(p.intervals)
+	currents := make([]interval, size)
+	copy(currents, p.intervals)
+
+	for _, value := range other.intervals {
+		var remainings []interval
+		for _, current := range currents {
+			for _, rem := range current.remove(value) {
+				if !rem.empty {
+					remainings = append(remainings, rem)
+				}
+			}
+		}
+
+		currents = remainings
+	}
+
+	return Period{intervals: currents}
 }

@@ -294,6 +294,11 @@ func intervalsIntersection(intervals []interval) interval {
 	return intersection
 }
 
+// intersection is the "object" version of intervalsIntersection
+func (i interval) intersection(other interval) interval {
+	return intervalsIntersection([]interval{i, other})
+}
+
 // intervalFromString parses an interval of time
 func intervalFromString(rawData string) (interval, error) {
 	if rawData == INTERVAL_EMPTY {
@@ -623,11 +628,25 @@ func (i interval) remove(other interval) []interval {
 	}
 
 	complements := other.complement()
-	leftOperand := intervalsIntersection([]interval{i, complements[0]})
-	if len(complements) == 1 {
-		return []interval{leftOperand}
-	} else {
-		rightOperand := intervalsIntersection([]interval{i, complements[1]})
-		return leftOperand.union(rightOperand)
+	size := len(complements)
+	switch {
+	case size == 0:
+		return []interval{}
+	case size == 1 && complements[0].empty:
+		return []interval{i}
+	case size == 1 && !complements[0].empty:
+		result := i.intersection(complements[0])
+		return []interval{result}
+	default:
+		leftOperand := i.intersection(complements[0])
+		rightOperand := i.intersection(complements[1])
+		var result []interval
+		for _, r := range leftOperand.union(rightOperand) {
+			if !r.empty {
+				result = append(result, r)
+			}
+		}
+
+		return result
 	}
 }

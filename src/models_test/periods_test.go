@@ -24,6 +24,22 @@ func TestPeriodComplements(t *testing.T) {
 		t.Logf("Complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
 		t.Fail()
 	}
+
+	value = models.NewEmptyPeriod()
+	complement = value.Complement()
+	expected = models.NewFullPeriod()
+	if !expected.Equals(complement) {
+		t.Logf("Complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
+		t.Fail()
+	}
+
+	value = models.NewFullPeriod()
+	complement = value.Complement()
+	expected = models.NewEmptyPeriod()
+	if !expected.Equals(complement) {
+		t.Log("Complement failed to reverse full to empty")
+		t.Fail()
+	}
 }
 
 func TestIntersectionWithFull(t *testing.T) {
@@ -157,6 +173,20 @@ func TestPeriodContains(t *testing.T) {
 	// period should not contain now, because now is excluded
 	if period.Contains(now) {
 		t.Log("Failed to test bound value excluded")
+		t.Fail()
+	}
+}
+
+func TestPeriodRemove(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	before := now.AddDate(-10, 0, 0)
+	after := now.AddDate(10, 0, 0)
+	period := models.NewPeriodUntil(after, true)
+	toRemove := models.NewFinitePeriod(before, now, true, false)
+	remaining := period.Remove(toRemove)
+	expected := models.NewPeriodUntil(before, false).Union(models.NewFinitePeriod(now, after, true, true))
+	if !remaining.Equals(expected) {
+		t.Logf("Failed to remove period, got %s but expected %s", remaining.AsRawString(), expected.AsRawString())
 		t.Fail()
 	}
 }
