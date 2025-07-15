@@ -29,7 +29,7 @@ type Period struct {
 
 // NewFullPeriod returns a period equivalent to ]-oo,+oo[
 func NewFullPeriod() Period {
-	value := interval{empty: false, leftFinite: false, rightFinite: false}
+	value := newFullInterval()
 	return Period{intervals: []interval{value}}
 }
 
@@ -41,49 +41,22 @@ func NewEmptyPeriod() Period {
 // NewFinitePeriod builds a period equivalent to a new finite interval (min, max)
 // SPECIAL CASES: it may return an empty period according to mathematical definition
 func NewFinitePeriod(min, max time.Time, minIncluded, maxIncluded bool) Period {
-	comparison := min.Compare(max)
-	if comparison == 0 && !(minIncluded && maxIncluded) {
+	content := newIntervalDuring(min, max, minIncluded, maxIncluded)
+	if content.empty {
 		return Period{}
-	} else if comparison > 0 {
-		return Period{}
+	} else {
+		return Period{intervals: []interval{content}}
 	}
-
-	content := interval{
-		empty:         false,
-		leftFinite:    true,
-		rightFinite:   true,
-		leftIncluded:  minIncluded,
-		rightIncluded: maxIncluded,
-		leftMoment:    min.Truncate(TIME_PRECISION),
-		rightMoment:   max.Truncate(TIME_PRECISION),
-	}
-
-	return Period{intervals: []interval{content}}
 }
 
 // NewPeriodSince builds a period equivalent to (leftLimit, +oo[
 func NewPeriodSince(leftLimit time.Time, leftIn bool) Period {
-	content := interval{
-		empty:        false,
-		rightFinite:  false,
-		leftFinite:   true,
-		leftIncluded: leftIn,
-		leftMoment:   leftLimit.Truncate(TIME_PRECISION),
-	}
-
-	return Period{intervals: []interval{content}}
+	return Period{intervals: []interval{newIntervalSince(leftLimit, leftIn)}}
 }
 
 // NewPeriodUntil builds a period equivalent to ]-oo,rightLimit)
 func NewPeriodUntil(rightLimit time.Time, rightIn bool) Period {
-	content := interval{
-		empty:         false,
-		leftFinite:    false,
-		rightFinite:   true,
-		rightIncluded: rightIn,
-		rightMoment:   rightLimit.Truncate(TIME_PRECISION),
-	}
-
+	content := newIntervalUntil(rightLimit, rightIn)
 	return Period{intervals: []interval{content}}
 }
 
@@ -203,21 +176,15 @@ func (p Period) Complement() Period {
 			// may complete left
 			if value.leftFinite {
 				// left completion
-				completion := interval{
-					empty: false, leftFinite: false,
-					rightFinite: true, rightIncluded: !value.leftIncluded, rightMoment: value.leftMoment,
-				}
-
+				completion := newIntervalUntil(value.leftMoment, !value.leftIncluded)
 				result = append(result, completion)
 			}
 		} else {
 			// complete from previous to value
-			completion := interval{
-				empty: false, leftFinite: true, leftIncluded: !previousIncluded, leftMoment: previousValue,
-				rightFinite: true, rightIncluded: !value.leftIncluded, rightMoment: value.leftMoment,
+			completion := newIntervalDuring(previousValue, value.leftMoment, !previousIncluded, !value.leftIncluded)
+			if !completion.empty {
+				result = append(result, completion)
 			}
-
-			result = append(result, completion)
 		}
 
 		previousFinite, previousIncluded = value.rightFinite, value.rightIncluded
@@ -226,11 +193,7 @@ func (p Period) Complement() Period {
 
 	if previousFinite {
 		// complete to reach +oo
-		completion := interval{
-			empty: false, rightFinite: false,
-			leftFinite: true, leftIncluded: !previousIncluded, leftMoment: previousValue,
-		}
-
+		completion := newIntervalSince(previousValue, !previousIncluded)
 		result = append(result, completion)
 	}
 

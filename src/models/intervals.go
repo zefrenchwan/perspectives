@@ -39,6 +39,58 @@ type interval struct {
 	rightMoment time.Time
 }
 
+// newFullInterval builds a new interval equals to full space
+func newFullInterval() interval {
+	return interval{empty: false, leftFinite: false, rightFinite: false}
+}
+
+// newIntervalSince builds the interval (leftLimit, +oo[
+func newIntervalSince(leftLimit time.Time, leftIn bool) interval {
+	return interval{
+		empty:        false,
+		rightFinite:  false,
+		leftFinite:   true,
+		leftIncluded: leftIn,
+		leftMoment:   leftLimit.Truncate(TIME_PRECISION),
+	}
+
+}
+
+// newIntervalUntil builds the interval ]-oo, rightLimit)
+func newIntervalUntil(rightLimit time.Time, rightIn bool) interval {
+	return interval{
+		empty:         false,
+		leftFinite:    false,
+		rightFinite:   true,
+		rightIncluded: rightIn,
+		rightMoment:   rightLimit.Truncate(TIME_PRECISION),
+	}
+}
+
+// newIntervalDuring returns the interval (min,max) or empty when result is mathematically empty.
+// If min > max, for instance, result is mathematically empty and so is result of the function
+func newIntervalDuring(min, max time.Time, minIncluded, maxIncluded bool) interval {
+	left := min.Truncate(TIME_PRECISION)
+	right := max.Truncate(TIME_PRECISION)
+	comparison := left.Compare(right)
+	switch {
+	case comparison > 0:
+		return interval{empty: true}
+	case comparison == 0 && !(minIncluded && maxIncluded):
+		return interval{empty: true}
+	default:
+		return interval{
+			empty:         false,
+			leftFinite:    true,
+			rightFinite:   true,
+			leftIncluded:  minIncluded,
+			rightIncluded: maxIncluded,
+			leftMoment:    min.Truncate(TIME_PRECISION),
+			rightMoment:   max.Truncate(TIME_PRECISION),
+		}
+	}
+}
+
 // intervalEquals tests if two periods are the same
 func intervalEquals(a, b interval) bool {
 	if a.empty != b.empty {
