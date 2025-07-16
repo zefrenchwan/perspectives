@@ -138,3 +138,31 @@ func (m Mapping[T]) GetValue(moment time.Time) (T, bool) {
 
 	return empty, false
 }
+
+// Get returns the values and periods the values are set during.
+// For instance, if content is ]-oo, now[ => "a", [after, +oo[ => "a"
+// then result would be "a" => Period(]-oo, now[ union [after, +oo[)
+func (m Mapping[T]) Get() map[T]Period {
+	// first, group intervals per value.
+	// One value => all intervals value is linked to
+	values := make(map[T][]interval)
+	for period, value := range m {
+		if period.empty {
+			continue
+		} else if content, found := values[value]; !found {
+			values[value] = []interval{period}
+		} else {
+			content = append(content, period)
+			values[value] = content
+		}
+	}
+
+	// for each value, just make the union
+	result := make(map[T]Period)
+	for value, intervals := range values {
+		unioned := intervalsUnionAll(intervals)
+		result[value] = Period{intervals: unioned}
+	}
+
+	return result
+}

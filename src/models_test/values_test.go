@@ -1,6 +1,7 @@
 package models
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -41,6 +42,37 @@ func TestValueSet(t *testing.T) {
 		t.Fail()
 	} else if v != 40 {
 		t.Log("Expecting value set after now")
+		t.Fail()
+	}
+}
+
+func TestValueGet(t *testing.T) {
+	value := models.NewValue(50)
+	expected := map[int]models.Period{
+		50: models.NewFullPeriod(),
+	}
+
+	if !maps.EqualFunc(expected, value.Get(), func(a, b models.Period) bool { return a.Equals(b) }) {
+		t.Log("Failed to flatten content")
+		t.Fail()
+	}
+
+	now := time.Now().Truncate(time.Hour)
+	value.SetUntil(30, now, true)
+	// value is now
+	// ]-oo, now] => 30
+	// ]now, +oo[ => 50
+	expected = map[int]models.Period{
+		30: models.NewPeriodUntil(now, true),
+		50: models.NewPeriodSince(now, false),
+	}
+
+	values := value.Get()
+
+	if !maps.EqualFunc(expected, values, func(a, b models.Period) bool { return a.Equals(b) }) {
+		t.Log("Failed to flatten content with multiple values")
+		t.Log(values)
+		t.Log(expected)
 		t.Fail()
 	}
 }
