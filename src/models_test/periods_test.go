@@ -190,3 +190,36 @@ func TestPeriodRemove(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPeriodSerde(t *testing.T) {
+	tested := models.NewEmptyPeriod()
+	if res, err := models.PeriodLoad(tested.AsStrings()); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if !res.Equals(tested) {
+		t.Log("Failed to ser + deser empty")
+		t.Fail()
+	}
+
+	tested = models.NewFullPeriod()
+	if res, err := models.PeriodLoad(tested.AsStrings()); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if !res.Equals(tested) {
+		t.Log("Failed to ser + deser full")
+		t.Fail()
+	}
+
+	now := time.Now().Truncate(time.Second)
+	before := now.AddDate(-1, 0, 0)
+	after := now.AddDate(10, 0, 0)
+	tested = models.NewFinitePeriod(before, now, true, false)
+	tested = tested.Union(models.NewPeriodSince(after, true))
+	if res, err := models.PeriodLoad(tested.AsStrings()); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if !res.Equals(tested) {
+		t.Log("Failed to ser + deser union of intervals")
+		t.Fail()
+	}
+}

@@ -21,7 +21,10 @@ const INTERVAL_EMPTY = "]["
 const INTERVAL_VALUE_LEFT_INFINITY = "-oo"
 const INTERVAL_VALUE_RIGHT_INFINITY = "+oo"
 
-// interval is an interval of time
+// interval is an interval of time.
+// It uses:
+// empty that overrides the rest
+// left and right boundaries represented by: finite or not, included or not (if finite), bounds as time.Time (if finite )
 type interval struct {
 	// empty is true for empty sets, overrides every other info
 	empty bool

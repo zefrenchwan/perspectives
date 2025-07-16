@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"slices"
 	"sort"
 	"strings"
@@ -227,4 +228,45 @@ func (p Period) Remove(other Period) Period {
 	}
 
 	return Period{intervals: currents}
+}
+
+// AsStrings returns the period as a slice of serialized partitioned intervals
+func (p Period) AsStrings() []string {
+	var result []string
+	if len(p.intervals) == 0 {
+		return nil
+	}
+
+	for _, val := range sortIntervals(p.intervals) {
+		result = append(result, val.toString())
+	}
+
+	return result
+}
+
+// PeriodLoad reads a partition of serialized intervals and makes period from it
+func PeriodLoad(partition []string) (Period, error) {
+	if len(partition) == 0 {
+		return Period{}, nil
+	}
+
+	// read them all
+	var errorResult error
+	var elements []interval
+	for _, part := range partition {
+		if i, err := intervalFromString(part); err != nil {
+			errorResult = errors.Join(errorResult, err)
+		} else if !i.empty {
+			elements = append(elements, i)
+		}
+	}
+
+	if errorResult != nil {
+		return Period{}, errorResult
+	}
+
+	// intervals from source may not form a partition
+	unioned := intervalsUnionAll(elements)
+
+	return Period{intervals: unioned}, nil
 }
