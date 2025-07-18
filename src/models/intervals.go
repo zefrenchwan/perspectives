@@ -2,7 +2,6 @@ package models
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -470,16 +469,6 @@ func (i interval) toString() string {
 	}
 
 	return result
-}
-
-// toRawString returns value as raw data
-func (i interval) toRawString() string {
-	return fmt.Sprintf("Period: [ empty %t finite: %t %t included: %t %t values: %s %s ]",
-		i.empty,
-		i.leftFinite, i.rightFinite,
-		i.leftIncluded, i.rightIncluded,
-		i.leftMoment.Format(TIME_FORMAT), i.rightMoment.Format(TIME_FORMAT),
-	)
 }
 
 // complement returns the complement of the interval.
