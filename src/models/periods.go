@@ -61,6 +61,11 @@ func NewPeriodUntil(rightLimit time.Time, rightIn bool) Period {
 	return Period{intervals: []interval{content}}
 }
 
+// IsEmpty returns true for empty, false otherwise
+func (p Period) IsEmpty() bool {
+	return len(p.intervals) == 0
+}
+
 // Intersection returns the set intersection between p and other as intervals
 func (p Period) Intersection(other Period) Period {
 	if len(p.intervals) == 0 || len(other.intervals) == 0 {
@@ -227,7 +232,11 @@ func (p Period) Remove(other Period) Period {
 		currents = remainings
 	}
 
-	return Period{intervals: currents}
+	if len(currents) == 0 {
+		return Period{}
+	} else {
+		return Period{intervals: currents}
+	}
 }
 
 // AsStrings returns the period as a slice of serialized partitioned intervals
