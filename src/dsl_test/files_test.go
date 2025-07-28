@@ -20,6 +20,19 @@ func TestFileLoading(t *testing.T) {
 	}
 }
 
+func TestFileModule(t *testing.T) {
+	if p, err := dsl.LoadFile("sample.dsl"); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if value, err := p.Module(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if value != "history" {
+		t.Log("failed to read module")
+		t.Fail()
+	}
+}
+
 func TestFileGroups(t *testing.T) {
 	var content dsl.SourceFile
 	if p, err := dsl.LoadFile("sample.dsl"); err != nil {
@@ -66,6 +79,23 @@ func TestFileGroups(t *testing.T) {
 		t.Fail()
 	} else if linkGroup[0].Value != "link" {
 		t.Log("failed to group link")
+		t.Fail()
+	}
+}
+
+func TestDirectoryLoading(t *testing.T) {
+	res, errLoad := dsl.LoadAllFilesFromBase("samples/")
+	if errLoad != nil {
+		t.Log(errLoad)
+		t.Fail()
+	} else if len(res) != 2 {
+		t.Log("missing modules when loading dir")
+		t.Fail()
+	} else if len(res["history"]) != 1 {
+		t.Log("failed to load history")
+		t.Fail()
+	} else if len(res["humans"]) != 1 {
+		t.Log("failed to load humans")
 		t.Fail()
 	}
 }

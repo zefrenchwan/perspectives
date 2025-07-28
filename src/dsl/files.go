@@ -1,6 +1,9 @@
 package dsl
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -10,8 +13,6 @@ type SourceFile struct {
 	AbsolutePath string
 	Content      []ParsingElement
 }
-
-//func WalkDir(root string, fn fs.WalkDirFunc) error
 
 // LoadFile loads a content from a file
 func LoadFile(contentPath string) (SourceFile, error) {
@@ -32,6 +33,57 @@ func LoadFile(contentPath string) (SourceFile, error) {
 		result = SourceFile{AbsolutePath: absPath, Content: parsed}
 		return result, nil
 	}
+}
+
+// LoadAllFilesFromBase loads either a file or a directory and regroups all content into modules.
+// Result is then a map of module and linked source files
+func LoadAllFilesFromBase(sourceBase string) (map[string][]SourceFile, error) {
+	result := make(map[string][]SourceFile)
+	if res, err := os.Stat(sourceBase); err != nil {
+		return nil, err
+	} else if !res.IsDir() {
+		if content, err := LoadFile(sourceBase); err != nil {
+			return nil, err
+		} else if m, err := content.Module(); err != nil {
+			return nil, err
+		} else {
+			result[m] = []SourceFile{content}
+			return result, nil
+		}
+	}
+
+	errWalk := filepath.WalkDir(sourceBase, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		} else if content, err := LoadFile(path); err != nil {
+			return err
+		} else if m, err := content.Module(); err != nil {
+			return err
+		} else {
+			existingValue := result[m]
+			result[m] = append(existingValue, content)
+			return nil
+		}
+	})
+
+	return result, errWalk
+}
+
+// Module returns the module of the source file, or error for a malformed file
+func (s SourceFile) Module() (string, error) {
+	if len(s.Content) < 2 {
+		return "", errors.New("no module declaration")
+	}
+
+	moduleUnit, nameUnit := s.Content[0], s.Content[1]
+	line := moduleUnit.Line
+	if moduleUnit.Value != KW_MODULE {
+		return "", fmt.Errorf("expecting module at position %d (line %d)", moduleUnit.Position, line)
+	} else if nameUnit.Line != line {
+		return "", fmt.Errorf("expecting module name at line %d", line)
+	}
+
+	return nameUnit.Value, nil
 }
 
 // Groups returns the parsed file, but as groups of elements
