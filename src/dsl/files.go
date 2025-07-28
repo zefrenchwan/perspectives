@@ -33,3 +33,32 @@ func LoadFile(contentPath string) (SourceFile, error) {
 		return result, nil
 	}
 }
+
+// Groups returns the parsed file, but as groups of elements
+func (s SourceFile) Groups() [][]ParsingElement {
+	if len(s.Content) == 0 {
+		return nil
+	}
+
+	var currentGroup []ParsingElement
+	var result [][]ParsingElement
+	for _, value := range s.Content {
+		currentPosition := value.Position
+		if currentPosition == 0 {
+			// store previous group if any
+			if currentGroup != nil {
+				result = append(result, currentGroup)
+			}
+
+			currentGroup = make([]ParsingElement, 0)
+		}
+
+		currentGroup = append(currentGroup, value)
+	}
+
+	if len(currentGroup) != 0 {
+		result = append(result, currentGroup)
+	}
+
+	return result
+}
