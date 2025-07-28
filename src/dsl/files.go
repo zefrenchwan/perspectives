@@ -36,13 +36,16 @@ func LoadFile(contentPath string) (SourceFile, error) {
 }
 
 // LoadAllFilesFromBase loads either a file or a directory and regroups all content into modules.
+// acceptFile returns true if file should be read. It applies only on regular files.
 // Result is then a map of module and linked source files
-func LoadAllFilesFromBase(sourceBase string) (map[string][]SourceFile, error) {
+func LoadAllFilesFromBase(sourceBase string, acceptFile func(path string) bool) (map[string][]SourceFile, error) {
 	result := make(map[string][]SourceFile)
 	if res, err := os.Stat(sourceBase); err != nil {
 		return nil, err
 	} else if !res.IsDir() {
-		if content, err := LoadFile(sourceBase); err != nil {
+		if !acceptFile(sourceBase) {
+			return nil, nil
+		} else if content, err := LoadFile(sourceBase); err != nil {
 			return nil, err
 		} else if m, err := content.Module(); err != nil {
 			return nil, err
@@ -53,7 +56,7 @@ func LoadAllFilesFromBase(sourceBase string) (map[string][]SourceFile, error) {
 	}
 
 	errWalk := filepath.WalkDir(sourceBase, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
+		if d.IsDir() || !acceptFile(path) {
 			return nil
 		} else if content, err := LoadFile(path); err != nil {
 			return err

@@ -15,3 +15,9 @@ third group
     still third group
     third group again
 ```
+
+## Module system 
+
+* Each file starts with `topic {name of the topic}`. For java or golang developers, consider it as the package declaration. 
+* topic declaration is not linked to directory structure. You may put different topics in a same directory or same topic in any other directory
+

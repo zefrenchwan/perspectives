@@ -84,7 +84,7 @@ func TestFileGroups(t *testing.T) {
 }
 
 func TestDirectoryLoading(t *testing.T) {
-	res, errLoad := dsl.LoadAllFilesFromBase("samples/")
+	res, errLoad := dsl.LoadAllFilesFromBase("samples/", func(path string) bool { return strings.HasSuffix(path, ".dsl") })
 	if errLoad != nil {
 		t.Log(errLoad)
 		t.Fail()
