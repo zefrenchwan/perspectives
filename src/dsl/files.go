@@ -35,11 +35,10 @@ func LoadFile(contentPath string) (SourceFile, error) {
 	}
 }
 
-// LoadAllFilesFromBase loads either a file or a directory and regroups all content into modules.
+// LoadAllFilesFromBase loads either a file or a directory
 // acceptFile returns true if file should be read. It applies only on regular files.
-// Result is then a map of module and linked source files
-func LoadAllFilesFromBase(sourceBase string, acceptFile func(path string) bool) (map[string][]SourceFile, error) {
-	result := make(map[string][]SourceFile)
+func LoadAllFilesFromBase(sourceBase string, acceptFile func(path string) bool) ([]SourceFile, error) {
+	var result []SourceFile
 	if res, err := os.Stat(sourceBase); err != nil {
 		return nil, err
 	} else if !res.IsDir() {
@@ -47,10 +46,8 @@ func LoadAllFilesFromBase(sourceBase string, acceptFile func(path string) bool) 
 			return nil, nil
 		} else if content, err := LoadFile(sourceBase); err != nil {
 			return nil, err
-		} else if m, err := content.Module(); err != nil {
-			return nil, err
 		} else {
-			result[m] = []SourceFile{content}
+			result = append(result, content)
 			return result, nil
 		}
 	}
@@ -60,11 +57,8 @@ func LoadAllFilesFromBase(sourceBase string, acceptFile func(path string) bool) 
 			return nil
 		} else if content, err := LoadFile(path); err != nil {
 			return err
-		} else if m, err := content.Module(); err != nil {
-			return err
 		} else {
-			existingValue := result[m]
-			result[m] = append(existingValue, content)
+			result = append(result, content)
 			return nil
 		}
 	})

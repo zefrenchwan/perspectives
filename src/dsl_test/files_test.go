@@ -91,11 +91,5 @@ func TestDirectoryLoading(t *testing.T) {
 	} else if len(res) != 2 {
 		t.Log("missing modules when loading dir")
 		t.Fail()
-	} else if len(res["history"]) != 1 {
-		t.Log("failed to load history")
-		t.Fail()
-	} else if len(res["humans"]) != 1 {
-		t.Log("failed to load humans")
-		t.Fail()
 	}
 }
