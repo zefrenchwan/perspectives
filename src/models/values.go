@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"maps"
 	"slices"
 	"time"
@@ -165,4 +166,33 @@ func (m Mapping[T]) Get() map[T]Period {
 	}
 
 	return result
+}
+
+// BuildCompactMapOfValues maps intervals to their string representation and returns the corresponding map
+func (m Mapping[T]) BuildCompactMapOfValues() map[string]T {
+	result := make(map[string]T)
+	for interval, value := range m {
+		result[interval.toString()] = value
+	}
+
+	return result
+}
+
+// LoadValuesFromCompactMap maps keys to intervals and returns corresponding map
+func LoadValuesFromCompactMap[T interface{ comparable }](content map[string]T) (Mapping[T], error) {
+	if content == nil {
+		return nil, nil
+	}
+
+	result := make(Mapping[T])
+	var globalErrors error
+	for k, v := range content {
+		if i, err := intervalFromString(k); err != nil {
+			globalErrors = errors.Join(globalErrors, err)
+		} else {
+			result[i] = v
+		}
+	}
+
+	return result, globalErrors
 }

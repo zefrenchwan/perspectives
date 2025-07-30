@@ -76,3 +76,27 @@ func TestValueGet(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestSerde(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	expected := models.NewValueSince(44, now, true)
+	result := expected.BuildCompactMapOfValues()
+	if value, err := models.LoadValuesFromCompactMap(result); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if len(value) != 1 {
+		t.Log("failed to load content: sizes differ")
+		t.Fail()
+	} else {
+		for k, v := range expected {
+			if other, found := value[k]; !found {
+				t.Log("values not found")
+				t.Fail()
+			} else if other != v {
+				t.Log("values mismatch")
+				t.Fail()
+			}
+		}
+	}
+
+}
