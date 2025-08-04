@@ -41,6 +41,44 @@ type interval struct {
 	rightMoment time.Time
 }
 
+// buildInterval returns an interval built from values (may be empty if values lead to it)
+func buildInterval(empty, minFinite, maxFinite bool, min, max time.Time, minIn, maxIn bool) interval {
+	if empty {
+		return interval{empty: true}
+	}
+
+	var left, right time.Time
+	var leftIn, rightIn bool
+	if minFinite {
+		left = min.Truncate(TIME_PRECISION)
+		leftIn = minIn
+	} else {
+		leftIn = false
+	}
+
+	if maxFinite {
+		right = max.Truncate(TIME_PRECISION)
+		rightIn = maxIn
+	} else {
+		rightIn = false
+	}
+
+	if minFinite && maxFinite {
+		comparison := left.Compare(right)
+		switch {
+		case comparison > 0:
+			return interval{empty: true}
+		case comparison == 0 && !(maxIn && minIn):
+			return interval{empty: true}
+		}
+	}
+
+	return interval{empty: false,
+		leftFinite: minFinite, leftMoment: left, leftIncluded: leftIn,
+		rightFinite: maxFinite, rightMoment: right, rightIncluded: rightIn,
+	}
+}
+
 // newFullInterval builds a new interval equals to full space
 func newFullInterval() interval {
 	return interval{empty: false, leftFinite: false, rightFinite: false}
@@ -129,15 +167,15 @@ func intervalCompare(a, b interval) int {
 	if a.empty && b.empty {
 		return 0
 	} else if a.empty {
-		return 0
+		return -1
 	} else if b.empty {
 		return 1
 	}
 
 	if a.leftFinite && !b.leftFinite {
-		return -1
-	} else if !a.leftFinite && b.leftFinite {
 		return 1
+	} else if !a.leftFinite && b.leftFinite {
+		return -1
 	} else if a.leftFinite && b.leftFinite {
 		comparison := a.leftMoment.Compare(b.leftMoment)
 		if comparison != 0 {

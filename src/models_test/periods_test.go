@@ -223,3 +223,32 @@ func TestPeriodSerde(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPeriodInfiniteBoundaries(t *testing.T) {
+	now := time.Now().Truncate(1 * time.Hour)
+	before := now.AddDate(-1, 0, 0)
+	after := now.AddDate(1, 0, 0)
+	a := models.NewPeriodSince(after, true)
+	b := models.NewPeriodUntil(before, true)
+	res := a.Union(b).BoundingPeriod()
+	expected := models.NewFullPeriod()
+	if !expected.Equals(res) {
+		t.Logf("failed to find full as boundaries, got %s", res.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestPeriodFiniteBoundaries(t *testing.T) {
+	now := time.Now().Truncate(1 * time.Hour)
+	before := now.AddDate(-1, 0, 0)
+	after := now.AddDate(1, 0, 0)
+	evenAfter := after.AddDate(10, 0, 0)
+	a := models.NewFinitePeriod(before, now, false, true)
+	b := models.NewFinitePeriod(after, evenAfter, true, true)
+	res := a.Union(b).BoundingPeriod()
+	expected := models.NewFinitePeriod(before, evenAfter, false, true)
+	if !expected.Equals(res) {
+		t.Logf("failed to find finite intervals as boundaries, got %s", res.AsRawString())
+		t.Fail()
+	}
+}

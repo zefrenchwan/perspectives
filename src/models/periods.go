@@ -279,3 +279,25 @@ func PeriodLoad(partition []string) (Period, error) {
 
 	return Period{intervals: unioned}, nil
 }
+
+// BoundingPeriod returns a period as an interval that is the largest connex interval to contain the period.
+// For instance, ]2024-01-02,2025-01-17[ UNION ]2027-01-01,2028-01-17[ returns ]2024-01-02,2028-01-17[
+func (p Period) BoundingPeriod() Period {
+	if p.IsEmpty() {
+		return p
+	} else if len(p.intervals) == 1 {
+		return p
+	}
+
+	slices.SortStableFunc(p.intervals, intervalCompare)
+	size := len(p.intervals)
+	minInterval := p.intervals[0]
+	maxInterval := p.intervals[size-1]
+	result := buildInterval(false,
+		minInterval.leftFinite, maxInterval.rightFinite,
+		minInterval.leftMoment, maxInterval.rightMoment,
+		minInterval.leftIncluded, maxInterval.rightIncluded,
+	)
+
+	return Period{intervals: []interval{result}}
+}
