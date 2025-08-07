@@ -19,15 +19,6 @@ func NewDAG[S interface{ comparable }, L interface{ comparable }]() DAG[S, L] {
 	return result
 }
 
-func (d DAG[S, L]) Childs(value S) []S {
-	var result []S
-	for child := range d.successors[value] {
-		result = append(result, child)
-	}
-
-	return result
-}
-
 // AddNode adds a node with no link if not present
 func (d DAG[S, L]) AddNode(node S) {
 	if _, found := d.successors[node]; !found {
