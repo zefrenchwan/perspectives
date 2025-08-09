@@ -1,13 +1,13 @@
-package models_test
+package structures_test
 
 import (
 	"testing"
 
-	"github.com/zefrenchwan/perspectives.git/models"
+	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
 func TestAddWithoutCycle(t *testing.T) {
-	value := models.NewDAG[string, int]()
+	value := structures.NewDAG[string, int]()
 	var index int
 	if err := value.UpsertNodesLinks("source", "dest", 0); err != nil {
 		index++
@@ -32,7 +32,7 @@ func TestAddWithoutCycle(t *testing.T) {
 }
 
 func TestAddCycle(t *testing.T) {
-	value := models.NewDAG[string, int]()
+	value := structures.NewDAG[string, int]()
 	var index int
 	if err := value.UpsertNodesLinks("source", "dest", 0); err != nil {
 		index++

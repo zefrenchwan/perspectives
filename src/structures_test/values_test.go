@@ -1,15 +1,15 @@
-package models
+package structures_test
 
 import (
 	"maps"
 	"testing"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/models"
+	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
 func TestValueSet(t *testing.T) {
-	value := models.NewValue(50)
+	value := structures.NewValue(50)
 	values := value.GetValues()
 	if len(values) != 1 || values[0] != 50 {
 		t.Log("Fail to read values")
@@ -47,12 +47,12 @@ func TestValueSet(t *testing.T) {
 }
 
 func TestValueGet(t *testing.T) {
-	value := models.NewValue(50)
-	expected := map[int]models.Period{
-		50: models.NewFullPeriod(),
+	value := structures.NewValue(50)
+	expected := map[int]structures.Period{
+		50: structures.NewFullPeriod(),
 	}
 
-	if !maps.EqualFunc(expected, value.Get(), func(a, b models.Period) bool { return a.Equals(b) }) {
+	if !maps.EqualFunc(expected, value.Get(), func(a, b structures.Period) bool { return a.Equals(b) }) {
 		t.Log("Failed to flatten content")
 		t.Fail()
 	}
@@ -62,14 +62,14 @@ func TestValueGet(t *testing.T) {
 	// value is now
 	// ]-oo, now] => 30
 	// ]now, +oo[ => 50
-	expected = map[int]models.Period{
-		30: models.NewPeriodUntil(now, true),
-		50: models.NewPeriodSince(now, false),
+	expected = map[int]structures.Period{
+		30: structures.NewPeriodUntil(now, true),
+		50: structures.NewPeriodSince(now, false),
 	}
 
 	values := value.Get()
 
-	if !maps.EqualFunc(expected, values, func(a, b models.Period) bool { return a.Equals(b) }) {
+	if !maps.EqualFunc(expected, values, func(a, b structures.Period) bool { return a.Equals(b) }) {
 		t.Log("Failed to flatten content with multiple values")
 		t.Log(values)
 		t.Log(expected)
@@ -79,9 +79,9 @@ func TestValueGet(t *testing.T) {
 
 func TestSerde(t *testing.T) {
 	now := time.Now().Truncate(time.Hour)
-	expected := models.NewValueSince(44, now, true)
+	expected := structures.NewValueSince(44, now, true)
 	result := expected.BuildCompactMapOfValues()
-	if value, err := models.LoadValuesFromCompactMap(result); err != nil {
+	if value, err := structures.LoadValuesFromCompactMap(result); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if len(value) != 1 {

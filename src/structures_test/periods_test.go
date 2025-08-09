@@ -1,41 +1,41 @@
-package models_test
+package structures_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/models"
+	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
 func TestPeriodComplements(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
-	value := models.NewPeriodSince(now, true)
+	value := structures.NewPeriodSince(now, true)
 	complement := value.Complement()
-	expected := models.NewPeriodUntil(now, false)
+	expected := structures.NewPeriodUntil(now, false)
 	if !expected.Equals(complement) {
 		t.Logf("Complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
 		t.Fail()
 	}
 
-	value = models.NewPeriodUntil(now, true)
+	value = structures.NewPeriodUntil(now, true)
 	complement = value.Complement()
-	expected = models.NewPeriodSince(now, false)
+	expected = structures.NewPeriodSince(now, false)
 	if !expected.Equals(complement) {
 		t.Logf("Complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
 		t.Fail()
 	}
 
-	value = models.NewEmptyPeriod()
+	value = structures.NewEmptyPeriod()
 	complement = value.Complement()
-	expected = models.NewFullPeriod()
+	expected = structures.NewFullPeriod()
 	if !expected.Equals(complement) {
 		t.Logf("Complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
 		t.Fail()
 	}
 
-	value = models.NewFullPeriod()
+	value = structures.NewFullPeriod()
 	complement = value.Complement()
-	expected = models.NewEmptyPeriod()
+	expected = structures.NewEmptyPeriod()
 	if !expected.Equals(complement) {
 		t.Log("Complement failed to reverse full to empty")
 		t.Fail()
@@ -43,9 +43,9 @@ func TestPeriodComplements(t *testing.T) {
 }
 
 func TestIntersectionWithFull(t *testing.T) {
-	value := models.NewFullPeriod()
+	value := structures.NewFullPeriod()
 	now := time.Now()
-	otherValue := models.NewPeriodSince(now, true)
+	otherValue := structures.NewPeriodSince(now, true)
 	result := otherValue.Intersection(value)
 	if !result.Equals(otherValue) {
 		t.Log("intersection with full failed")
@@ -54,9 +54,9 @@ func TestIntersectionWithFull(t *testing.T) {
 }
 
 func TestIntersectionWithEmpty(t *testing.T) {
-	value := models.NewEmptyPeriod()
+	value := structures.NewEmptyPeriod()
 	now := time.Now()
-	otherValue := models.NewPeriodSince(now, true)
+	otherValue := structures.NewPeriodSince(now, true)
 	result := otherValue.Intersection(value)
 	if !result.Equals(value) {
 		t.Log("intersection with empty failed")
@@ -67,9 +67,9 @@ func TestIntersectionWithEmpty(t *testing.T) {
 func TestIntersectionWithOther(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	before := time.Now().Add(-24 * time.Hour)
-	value := models.NewPeriodSince(before, true)
-	otherValue := models.NewPeriodUntil(now, true)
-	expected := models.NewFinitePeriod(before, now, true, true)
+	value := structures.NewPeriodSince(before, true)
+	otherValue := structures.NewPeriodUntil(now, true)
+	expected := structures.NewFinitePeriod(before, now, true, true)
 	result := otherValue.Intersection(value)
 	if !result.Equals(expected) {
 		t.Logf("intersection with other failed: got %s BUT EXPECTED %s", result.AsRawString(), expected.AsRawString())
@@ -79,15 +79,15 @@ func TestIntersectionWithOther(t *testing.T) {
 
 func TestUnionWithEmpty(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
-	value := models.NewPeriodSince(now, true)
+	value := structures.NewPeriodSince(now, true)
 	expected := value
-	result := models.NewEmptyPeriod().Union(value)
+	result := structures.NewEmptyPeriod().Union(value)
 	if !result.Equals(expected) {
 		t.Logf("union with empty failed: got %s", result.AsRawString())
 		t.Fail()
 	}
 
-	result = value.Union(models.NewEmptyPeriod())
+	result = value.Union(structures.NewEmptyPeriod())
 	if !result.Equals(expected) {
 		t.Logf("union with empty failed: got %s", result.AsRawString())
 		t.Fail()
@@ -96,7 +96,7 @@ func TestUnionWithEmpty(t *testing.T) {
 
 func TestUnionWithSame(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
-	value := models.NewPeriodSince(now, true)
+	value := structures.NewPeriodSince(now, true)
 	expected := value
 	result := value.Union(value)
 	if !result.Equals(expected) {
@@ -108,9 +108,9 @@ func TestUnionWithSame(t *testing.T) {
 func TestInfiniteUnion(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	before := time.Now().Add(-24 * time.Hour).Truncate(time.Second)
-	first := models.NewPeriodSince(before, true)
-	second := models.NewPeriodUntil(now, true)
-	expected := models.NewFullPeriod()
+	first := structures.NewPeriodSince(before, true)
+	second := structures.NewPeriodUntil(now, true)
+	expected := structures.NewFullPeriod()
 	result := first.Union(second)
 	if !result.Equals(expected) {
 		t.Logf("union to make full failed: got %s", result.AsRawString())
@@ -128,7 +128,7 @@ func TestPeriodContains(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	before := time.Now().Add(-24 * time.Hour).Truncate(time.Second)
 	// period is [before, +oo[
-	period := models.NewPeriodSince(before, true)
+	period := structures.NewPeriodSince(before, true)
 	// before is in period
 	if !period.Contains(before) {
 		t.Log("Failed to test when value is boundary included")
@@ -142,7 +142,7 @@ func TestPeriodContains(t *testing.T) {
 	}
 
 	// period is ]before, +oo[
-	period = models.NewPeriodSince(before, false)
+	period = structures.NewPeriodSince(before, false)
 	// before is not in interval before it is excluded
 	if period.Contains(before) {
 		t.Log("Failed to test when value is boundary excluded")
@@ -155,7 +155,7 @@ func TestPeriodContains(t *testing.T) {
 	}
 
 	// period is ]-oo, now]
-	period = models.NewPeriodUntil(now, true)
+	period = structures.NewPeriodUntil(now, true)
 	// before < now, so expecting period to contain in
 	if !period.Contains(before) {
 		t.Log("Failed to test when value is strictly included")
@@ -169,7 +169,7 @@ func TestPeriodContains(t *testing.T) {
 	}
 
 	// period is ]-oo, now[
-	period = models.NewPeriodUntil(now, false)
+	period = structures.NewPeriodUntil(now, false)
 	// period should not contain now, because now is excluded
 	if period.Contains(now) {
 		t.Log("Failed to test bound value excluded")
@@ -181,10 +181,10 @@ func TestPeriodRemove(t *testing.T) {
 	now := time.Now().Truncate(time.Hour)
 	before := now.AddDate(-10, 0, 0)
 	after := now.AddDate(10, 0, 0)
-	period := models.NewPeriodUntil(after, true)
-	toRemove := models.NewFinitePeriod(before, now, true, false)
+	period := structures.NewPeriodUntil(after, true)
+	toRemove := structures.NewFinitePeriod(before, now, true, false)
 	remaining := period.Remove(toRemove)
-	expected := models.NewPeriodUntil(before, false).Union(models.NewFinitePeriod(now, after, true, true))
+	expected := structures.NewPeriodUntil(before, false).Union(structures.NewFinitePeriod(now, after, true, true))
 	if !remaining.Equals(expected) {
 		t.Logf("Failed to remove period, got %s but expected %s", remaining.AsRawString(), expected.AsRawString())
 		t.Fail()
@@ -192,8 +192,8 @@ func TestPeriodRemove(t *testing.T) {
 }
 
 func TestPeriodSerde(t *testing.T) {
-	tested := models.NewEmptyPeriod()
-	if res, err := models.PeriodLoad(tested.AsStrings()); err != nil {
+	tested := structures.NewEmptyPeriod()
+	if res, err := structures.PeriodLoad(tested.AsStrings()); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !res.Equals(tested) {
@@ -201,8 +201,8 @@ func TestPeriodSerde(t *testing.T) {
 		t.Fail()
 	}
 
-	tested = models.NewFullPeriod()
-	if res, err := models.PeriodLoad(tested.AsStrings()); err != nil {
+	tested = structures.NewFullPeriod()
+	if res, err := structures.PeriodLoad(tested.AsStrings()); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !res.Equals(tested) {
@@ -213,9 +213,9 @@ func TestPeriodSerde(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	before := now.AddDate(-1, 0, 0)
 	after := now.AddDate(10, 0, 0)
-	tested = models.NewFinitePeriod(before, now, true, false)
-	tested = tested.Union(models.NewPeriodSince(after, true))
-	if res, err := models.PeriodLoad(tested.AsStrings()); err != nil {
+	tested = structures.NewFinitePeriod(before, now, true, false)
+	tested = tested.Union(structures.NewPeriodSince(after, true))
+	if res, err := structures.PeriodLoad(tested.AsStrings()); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !res.Equals(tested) {
@@ -228,10 +228,10 @@ func TestPeriodInfiniteBoundaries(t *testing.T) {
 	now := time.Now().Truncate(1 * time.Hour)
 	before := now.AddDate(-1, 0, 0)
 	after := now.AddDate(1, 0, 0)
-	a := models.NewPeriodSince(after, true)
-	b := models.NewPeriodUntil(before, true)
+	a := structures.NewPeriodSince(after, true)
+	b := structures.NewPeriodUntil(before, true)
 	res := a.Union(b).BoundingPeriod()
-	expected := models.NewFullPeriod()
+	expected := structures.NewFullPeriod()
 	if !expected.Equals(res) {
 		t.Logf("failed to find full as boundaries, got %s", res.AsRawString())
 		t.Fail()
@@ -243,10 +243,10 @@ func TestPeriodFiniteBoundaries(t *testing.T) {
 	before := now.AddDate(-1, 0, 0)
 	after := now.AddDate(1, 0, 0)
 	evenAfter := after.AddDate(10, 0, 0)
-	a := models.NewFinitePeriod(before, now, false, true)
-	b := models.NewFinitePeriod(after, evenAfter, true, true)
+	a := structures.NewFinitePeriod(before, now, false, true)
+	b := structures.NewFinitePeriod(after, evenAfter, true, true)
 	res := a.Union(b).BoundingPeriod()
-	expected := models.NewFinitePeriod(before, evenAfter, false, true)
+	expected := structures.NewFinitePeriod(before, evenAfter, false, true)
 	if !expected.Equals(res) {
 		t.Logf("failed to find finite intervals as boundaries, got %s", res.AsRawString())
 		t.Fail()
