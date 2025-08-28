@@ -111,3 +111,29 @@ func (d DVGraph[S, L]) Nodes() []S {
 
 	return result
 }
+
+// Walk goes through a graph and reading once each element.
+// Processor is a function to apply to each node (for instance, get its neighbors and so something)
+func (d DVGraph[S, L]) Walk(starting S, processor func(source S)) {
+	seen := make(map[S]bool)
+	fifo := []S{starting}
+
+	for len(fifo) != 0 {
+		element := fifo[0]
+		fifo = fifo[1:]
+
+		if seen[element] {
+			continue
+		}
+
+		processor(element)
+		seen[element] = true
+
+		for other := range d[element] {
+			if !seen[other] {
+				fifo = append(fifo, other)
+			}
+		}
+	}
+
+}

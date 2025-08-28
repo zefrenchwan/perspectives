@@ -46,3 +46,66 @@ func TestCycles(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestWalkNoCycle(t *testing.T) {
+	graph := structures.NewDVGraph[string, int]()
+	graph.AddNode("a")
+	graph.AddNode("b")
+	graph.Link("b", "c", 10)
+	graph.Link("c", "d", 10)
+
+	var collector []string
+	graph.Walk("a", func(source string) {
+		collector = append(collector, source)
+	})
+
+	if slices.Compare([]string{"a"}, collector) != 0 {
+		t.Log("failed to read single element")
+		t.Fail()
+	}
+
+	collector = nil
+	graph.Walk("b", func(source string) {
+		collector = append(collector, source)
+	})
+
+	slices.Sort(collector)
+	if slices.Compare([]string{"b", "c", "d"}, collector) != 0 {
+		t.Log("walk failed for path")
+		t.Log(collector)
+		t.Log(graph)
+		t.Fail()
+	}
+
+	collector = nil
+	graph.Walk("c", func(source string) {
+		collector = append(collector, source)
+	})
+
+	slices.Sort(collector)
+	if slices.Compare([]string{"c", "d"}, collector) != 0 {
+		t.Log("walk failed for path")
+		t.Log(collector)
+		t.Log(graph)
+		t.Fail()
+	}
+}
+
+func TestWalkCycle(t *testing.T) {
+	graph := structures.NewDVGraph[string, int]()
+	graph.Link("b", "c", 10)
+	graph.Link("c", "d", 10)
+	graph.Link("d", "a", 10)
+	graph.Link("d", "b", 10)
+
+	var collector []string
+	graph.Walk("b", func(source string) {
+		collector = append(collector, source)
+	})
+
+	slices.Sort(collector)
+	if slices.Compare([]string{"a", "b", "c", "d"}, collector) != 0 {
+		t.Log("failed to read cycle")
+		t.Fail()
+	}
+}
