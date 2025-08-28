@@ -1,22 +1,21 @@
 package structures
 
 import (
-	"errors"
 	"maps"
 )
 
-// DAG represents a directed acyclic graph as map of nodes and links.
+// DVGraph represents a directed valued graph as map of nodes and links.
 // Given a node in the graph, it appears once (no outgoing link) or twice (ingoing and outgoing links)
-type DAG[S comparable, L comparable] map[S]map[S]L
+type DVGraph[S comparable, L comparable] map[S]map[S]L
 
-// NewDAG returns a new empty DAG
-func NewDAG[S comparable, L comparable]() DAG[S, L] {
-	return make(DAG[S, L])
+// NewDVGraph returns a new empty DAG
+func NewDVGraph[S comparable, L comparable]() DVGraph[S, L] {
+	return make(DVGraph[S, L])
 }
 
 // AddNode adds a node in the graph and returns true if graph did not already contained it.
 // If a node is destination of a link, it also appears in the map as primay value
-func (d DAG[S, L]) AddNode(source S) bool {
+func (d DVGraph[S, L]) AddNode(source S) bool {
 	if _, found := d[source]; found {
 		return false
 	}
@@ -26,58 +25,23 @@ func (d DAG[S, L]) AddNode(source S) bool {
 }
 
 // Link adds source, destination and the link in between.
-// It returns an error if a cycle appears
-func (d DAG[S, L]) Link(source, destination S, link L) error {
-	if source == destination {
-		return errors.New("adding same source and destination makes an obvious cycle")
-	}
+func (d DVGraph[S, L]) Link(source, destination S, link L) {
+	_, sourceExists := d[source]
+	_, destinationExists := d[destination]
 
-	var sourceExisted, destinationExisted, linkExisted bool
-	var previousLink L
-
-	// get previous values for a potential rollback
-	_, sourceExisted = d[source]
-	_, destinationExisted = d[destination]
-
-	if !sourceExisted {
-		d[source] = make(map[S]L)
-	} else if destinationExisted {
-		previousLink, linkExisted = d[source][destination]
-	}
-
-	// perform the action
-	d[source][destination] = link
-	if !destinationExisted {
+	if !destinationExists {
 		d[destination] = make(map[S]L)
 	}
 
-	// test if adding element would create a cycle.
-	// If so, perform a rollback !
-	if d.hasCycle() {
-		// Rollback
-		if !linkExisted {
-			delete(d[source], destination)
-		} else {
-			d[source][destination] = previousLink
-		}
-
-		if !destinationExisted {
-			delete(d[source], destination)
-			delete(d, destination)
-		}
-
-		if !sourceExisted {
-			delete(d, source)
-		}
-
-		return errors.New("adding this link would create a cycle")
+	if !sourceExists {
+		d[source] = make(map[S]L)
 	}
 
-	return nil
+	d[source][destination] = link
 }
 
 // Neighbors returns a copy of the neighborhood of a node, false for not found in the graph
-func (d DAG[S, L]) Neighbors(source S) (map[S]L, bool) {
+func (d DVGraph[S, L]) Neighbors(source S) (map[S]L, bool) {
 	if values, found := d[source]; !found {
 		return nil, false
 	} else if len(values) != 0 {
@@ -91,8 +55,8 @@ func (d DAG[S, L]) Neighbors(source S) (map[S]L, bool) {
 	}
 }
 
-// hasCycle returns true if graph contains a cycle
-func (d DAG[S, L]) hasCycle() bool {
+// HasCycle returns true if graph contains a cycle
+func (d DVGraph[S, L]) HasCycle() bool {
 	// DFS needs a stack
 	var stack []S
 
@@ -136,4 +100,14 @@ func (d DAG[S, L]) hasCycle() bool {
 	}
 
 	return false
+}
+
+// Nodes returns the nodes of the graph
+func (d DVGraph[S, L]) Nodes() []S {
+	var result []S
+	for key := range d {
+		result = append(result, key)
+	}
+
+	return result
 }
