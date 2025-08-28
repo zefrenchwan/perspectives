@@ -109,3 +109,18 @@ func TestWalkCycle(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestWalkReverse(t *testing.T) {
+	graph := structures.NewDVGraph[string, int]()
+	graph.Link("b", "c", 10)
+	graph.Link("a", "c", 10)
+	graph.Link("c", "d", 10)
+
+	var collector []string
+	graph.ReverseWalk("c", func(current string) { collector = append(collector, current) })
+	slices.Sort(collector)
+	if slices.Compare(collector, []string{"a", "b", "c"}) != 0 {
+		t.Log("failed to reverse graph")
+		t.Fail()
+	}
+}

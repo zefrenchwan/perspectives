@@ -135,5 +135,40 @@ func (d DVGraph[S, L]) Walk(starting S, processor func(source S)) {
 			}
 		}
 	}
+}
 
+// ReverseWalk walks through a graph, going backward (from a node to predecessors)
+func (d DVGraph[S, L]) ReverseWalk(starting S, processor func(current S)) {
+	reverseGraph := make(map[S][]S)
+	for key, values := range d {
+		for value := range values {
+			if existing, found := reverseGraph[value]; !found {
+				reverseGraph[value] = []S{key}
+			} else {
+				existing = append(existing, key)
+				reverseGraph[value] = existing
+			}
+		}
+	}
+
+	seen := make(map[S]bool)
+	fifo := []S{starting}
+
+	for len(fifo) != 0 {
+		element := fifo[0]
+		fifo = fifo[1:]
+
+		if seen[element] {
+			continue
+		}
+
+		processor(element)
+		seen[element] = true
+
+		for _, other := range reverseGraph[element] {
+			if !seen[other] {
+				fifo = append(fifo, other)
+			}
+		}
+	}
 }
