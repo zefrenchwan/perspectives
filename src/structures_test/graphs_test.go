@@ -29,6 +29,31 @@ func TestGraphAdd(t *testing.T) {
 	}
 }
 
+func TestGraphRemove(t *testing.T) {
+	graph := structures.NewDVGraph[string, int]()
+	graph.Link("a", "b", 10)
+	graph.AddNode("d")
+
+	if !graph.RemoveNode("d") {
+		t.Log("node should be here")
+		t.Fail()
+	}
+
+	if graph.RemoveNode("d") {
+		t.Log("node should NOT be here (was removed)")
+		t.Fail()
+	}
+
+	if !graph.RemoveNode("b") {
+		t.Log("b should be here")
+		t.Fail()
+	} else if !graph.Has("a") {
+		t.Log("a was removed due to link")
+		t.Fail()
+	}
+
+}
+
 func TestCycles(t *testing.T) {
 	graph := structures.NewDVGraph[string, int]()
 	graph.Link("a", "b", 10)

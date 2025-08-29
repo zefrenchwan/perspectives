@@ -24,6 +24,24 @@ func (d DVGraph[S, L]) AddNode(source S) bool {
 	return true
 }
 
+// RemoveNode removes that node (as destination and source).
+// It returns true if the node was in the graph, false otherwise
+func (d DVGraph[S, L]) RemoveNode(node S) bool {
+	for _, values := range d {
+		delete(values, node)
+	}
+
+	_, found := d[node]
+	delete(d, node)
+	return found
+}
+
+// Has returns true if node is in the graph
+func (d DVGraph[S, L]) Has(node S) bool {
+	_, found := d[node]
+	return found
+}
+
 // Link adds source, destination and the link in between.
 func (d DVGraph[S, L]) Link(source, destination S, link L) {
 	_, sourceExists := d[source]
