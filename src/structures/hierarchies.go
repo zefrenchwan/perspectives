@@ -14,19 +14,19 @@ type Hierarchy[S any] struct {
 	// parents link childs to parents
 	parents DVGraph[string, int]
 	// values link instances of S by name
-	values map[string]any
+	values map[string]S
 }
 
 // NewHierarchy builds an empty hierarchy
 func NewHierarchy[S any]() Hierarchy[S] {
 	return Hierarchy[S]{
 		parents: NewDVGraph[string, int](),
-		values:  make(map[string]any),
+		values:  make(map[string]S),
 	}
 }
 
 // Set value to a key (a name)
-func (h Hierarchy[S]) Set(key string, value any) {
+func (h Hierarchy[S]) Set(key string, value S) {
 	h.values[key] = value
 	h.parents.AddNode(key)
 }
@@ -46,4 +46,19 @@ func (h Hierarchy[S]) LinkToParent(child, parent string) error {
 	} else {
 		return nil
 	}
+}
+
+// LoadWithDependencies returns all the dependencies from a node.
+// For instance, if "a" -> X depends on "b" -> Y, then result for "a" would be "a" -> X , "b" -> Y
+func (h Hierarchy[S]) LoadWithDependencies(name string) map[string]S {
+	result := make(map[string]S)
+	h.parents.Walk(name, func(source string) {
+		result[source] = h.values[source]
+	})
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
 }

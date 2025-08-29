@@ -198,6 +198,11 @@ func (d DVGraph[S, L]) Walk(starting S, processor func(source S)) {
 	seen := make(map[S]bool)
 	fifo := []S{starting}
 
+	_, found := d[starting]
+	if !found {
+		return
+	}
+
 	for len(fifo) != 0 {
 		element := fifo[0]
 		fifo = fifo[1:]
@@ -219,6 +224,11 @@ func (d DVGraph[S, L]) Walk(starting S, processor func(source S)) {
 
 // ReverseWalk walks through a graph, going backward (from a node to predecessors)
 func (d DVGraph[S, L]) ReverseWalk(starting S, processor func(current S)) {
+	_, found := d[starting]
+	if !found {
+		return
+	}
+
 	reverseGraph := make(map[S][]S)
 	for key, values := range d {
 		for value := range values {
@@ -255,6 +265,11 @@ func (d DVGraph[S, L]) ReverseWalk(starting S, processor func(current S)) {
 
 // EdgesFrom gets the edges since a starting node
 func (d DVGraph[S, L]) EdgesFrom(starting S) []GraphEdge[S, L] {
+	_, found := d[starting]
+	if !found {
+		return nil
+	}
+
 	elements := []S{starting}
 	var result []GraphEdge[S, L]
 	seen := make(map[S]bool)
