@@ -196,3 +196,35 @@ func TestAddWithoutCycle(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestEdgesWalk(t *testing.T) {
+	graph := structures.NewDVGraph[string, int]()
+	graph.AddNode("a")
+	graph.Link("b", "c", 10)
+	graph.Link("c", "d", 10)
+	graph.Link("d", "e", 10)
+	graph.Link("d", "f", 10)
+
+	expected := []structures.GraphEdge[string, int]{
+		{Source: "b", Destination: "c", Value: 10},
+		{Source: "c", Destination: "d", Value: 10},
+		{Source: "d", Destination: "e", Value: 10},
+		{Source: "d", Destination: "f", Value: 10},
+	}
+
+	got := graph.EdgesFrom("b")
+
+	if len(got) != len(expected) {
+		t.Log("missing edges")
+		t.Log(got)
+		t.Fail()
+	}
+
+	for _, link := range expected {
+		if !slices.Contains(got, link) {
+			t.Log("missing link")
+			t.Log(link)
+			t.Fail()
+		}
+	}
+}

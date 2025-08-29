@@ -8,6 +8,16 @@ import (
 // Given a node in the graph, it appears once (no outgoing link) or twice (ingoing and outgoing links)
 type DVGraph[S comparable, L comparable] map[S]map[S]L
 
+// GraphEdge defines an edge of a graph
+type GraphEdge[S comparable, L comparable] struct {
+	// Source of the edge
+	Source S
+	// Destination of the edge
+	Destination S
+	// Value of the edge
+	Value L
+}
+
 // NewDVGraph returns a new empty DAG
 func NewDVGraph[S comparable, L comparable]() DVGraph[S, L] {
 	return make(DVGraph[S, L])
@@ -241,4 +251,33 @@ func (d DVGraph[S, L]) ReverseWalk(starting S, processor func(current S)) {
 			}
 		}
 	}
+}
+
+// EdgesFrom gets the edges since a starting node
+func (d DVGraph[S, L]) EdgesFrom(starting S) []GraphEdge[S, L] {
+	elements := []S{starting}
+	var result []GraphEdge[S, L]
+	seen := make(map[S]bool)
+
+	for len(elements) != 0 {
+		element := elements[0]
+		elements = elements[1:]
+
+		if seen[element] {
+			continue
+		}
+
+		for destination, link := range d[element] {
+			edge := GraphEdge[S, L]{Source: element, Destination: destination, Value: link}
+			result = append(result, edge)
+
+			if !seen[destination] {
+				elements = append(elements, destination)
+			}
+		}
+
+		seen[element] = true
+	}
+
+	return result
 }
