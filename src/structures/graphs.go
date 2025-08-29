@@ -58,6 +58,58 @@ func (d DVGraph[S, L]) Link(source, destination S, link L) {
 	d[source][destination] = link
 }
 
+// LinkWithoutCycle adds a link if it makes no cycle.
+// If it makes a cycle, then rollback this link.
+// Result is true if link was added, false otherwise
+func (d DVGraph[S, L]) LinkWithoutCycle(source, destination S, link L) bool {
+	if source == destination {
+		// obvious cycle
+		return false
+	}
+
+	// measure previous state
+	_, sourceExists := d[source]
+	_, destinationExists := d[destination]
+	var previousLink bool
+	var previousValue L
+
+	if sourceExists {
+		if l, found := d[source][destination]; found {
+			previousLink = found
+			previousValue = l
+		} else {
+			previousLink = found
+		}
+	}
+
+	// perform the action
+	d.Link(source, destination, link)
+
+	// test if it would make a cycle, and then rollback
+	if !d.HasCycle() {
+		return true
+	}
+
+	// rollback because of the cycle
+	if previousLink {
+		d[source][destination] = previousValue
+		return false
+	} else {
+		// delete the link for sure
+		delete(d[source], destination)
+	}
+
+	if !destinationExists {
+		delete(d, destination)
+	}
+
+	if !sourceExists {
+		delete(d, source)
+	}
+
+	return false
+}
+
 // Neighbors returns a copy of the neighborhood of a node, false for not found in the graph
 func (d DVGraph[S, L]) Neighbors(source S) (map[S]L, bool) {
 	if values, found := d[source]; !found {

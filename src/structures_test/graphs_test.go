@@ -149,3 +149,50 @@ func TestWalkReverse(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestAddWithoutCycle(t *testing.T) {
+	graph := structures.NewDVGraph[string, int]()
+	if !graph.LinkWithoutCycle("a", "b", 10) {
+		t.Log("cycle detected, while there is none")
+		t.Fail()
+	}
+
+	if !graph.LinkWithoutCycle("a", "c", 10) {
+		t.Log("cycle detected, while there is none")
+		t.Fail()
+	}
+
+	if !graph.LinkWithoutCycle("b", "c", 10) {
+		t.Log("cycle detected, while there is none")
+		t.Fail()
+	}
+
+	// now make the cycle
+	if graph.LinkWithoutCycle("c", "b", 10) {
+		t.Log("cycle undetected, while there is b -> c -> b")
+		t.Fail()
+	}
+
+	// test the rollback
+	if !graph.Has("a") || !graph.Has("b") || !graph.Has("c") {
+		t.Log("missing node")
+		t.Fail()
+	}
+
+	// expecting :
+	// a -> c, a -> b, b -> c
+	if value, found := graph.Neighbors("c"); !found || len(value) != 0 {
+		t.Log("neighbor failed for c")
+		t.Fail()
+	}
+
+	if value, found := graph.Neighbors("b"); !found || len(value) != 1 {
+		t.Log("neighbor failed for b")
+		t.Fail()
+	}
+
+	if value, found := graph.Neighbors("a"); !found || len(value) != 2 {
+		t.Log("neighbor failed for a")
+		t.Fail()
+	}
+}
