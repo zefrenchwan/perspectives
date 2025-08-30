@@ -25,10 +25,20 @@ func NewHierarchy[S any]() Hierarchy[S] {
 	}
 }
 
-// Set value to a key (a name)
-func (h Hierarchy[S]) Set(key string, value S) {
+// SetValue sets value to a key (a name)
+func (h Hierarchy[S]) SetValue(key string, value S) {
 	h.values[key] = value
 	h.parents.AddNode(key)
+}
+
+// GetValue returns the value associated to that key, if any.
+// It returns the value, true if found, empty, false otherwise
+func (h Hierarchy[S]) GetValue(key string) (S, bool) {
+	var empty S
+	if v, found := h.values[key]; found {
+		return v, found
+	}
+	return empty, false
 }
 
 // LinkToParent links a child (assumed to exist) to a parent (assumed to exist)

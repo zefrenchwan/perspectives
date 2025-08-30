@@ -10,8 +10,20 @@ func TestLoadDependencies(t *testing.T) {
 	wValue := "class Worker extends humans.Human"
 	hValue := "class Human"
 	h := structures.NewHierarchy[string]()
-	h.Set("humans", hValue)
-	h.Set("workers", wValue)
+	h.SetValue("humans", hValue)
+	h.SetValue("workers", wValue)
+
+	if _, f := h.GetValue("none"); f {
+		t.Log("unexpected value for none (was not set)")
+		t.Fail()
+	} else if v, f := h.GetValue("humans"); !f {
+		t.Log("should have found humans")
+		t.Fail()
+	} else if v != hValue {
+		t.Log("unexpected value for humans")
+		t.Fail()
+	}
+
 	h.LinkToParent("workers", "humans")
 
 	dependencies := h.LoadWithDependencies("workers")
