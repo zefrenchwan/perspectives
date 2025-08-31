@@ -168,6 +168,23 @@ func (m Mapping[T]) Get() map[T]Period {
 	return result
 }
 
+// Cut returns the mapping restricted to other.
+// For instance,
+// if mapping contains ]-oo,+oo[ => "a" and other is ]-oo, now],
+// then result would be ]-oo, now] => "a"
+func (m Mapping[T]) Cut(other Period) Mapping[T] {
+	result := make(Mapping[T])
+	for current, currentValue := range m {
+		for _, i := range other.intervals {
+			if inter := i.intersection(current); !inter.empty {
+				result[inter] = currentValue
+			}
+		}
+	}
+
+	return result
+}
+
 // BuildCompactMapOfValues maps intervals to their string representation and returns the corresponding map
 func (m Mapping[T]) BuildCompactMapOfValues() map[string]T {
 	result := make(map[string]T)

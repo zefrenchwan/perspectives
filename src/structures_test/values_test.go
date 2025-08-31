@@ -100,3 +100,16 @@ func TestSerde(t *testing.T) {
 	}
 
 }
+
+func TestValuesCut(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	reference := structures.NewPeriodUntil(now, true)
+	value := structures.NewValue("a")
+	result := value.Cut(reference).Get()
+
+	if len(result) != 1 {
+		t.Fail()
+	} else if period := result["a"]; !period.Equals(reference) {
+		t.Fail()
+	}
+}
