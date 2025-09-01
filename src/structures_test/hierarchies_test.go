@@ -65,3 +65,15 @@ func TestHierarchyChilds(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestMismatch(t *testing.T) {
+	hierarchy := structures.NewHierarchy[string]()
+	hierarchy.SetValue("humans", "people")
+	hierarchy.SetValue("men", "male people")
+	hierarchy.SetValue("women", "female people")
+	hierarchy.AddChildInPartition("men", "humans")
+	if err := hierarchy.AddChildToParent("women", "humans"); err == nil {
+		t.Log("missing exception")
+		t.Fail()
+	}
+}
