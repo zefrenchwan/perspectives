@@ -38,3 +38,30 @@ func TestHierarchyAncesors(t *testing.T) {
 	}
 
 }
+
+func TestHierarchyChilds(t *testing.T) {
+	hierarchy := structures.NewHierarchy[string]()
+	hierarchy.SetValue("humans", "people")
+	hierarchy.SetValue("men", "male people")
+	hierarchy.SetValue("women", "female people")
+	hierarchy.AddChildInPartition("men", "humans")
+	hierarchy.AddChildInPartition("women", "humans")
+
+	if values, _ := hierarchy.Childs("pizza"); len(values) != 0 {
+		t.Fail()
+	}
+
+	if values, exclusive := hierarchy.Childs("humans"); len(values) != 2 {
+		t.Log("values mismatch")
+		t.Fail()
+	} else if !slices.Contains(values, "men") {
+		t.Log("missing men")
+		t.Fail()
+	} else if !slices.Contains(values, "women") {
+		t.Log("missing women")
+		t.Fail()
+	} else if !exclusive {
+		t.Log("exclusive failed")
+		t.Fail()
+	}
+}

@@ -118,3 +118,21 @@ func (h Hierarchy[S]) Ancestors(source string) ([]string, bool) {
 
 	return result, result != nil
 }
+
+// Childs returns the childs of a node by name
+// Result is the cbilds (if any) and a boolean
+// This boolean is true if childs are mutually exclusive
+func (h Hierarchy[S]) Childs(source string) ([]string, bool) {
+	if links, found := h.childs.Neighbors(source); !found {
+		return nil, false
+	} else {
+		var result []string
+		var exclusive bool
+		for child, linkType := range links {
+			exclusive = linkType == child_exclusive_link
+			result = append(result, child)
+		}
+
+		return result, exclusive
+	}
+}
