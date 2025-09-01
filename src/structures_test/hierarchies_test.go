@@ -1,46 +1,40 @@
 package structures_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
-func TestLoadDependencies(t *testing.T) {
-	wValue := "class Worker extends humans.Human"
-	hValue := "class Human"
-	h := structures.NewHierarchy[string]()
-	h.SetValue("humans", hValue)
-	h.SetValue("workers", wValue)
+func TestHierarchyAncesors(t *testing.T) {
+	hierarchy := structures.NewHierarchy[string]()
+	hierarchy.SetValue("humans", "people")
+	hierarchy.SetValue("men", "male people")
+	hierarchy.SetValue("women", "female people")
 
-	if _, f := h.GetValue("none"); f {
-		t.Log("unexpected value for none (was not set)")
-		t.Fail()
-	} else if v, f := h.GetValue("humans"); !f {
-		t.Log("should have found humans")
-		t.Fail()
-	} else if v != hValue {
-		t.Log("unexpected value for humans")
+	if err := hierarchy.AddChildInPartition("men", "humans"); err != nil {
+		t.Log(err)
 		t.Fail()
 	}
 
-	h.LinkToParent("workers", "humans")
-
-	dependencies := h.LoadWithDependencies("workers")
-	if len(dependencies) != 2 {
-		t.Log("failed to load dependencies")
-		t.Fail()
-	} else if value, found := dependencies["workers"]; !found {
-		t.Log("failed to load workers")
-		t.Fail()
-	} else if wValue != value {
-		t.Log("failed to load workers value")
-		t.Fail()
-	} else if value, found := dependencies["humans"]; !found {
-		t.Log("failed to load humans")
-		t.Fail()
-	} else if hValue != value {
-		t.Log("failed to load humans value")
+	if err := hierarchy.AddChildInPartition("women", "humans"); err != nil {
+		t.Log(err)
 		t.Fail()
 	}
+
+	if parents, found := hierarchy.Ancestors("women"); !found {
+		t.Log("failed to load women -> humans")
+		t.Fail()
+	} else if len(parents) != 2 {
+		t.Log("missing values")
+		t.Fail()
+	} else if !slices.Contains(parents, "women") {
+		t.Log("missing base")
+		t.Fail()
+	} else if !slices.Contains(parents, "humans") {
+		t.Log("missing destination")
+		t.Fail()
+	}
+
 }

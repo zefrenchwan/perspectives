@@ -46,6 +46,21 @@ func (d DVGraph[S, L]) RemoveNode(node S) bool {
 	return found
 }
 
+// ClearLinks deletes all existing links from a node.
+// If there were links return true, false otherwise
+func (d DVGraph[S, L]) ClearLinks(node S) bool {
+	if d == nil {
+		return false
+	} else if values, found := d[node]; !found {
+		return false
+	} else if len(values) == 0 {
+		return false
+	} else {
+		delete(d, node)
+		return true
+	}
+}
+
 // Has returns true if node is in the graph
 func (d DVGraph[S, L]) Has(node S) bool {
 	_, found := d[node]
@@ -133,6 +148,21 @@ func (d DVGraph[S, L]) Neighbors(source S) (map[S]L, bool) {
 	} else {
 		return nil, true
 	}
+}
+
+// Edges return the edges from a node, if any (true) or empty, false
+func (d DVGraph[S, L]) Edges(source S) ([]GraphEdge[S, L], bool) {
+	values, found := d[source]
+	if !found {
+		return nil, false
+	}
+
+	var result []GraphEdge[S, L]
+	for dest, link := range values {
+		result = append(result, GraphEdge[S, L]{Source: source, Destination: dest, Value: link})
+	}
+
+	return result, true
 }
 
 // HasCycle returns true if graph contains a cycle

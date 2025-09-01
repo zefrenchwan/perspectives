@@ -54,6 +54,50 @@ func TestGraphRemove(t *testing.T) {
 
 }
 
+func TestNeighbors(t *testing.T) {
+	graph := structures.NewDVGraph[string, int]()
+	graph.Link("a", "b", 10)
+	graph.Link("a", "c", 100)
+	graph.Link("c", "d", 1000)
+	graph.AddNode("z")
+
+	// not exists
+	if values, found := graph.Neighbors("x"); found || len(values) != 0 {
+		t.Log("x not in graph")
+		t.Fail()
+	}
+
+	if values, found := graph.Edges("x"); found || len(values) != 0 {
+		t.Log("x not in graph")
+		t.Fail()
+	}
+
+	// exists
+	if values, found := graph.Neighbors("a"); !found || len(values) != 2 {
+		t.Log("a in graph with two childs")
+		t.Fail()
+	} else if values["b"] != 10 {
+		t.Fail()
+	} else if values["c"] != 100 {
+		t.Fail()
+	}
+
+	if values, found := graph.Edges("c"); !found || len(values) != 1 {
+		t.Log("c in graph with one child")
+		t.Fail()
+	} else {
+		value := values[0]
+		if value.Source != "c" {
+			t.Fail()
+		} else if value.Destination != "d" {
+			t.Fail()
+		} else if value.Value != 1000 {
+			t.Fail()
+		}
+	}
+
+}
+
 func TestCycles(t *testing.T) {
 	graph := structures.NewDVGraph[string, int]()
 	graph.Link("a", "b", 10)

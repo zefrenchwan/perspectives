@@ -103,6 +103,7 @@ func TestSerde(t *testing.T) {
 
 func TestValuesCut(t *testing.T) {
 	now := time.Now().Truncate(time.Hour)
+	after := now.AddDate(10, 0, 0)
 	reference := structures.NewPeriodUntil(now, true)
 	value := structures.NewValue("a")
 	result := value.Cut(reference).Get()
@@ -110,6 +111,17 @@ func TestValuesCut(t *testing.T) {
 	if len(result) != 1 {
 		t.Fail()
 	} else if period := result["a"]; !period.Equals(reference) {
+		t.Fail()
+	}
+
+	// test empty result
+	reference = structures.NewPeriodSince(after, true)
+	value = structures.NewValueUntil("a", now, true)
+	result = value.Cut(reference).Get()
+
+	if len(result) != 0 {
+		t.Log("empty expected")
+		t.Log(result)
 		t.Fail()
 	}
 }

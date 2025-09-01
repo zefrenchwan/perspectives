@@ -6,7 +6,15 @@ import (
 )
 
 // parent_link defines an "extends" relation
-const parent_link = 0
+const parent_link = 10
+
+// child_exclusive_link defines a link that says childs form a partition of parent.
+// For instance, man and woman are exclusive childs of person
+const child_exclusive_link = 100
+
+// child_standard_link defines a link that says that childs are linked to parents.
+// For instance, people may be worker or father (and both)
+const child_standard_link = 1000
 
 // Hierarchy is a DAG of named S , link is extends.
 // Assumption is that a name is unique
@@ -15,6 +23,8 @@ type Hierarchy[S any] struct {
 	parents DVGraph[string, int]
 	// values link instances of S by name
 	values map[string]S
+	// childs link parents to childs via a link : partition or standard
+	childs DVGraph[string, int]
 }
 
 // NewHierarchy builds an empty hierarchy
@@ -22,6 +32,7 @@ func NewHierarchy[S any]() Hierarchy[S] {
 	return Hierarchy[S]{
 		parents: NewDVGraph[string, int](),
 		values:  make(map[string]S),
+		childs:  NewDVGraph[string, int](),
 	}
 }
 
@@ -41,8 +52,22 @@ func (h Hierarchy[S]) GetValue(key string) (S, bool) {
 	return empty, false
 }
 
-// LinkToParent links a child (assumed to exist) to a parent (assumed to exist)
-func (h Hierarchy[S]) LinkToParent(child, parent string) error {
+// AddChildToParent adds a child to a parent
+// If other childs form a partition, raise an error
+func (h Hierarchy[S]) AddChildToParent(child, parent string) error {
+	return h.addLink(child, parent, child_standard_link)
+}
+
+// AddChildInPartition adds a child in a partition
+// If other childs form a standard union, raise an error
+func (h Hierarchy[S]) AddChildInPartition(child, parent string) error {
+	return h.addLink(child, parent, child_exclusive_link)
+}
+
+// addLink is private method to deal with links.
+// It adds a
+func (h Hierarchy[S]) addLink(child, parent string, link int) error {
+	// test if values exist or not
 	_, sourceExists := h.values[child]
 	_, destinationExists := h.values[parent]
 	if child == parent {
@@ -51,24 +76,45 @@ func (h Hierarchy[S]) LinkToParent(child, parent string) error {
 		return errors.New("child does not exist")
 	} else if !destinationExists {
 		return errors.New("parent does not exist")
-	} else if !h.parents.LinkWithoutCycle(child, parent, parent_link) {
-		return fmt.Errorf("linking %s to %s would make a cycle", child, parent)
-	} else {
-		return nil
 	}
+
+	// at this point, parent and child exist, but link may not
+	existingLinks, foundLinks := h.childs.Neighbors(parent)
+	// if some previous links existed, ensure that new link has the same type
+	var existingType int
+	if foundLinks {
+		// test if link is the same as the previous ones
+		// THAT IS: don't add partition to simple union, and vice versa
+		for _, existingLink := range existingLinks {
+			existingType = existingLink
+			break
+		}
+
+		// test if type of link to add matches the current type of the existing links
+		if existingType != link {
+			return fmt.Errorf("cannot create link with a different type than existing values for %s", child)
+		}
+	}
+
+	// Add the link in the parents tree
+	addedLink := h.parents.LinkWithoutCycle(child, parent, parent_link)
+	if !addedLink {
+		return fmt.Errorf("there would be a cycle linking %s to %s", child, parent)
+	}
+
+	// no link detected, so we may add
+	h.childs.Link(parent, child, link)
+
+	return nil
 }
 
-// LoadWithDependencies returns all the dependencies from a node.
-// For instance, if "a" -> X depends on "b" -> Y, then result for "a" would be "a" -> X , "b" -> Y
-func (h Hierarchy[S]) LoadWithDependencies(name string) map[string]S {
-	result := make(map[string]S)
-	h.parents.Walk(name, func(source string) {
-		result[source] = h.values[source]
+// Ancestors returns the ancestors of a value as a slice.
+// It returns the ancestors (including the node), true or nil, false for not found
+func (h Hierarchy[S]) Ancestors(source string) ([]string, bool) {
+	var result []string
+	h.parents.Walk(source, func(source string) {
+		result = append(result, source)
 	})
 
-	if len(result) == 0 {
-		return nil
-	}
-
-	return result
+	return result, result != nil
 }
