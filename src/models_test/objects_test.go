@@ -40,3 +40,18 @@ func TestObjectAttributes(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestObjectAttributesPartiallyFilled(t *testing.T) {
+	o := models.NewObject([]string{"Human"})
+	o.AddSemanticForAttribute("first name", "name")
+	o.AddSemanticForAttribute("last name", "name")
+	o.SetValue("last name", "Doe")
+
+	if values := o.GetAllValues(); len(values) != 1 {
+		t.Log("missing fields")
+		t.Fail()
+	} else if slices.Compare([]string{"Doe"}, values["last name"]) != 0 {
+		t.Log("missing content for attribute")
+		t.Fail()
+	}
+}

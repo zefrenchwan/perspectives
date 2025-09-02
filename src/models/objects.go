@@ -105,6 +105,7 @@ func (o *Object) GetAllValues() map[string][]string {
 	result := make(map[string][]string)
 
 	for name, attr := range o.attributes {
+		// GetValues deal with nil, no need to check for nil values
 		values := attr.values.GetValues()
 		if len(values) != 0 {
 			result[name] = values
