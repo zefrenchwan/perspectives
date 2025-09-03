@@ -23,10 +23,16 @@ type FormalClass struct {
 // It defines relations main chararestics: how to use it (transitive ? Symetric ?) and matching roles.
 // Roles may be: "subject", "location", etc.
 type FormalRelation struct {
-	Name       string
+	// Id of the formal relation
+	Id string
+	// Name of the relation
+	Name string
+	// Transitive means R(a,b) and R(b,c) implies R(a,c)
 	Transitive bool
-	Symetric   bool
-	Roles      map[string]FormalClass
+	// Symetric means R(a,b) equivalent to R(b,a)
+	Symetric bool
+	// Roles may be subject, object, location, etc
+	Roles map[string]FormalClass
 }
 
 // NewFormalClass returns a new class
