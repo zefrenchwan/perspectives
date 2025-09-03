@@ -119,6 +119,21 @@ func (h Hierarchy[S]) Ancestors(source string) ([]string, bool) {
 	return result, result != nil
 }
 
+// AncestorsValues return the ancestors values from a given source
+func (h Hierarchy[S]) AncestorsValues(source string) ([]S, bool) {
+	var result []S
+	if ancestors, found := h.Ancestors(source); !found {
+		return nil, false
+	} else {
+		for _, name := range ancestors {
+			value := h.values[name]
+			result = append(result, value)
+		}
+
+		return result, true
+	}
+}
+
 // Childs returns the childs of a node by name
 // Result is the cbilds (if any) and a boolean
 // This boolean is true if childs are mutually exclusive
