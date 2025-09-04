@@ -19,7 +19,7 @@ func TestRelationsBuild(t *testing.T) {
 	} else if relation == nil {
 		t.Log("nil relation")
 		t.Fail()
-	} else if relation.Verb != "loves" {
+	} else if relation.Link != "loves" {
 		t.Log("wrong verb")
 		t.Fail()
 	} else if !relation.Lifetime.Equals(structures.NewFullPeriod()) {
@@ -62,7 +62,7 @@ func TestRelationsComposeBuild(t *testing.T) {
 	} else if relation == nil {
 		t.Log("nil relation")
 		t.Fail()
-	} else if relation.Verb != "knows" {
+	} else if relation.Link != "knows" {
 		t.Log("wrong verb")
 		t.Fail()
 	} else if !relation.Lifetime.Equals(structures.NewFullPeriod()) {
@@ -86,7 +86,7 @@ func TestRelationsComposeBuild(t *testing.T) {
 	} else if child, err := v.Build(); err != nil {
 		t.Log("wrong composition")
 		t.Fail()
-	} else if child.Verb != "loves" {
+	} else if child.Link != "loves" {
 		t.Log("wrong verb for child")
 		t.Fail()
 	}

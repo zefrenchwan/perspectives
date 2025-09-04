@@ -32,7 +32,7 @@ type FormalRelation struct {
 	// Id of the formal relation
 	Id string
 	// Name of the relation
-	Name string
+	Link string
 	// Transitive means R(a,b) and R(b,c) implies R(a,c)
 	Transitive bool
 	// Symetric means R(a,b) equivalent to R(b,a)

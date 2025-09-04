@@ -21,8 +21,8 @@ type RelationTerm struct {
 // For instance Likes(John, Cheese) is a relation.
 // But Knows(John, Likes(Marie, Cheese)) is a relation too
 type Relation struct {
-	// Verb defines the semantic of the relation
-	Verb string
+	// Link defines the semantic of the relation
+	Link string
 	// Parameters links roles to terms.
 	Parameters map[string]RelationTerm
 	// Lifetime defines the period during the relation is true
@@ -64,9 +64,9 @@ func NewGroupTerm(objects []Object) RelationTerm {
 	return result
 }
 
-// NewRelationTerm builds a new relation (as a term) from a verb, roles and true for a given duration
-func NewRelationTerm(verb string, parameters map[string]RelationTerm, duration structures.Period) RelationTerm {
-	relation := Relation{Verb: verb, Parameters: make(map[string]RelationTerm), Lifetime: duration}
+// NewRelationTerm builds a new relation (as a term) from a link, roles and true for a given duration
+func NewRelationTerm(link string, parameters map[string]RelationTerm, duration structures.Period) RelationTerm {
+	relation := Relation{Link: link, Parameters: make(map[string]RelationTerm), Lifetime: duration}
 	maps.Copy(relation.Parameters, parameters)
 
 	return RelationTerm{
