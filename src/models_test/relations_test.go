@@ -95,23 +95,8 @@ func TestRelationsComposeBuild(t *testing.T) {
 func TestRelationsWalkthrough(t *testing.T) {
 	source := models.NewObject([]string{"Human"})
 	dest := models.NewObject([]string{"Dessert"})
-	likes := models.NewRelationTerm(
-		"likes",
-		map[string]models.RelationTerm{
-			"subject": models.NewObjectTerm(source),
-			"object":  models.NewObjectTerm(dest),
-		},
-		structures.NewFullPeriod(),
-	)
-
-	knows := models.NewRelationTerm(
-		"knows",
-		map[string]models.RelationTerm{
-			"subject": models.NewObjectTerm(source),
-			"object":  likes,
-		},
-		structures.NewFullPeriod(),
-	)
+	likes := models.NewSubjectObjectRelationTerm("likes", source, models.NewObjectTerm(dest))
+	knows := models.NewSubjectObjectRelationTerm("knows", source, likes)
 
 	operands := knows.ObjectsOperands()
 	values := make([]string, 0)

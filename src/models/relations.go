@@ -135,3 +135,15 @@ func NewRelationTerm(link string, parameters map[string]RelationTerm, duration s
 		relation: &relation,
 	}
 }
+
+// NewSubjectObjectRelationTerm returns a relation term with given subject and object, assumed to last forever
+func NewSubjectObjectRelationTerm(link string, subject Object, object RelationTerm) RelationTerm {
+	return NewRelationTerm(
+		link,
+		map[string]RelationTerm{
+			"subject": NewObjectTerm(subject),
+			"object":  object,
+		},
+		structures.NewFullPeriod(),
+	)
+}
