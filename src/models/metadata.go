@@ -25,8 +25,17 @@ type FormalClass struct {
 	Attributes map[string]FormalAttribute
 }
 
+// FormalRelationParameter defines characteristics of formal relations parameters
+type FormalRelationParameter struct {
+	// ExpectedTraits for that parameter
+	ExpectedTraits []string
+	// ExpectedRelation is true when only a relation is expected.
+	// For instance, Person Knows (Relation)
+	ExpectedRelation bool
+}
+
 // FormalRelation is a formal link definition.
-// It defines relations main chararestics: how to use it (transitive ? Symetric ?) and matching roles.
+// It defines relations main characteristics: how to use it (transitive ? Symetric ?) and matching roles.
 // Roles may be: "subject", "location", etc.
 type FormalRelation struct {
 	// Id of the formal relation
@@ -34,11 +43,13 @@ type FormalRelation struct {
 	// Name of the relation
 	Link string
 	// Transitive means R(a,b) and R(b,c) implies R(a,c)
+	// For instance, isPartOf would be transitive
 	Transitive bool
 	// Symetric means R(a,b) equivalent to R(b,a)
+	// For instance: IsInCoupleWith
 	Symetric bool
 	// Roles may be subject, object, location, etc
-	Roles map[string][]string
+	Roles map[string]FormalRelationParameter
 }
 
 // possible roles
