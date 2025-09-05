@@ -4,6 +4,7 @@ import (
 	"errors"
 	"maps"
 
+	"github.com/google/uuid"
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
@@ -17,16 +18,78 @@ type RelationTerm struct {
 	relation *Relation
 }
 
+// ObjectsOperands returns all the objects the term uses.
+// One object appears once as a pointer (deduplication)
+func (r RelationTerm) ObjectsOperands() []*Object {
+	matches := make(map[string]*Object)
+	seen := make(map[*Relation]bool)
+	var relations []*Relation
+
+	if r.relation != nil {
+		relations = append(relations, r.relation)
+	} else {
+		return structures.SliceDeduplicate(r.objects)
+	}
+
+	for len(relations) != 0 {
+		current := relations[0]
+		relations = relations[1:]
+		seen[current] = true
+		for _, term := range current.Parameters {
+			if term.objects != nil {
+				for _, object := range term.objects {
+					matches[object.Id] = object
+				}
+			} else if term.relation != nil {
+				if !seen[term.relation] {
+					relations = append(relations, term.relation)
+				}
+			}
+		}
+	}
+
+	var objects []*Object
+	for _, val := range matches {
+		objects = append(objects, val)
+	}
+
+	return objects
+}
+
 // Relation is a tree with nodes being terms and links being roles.
 // For instance Likes(John, Cheese) is a relation.
 // But Knows(John, Likes(Marie, Cheese)) is a relation too
 type Relation struct {
+	// Id defines an unique relation
+	Id string
 	// Link defines the semantic of the relation
 	Link string
 	// Parameters links roles to terms.
 	Parameters map[string]RelationTerm
 	// Lifetime defines the period during the relation is true
 	Lifetime structures.Period
+}
+
+// NewRelation builds a new relation.
+// A relation links content as roles and values for a given duration
+func NewRelation(link string, parameters map[string]RelationTerm, duration structures.Period) Relation {
+	relation := Relation{
+		Id:         uuid.NewString(),
+		Link:       link,
+		Parameters: make(map[string]RelationTerm),
+		Lifetime:   duration,
+	}
+
+	maps.Copy(relation.Parameters, parameters)
+	return relation
+}
+
+// AsRelationTerm returns a term for that relation.
+// Use it to include this relation again as a term to compose
+func (r Relation) AsRelationTerm() RelationTerm {
+	return RelationTerm{
+		relation: &r,
+	}
 }
 
 // AsObjects returns the objects within the term (may be nil)
@@ -66,8 +129,7 @@ func NewGroupTerm(objects []Object) RelationTerm {
 
 // NewRelationTerm builds a new relation (as a term) from a link, roles and true for a given duration
 func NewRelationTerm(link string, parameters map[string]RelationTerm, duration structures.Period) RelationTerm {
-	relation := Relation{Link: link, Parameters: make(map[string]RelationTerm), Lifetime: duration}
-	maps.Copy(relation.Parameters, parameters)
+	relation := NewRelation(link, parameters, duration)
 
 	return RelationTerm{
 		relation: &relation,

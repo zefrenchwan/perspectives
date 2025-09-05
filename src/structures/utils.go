@@ -25,3 +25,18 @@ func SliceReduce[T cmp.Ordered](original []T) []T {
 	slices.Sort(result)
 	return result
 }
+
+// SliceDeduplicate returns the slice content with one value only from original slice
+func SliceDeduplicate[T comparable](original []T) []T {
+	var result []T
+	seen := make(map[T]bool)
+	for _, v := range original {
+		seen[v] = true
+	}
+
+	for k := range seen {
+		result = append(result, k)
+	}
+
+	return result
+}

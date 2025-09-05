@@ -91,3 +91,43 @@ func TestRelationsComposeBuild(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestRelationsWalkthrough(t *testing.T) {
+	source := models.NewObject([]string{"Human"})
+	dest := models.NewObject([]string{"Dessert"})
+	likes := models.NewRelationTerm(
+		"likes",
+		map[string]models.RelationTerm{
+			"subject": models.NewObjectTerm(source),
+			"object":  models.NewObjectTerm(dest),
+		},
+		structures.NewFullPeriod(),
+	)
+
+	knows := models.NewRelationTerm(
+		"knows",
+		map[string]models.RelationTerm{
+			"subject": models.NewObjectTerm(source),
+			"object":  likes,
+		},
+		structures.NewFullPeriod(),
+	)
+
+	operands := knows.ObjectsOperands()
+	values := make([]string, 0)
+	for _, obj := range operands {
+		values = append(values, obj.Id)
+	}
+
+	if len(values) != 2 {
+		t.Log("missing operands")
+		t.Fail()
+	} else if !slices.Contains(values, source.Id) {
+		t.Log("missing source")
+		t.Fail()
+	} else if !slices.Contains(values, dest.Id) {
+		t.Log("missing dest")
+		t.Fail()
+	}
+
+}
