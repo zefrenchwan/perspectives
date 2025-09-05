@@ -31,6 +31,21 @@ type Object struct {
 	lifetime structures.Period
 }
 
+// ObjectDescription describes the object
+type ObjectDescription struct {
+	// Id of the description (not the object)
+	Id string
+	// Traits of the object
+	Traits []string
+	// Attributes of the object
+	Attributes []string
+}
+
+// IsEmpty returns true if the attribute contains no data
+func (a *Attribute) IsEmpty() bool {
+	return a == nil || len(a.values) == 0
+}
+
 // NewObject returns an object implementing those traits
 func NewObject(traits []string) Object {
 	return Object{
@@ -86,6 +101,23 @@ func (o *Object) GetSemanticForAttribute(attribute string) ([]string, bool) {
 	}
 }
 
+// Attributes return the attributes of the object
+func (o *Object) Attributes() []string {
+	var result []string
+	for name, attr := range o.attributes {
+		if attr.IsEmpty() {
+			result = append(result, name)
+		}
+	}
+
+	if len(result) == 0 {
+		result = make([]string, 0)
+		return result
+	} else {
+		return structures.SliceReduce(result)
+	}
+}
+
 // SetValue sets a value for that attribute
 func (o *Object) SetValue(attribute, value string) {
 	if attr, found := o.attributes[attribute]; !found {
@@ -113,4 +145,20 @@ func (o *Object) GetAllValues() map[string][]string {
 	}
 
 	return result
+}
+
+// Describe returns the structure of the object
+func (o *Object) Describe() ObjectDescription {
+	var attributes []string
+	for name, attr := range o.attributes {
+		if !attr.IsEmpty() {
+			attributes = append(attributes, name)
+		}
+	}
+
+	return ObjectDescription{
+		Id:         uuid.NewString(),
+		Traits:     structures.SliceReduce(o.traits),
+		Attributes: structures.SliceReduce(attributes),
+	}
 }
