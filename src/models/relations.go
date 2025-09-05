@@ -92,6 +92,16 @@ func (r Relation) AsRelationTerm() RelationTerm {
 	}
 }
 
+// Roles returns the roles for that relation
+func (r Relation) Roles() []string {
+	var roles []string
+	for name := range r.Parameters {
+		roles = append(roles, name)
+	}
+
+	return structures.SliceReduce(roles)
+}
+
 // AsObjects returns the objects within the term (may be nil)
 func (t RelationTerm) AsObjects() []*Object {
 	return t.objects
