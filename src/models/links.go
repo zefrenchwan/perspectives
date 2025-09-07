@@ -51,7 +51,7 @@ type LinkValue interface {
 	AsGroup() ([]Object, error)
 	// AsObject casts the value as an object, or raises an error it underlying content is not an object
 	AsObject() (Object, error)
-	// AsTrait returns the value as a trait
+	// AsTrait returns the value as a trait, or raises an error it underlying content is not a trait
 	AsTrait() (Trait, error)
 }
 

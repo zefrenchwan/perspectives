@@ -59,7 +59,10 @@ func TestObjectAttributesPartiallyFilled(t *testing.T) {
 func TestObjectDescription(t *testing.T) {
 	obj := models.NewObject([]string{"Human"})
 
-	if desc := obj.Describe(); len(desc.Attributes) != 0 {
+	if desc := obj.Describe(); desc.IdObject != obj.Id {
+		t.Log("failed to reference object")
+		t.Fail()
+	} else if len(desc.Attributes) != 0 {
 		t.Log("wrong attributes for object")
 		t.Fail()
 	} else if slices.Compare(desc.Traits, []string{"Human"}) != 0 {

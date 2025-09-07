@@ -19,17 +19,6 @@ type Attribute struct {
 	values structures.Mapping[string]
 }
 
-// Trait defines a general label for an object
-type Trait struct {
-	// Name of the label
-	Name string
-}
-
-// NewTrait returns a new trait for that label
-func NewTrait(label string) Trait {
-	return Trait{Name: label}
-}
-
 // Object defines an object for a given lifetime with values
 type Object struct {
 	// Id of the object (assumed to be unique)
@@ -40,16 +29,6 @@ type Object struct {
 	attributes map[string]Attribute
 	// lifetime of the object, that is the period that object "lives"
 	lifetime structures.Period
-}
-
-// ObjectDescription describes the object
-type ObjectDescription struct {
-	// Id of the description (not the object)
-	Id string
-	// Traits of the object
-	Traits []string
-	// Attributes of the object
-	Attributes []string
 }
 
 // IsEmpty returns true if the attribute contains no data
@@ -178,6 +157,12 @@ func (o *Object) GetAllValues() map[string][]string {
 
 // Describe returns the structure of the object
 func (o *Object) Describe() ObjectDescription {
+	if o == nil {
+		return ObjectDescription{
+			Id: uuid.NewString(),
+		}
+	}
+
 	var attributes []string
 	for name, attr := range o.attributes {
 		if !attr.IsEmpty() {
@@ -192,6 +177,7 @@ func (o *Object) Describe() ObjectDescription {
 
 	return ObjectDescription{
 		Id:         uuid.NewString(),
+		IdObject:   o.Id,
 		Traits:     structures.SliceReduce(traits),
 		Attributes: structures.SliceReduce(attributes),
 	}
