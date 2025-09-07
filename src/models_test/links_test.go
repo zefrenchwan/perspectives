@@ -10,7 +10,7 @@ import (
 
 func TestLinksCreation(t *testing.T) {
 	john := models.NewObject([]string{"Human"})
-	cheese := models.NewObject([]string{"cheese"})
+	cheese := models.NewTrait("cheese")
 	mary := models.NewObject([]string{"Human"})
 
 	if _, err := models.NewLink("likes", map[string]any{"subject": john, "object": "cheese"}, structures.NewFullPeriod()); err == nil {
@@ -45,7 +45,7 @@ func TestLinksCreation(t *testing.T) {
 
 func TestLinkWalkthrough(t *testing.T) {
 	john := models.NewObject([]string{"Human"})
-	cheese := models.NewObject([]string{"cheese"})
+	cheese := models.NewTrait("cheese")
 	mary := models.NewObject([]string{"Human"})
 
 	likes, _ := models.NewLink("likes", map[string]any{"subject": []models.Object{john, mary}, "object": cheese}, structures.NewFullPeriod())
@@ -61,7 +61,7 @@ func TestLinkWalkthrough(t *testing.T) {
 	} else if s, found := childs["subject"]; !found {
 		t.Log("missing subject child at top level")
 		t.Fail()
-	} else if !s.IsObject() {
+	} else if s.GetType() != models.LinkValueAsObject {
 		t.Log("wrong subject type as top level")
 		t.Fail()
 	} else if so, err := s.AsObject(); err != nil {
@@ -73,7 +73,7 @@ func TestLinkWalkthrough(t *testing.T) {
 	} else if o, found := childs["object"]; !found {
 		t.Log("missing object at top level")
 		t.Fail()
-	} else if !o.IsLink() {
+	} else if o.GetType() != models.LinkValueAsLink {
 		t.Log("wrong link parameter")
 		t.Fail()
 	} else if inner, err := o.AsLink(); err != nil {
@@ -90,7 +90,7 @@ func TestLinkWalkthrough(t *testing.T) {
 	} else if s, found := childs["subject"]; !found {
 		t.Log("missing subject child at inner level")
 		t.Fail()
-	} else if !s.IsGroup() {
+	} else if s.GetType() != models.LinkValueAsGroup {
 		t.Log("wrong subject type as inner level")
 		t.Fail()
 	} else if so, err := s.AsGroup(); err != nil {
@@ -102,13 +102,13 @@ func TestLinkWalkthrough(t *testing.T) {
 	} else if o, found := childs["object"]; !found {
 		t.Log("missing object at inner level")
 		t.Fail()
-	} else if !o.IsObject() {
+	} else if o.GetType() != models.LinkValueAsTrait {
 		t.Log("wrong inner object parameter")
 		t.Fail()
-	} else if c, err := o.AsObject(); err != nil {
+	} else if c, err := o.AsTrait(); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if c.Id != cheese.Id {
+	} else if c.Name != cheese.Name {
 		t.Log("wrong object parameter for inner relation")
 		t.Fail()
 	}

@@ -19,12 +19,23 @@ type Attribute struct {
 	values structures.Mapping[string]
 }
 
+// Trait defines a general label for an object
+type Trait struct {
+	// Name of the label
+	Name string
+}
+
+// NewTrait returns a new trait for that label
+func NewTrait(label string) Trait {
+	return Trait{Name: label}
+}
+
 // Object defines an object for a given lifetime with values
 type Object struct {
 	// Id of the object (assumed to be unique)
 	Id string
 	// traits of the object, by name
-	traits []string
+	traits []Trait
 	// attributes of the object, key is attribute name
 	attributes map[string]Attribute
 	// lifetime of the object, that is the period that object "lives"
@@ -48,9 +59,22 @@ func (a *Attribute) IsEmpty() bool {
 
 // NewObject returns an object implementing those traits
 func NewObject(traits []string) Object {
+	// map and deduplicate traits
+	declaringTraits := make(map[string]Trait)
+
+	for _, trait := range traits {
+		declaringTraits[trait] = Trait{Name: trait}
+	}
+
+	var objectTraits []Trait
+	for _, value := range declaringTraits {
+		objectTraits = append(objectTraits, value)
+	}
+
+	// then, build the object
 	return Object{
 		Id:         uuid.NewString(),
-		traits:     structures.SliceReduce(traits),
+		traits:     objectTraits,
 		attributes: make(map[string]Attribute),
 		lifetime:   structures.NewFullPeriod(),
 	}
@@ -77,7 +101,12 @@ func NewObjectDuring(traits []string, startTime, endTime time.Time) (Object, err
 
 // DeclaringTraits returns the declaring traits for that object
 func (o *Object) DeclaringTraits() []string {
-	return o.traits
+	var result []string
+	for _, trait := range o.traits {
+		result = append(result, trait.Name)
+	}
+
+	return structures.SliceReduce(result)
 }
 
 // AddSemanticForAttribute flags this attribute for that particular meaning.
@@ -156,9 +185,14 @@ func (o *Object) Describe() ObjectDescription {
 		}
 	}
 
+	var traits []string
+	for _, value := range o.traits {
+		traits = append(traits, value.Name)
+	}
+
 	return ObjectDescription{
 		Id:         uuid.NewString(),
-		Traits:     structures.SliceReduce(o.traits),
+		Traits:     structures.SliceReduce(traits),
 		Attributes: structures.SliceReduce(attributes),
 	}
 }
