@@ -1,6 +1,7 @@
 package models
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/models"
@@ -109,6 +110,45 @@ func TestLinkWalkthrough(t *testing.T) {
 		t.Fail()
 	} else if c.Id != cheese.Id {
 		t.Log("wrong object parameter for inner relation")
+		t.Fail()
+	}
+}
+
+func TestLinkObjectsWalkthrough(t *testing.T) {
+	john := models.NewObject([]string{"Human"})
+	cheese := models.NewObject([]string{"cheese"})
+	mary := models.NewObject([]string{"Human"})
+
+	likes, _ := models.NewLink("likes", map[string]any{"subject": []models.Object{john, mary}, "object": cheese}, structures.NewFullPeriod())
+	knows, _ := models.NewLink("knows", map[string]any{"subject": mary, "object": likes}, structures.NewFullPeriod())
+
+	if values := likes.AllObjectsOperands(); len(values) != 3 {
+		t.Log("faield to find objects")
+		t.Log(values)
+		t.Fail()
+	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == john.Id }) {
+		t.Log("missing object")
+		t.Fail()
+	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == mary.Id }) {
+		t.Log("missing other object")
+		t.Fail()
+	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == cheese.Id }) {
+		t.Log("missing other object")
+		t.Fail()
+	}
+
+	if values := knows.AllObjectsOperands(); len(values) != 3 {
+		t.Log("faield to find objects")
+		t.Log(values)
+		t.Fail()
+	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == john.Id }) {
+		t.Log("missing object")
+		t.Fail()
+	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == mary.Id }) {
+		t.Log("missing other object")
+		t.Fail()
+	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == cheese.Id }) {
+		t.Log("missing other object")
 		t.Fail()
 	}
 }

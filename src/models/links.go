@@ -108,6 +108,51 @@ func (l Link) ValuesPerRole() map[string]LinkValue {
 	return result
 }
 
+// AllObjectsOperands returns the objects appearing recursively in the link.
+// It means that if l is a link of links of objects, descendants objects will appear.
+// Each object appears once per id
+func (l Link) AllObjectsOperands() []Object {
+	var result []Object
+	matches := make(map[string]Object)
+	linksAlreadyVisited := make(map[string]bool)
+
+	elements := []Link{l}
+	for len(elements) != 0 {
+		current := elements[0]
+		elements = elements[1:]
+
+		if linksAlreadyVisited[current.id] {
+			continue
+		} else {
+			linksAlreadyVisited[current.id] = true
+		}
+
+		for _, value := range current.ValuesPerRole() {
+			switch {
+			case value.IsLink():
+				l, _ := value.AsLink()
+				if !linksAlreadyVisited[l.id] {
+					elements = append(elements, l)
+				}
+			case value.IsGroup():
+				g, _ := value.AsGroup()
+				for _, obj := range g {
+					matches[obj.Id] = obj
+				}
+			case value.IsObject():
+				o, _ := value.AsObject()
+				matches[o.Id] = o
+			}
+		}
+	}
+
+	for _, obj := range matches {
+		result = append(result, obj)
+	}
+
+	return result
+}
+
 ////////////////////////////////////////////////
 // TECHNICAL IMPLEMENTATION OF LINKS OPERANDS //
 ////////////////////////////////////////////////
