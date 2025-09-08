@@ -101,6 +101,11 @@ func NewLink(name string, values map[string]any, duration structures.Period) (Li
 	return link, nil
 }
 
+// NewSimpleLink is a shortcut to declare a link(subject, object) valid for the full time
+func NewSimpleLink(link string, subject, object any) (Link, error) {
+	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, structures.NewFullPeriod())
+}
+
 // Id returns the globally unique id for that link
 func (l Link) Id() string {
 	return l.id
