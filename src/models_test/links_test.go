@@ -13,12 +13,12 @@ func TestLinksCreation(t *testing.T) {
 	cheese := models.NewTrait("cheese")
 	mary := models.NewObject([]string{"Human"})
 
-	if _, err := models.NewLink("likes", map[string]any{"subject": john, "object": "cheese"}, structures.NewFullPeriod()); err == nil {
+	if _, err := models.NewLink("likes", map[string]any{models.RoleSubject: john, models.RoleObject: "cheese"}, structures.NewFullPeriod()); err == nil {
 		t.Log("failed to detect wrong object operand")
 		t.Fail()
 	}
 
-	if l, err := models.NewLink("likes", map[string]any{"subject": john, "object": cheese}, structures.NewFullPeriod()); err != nil {
+	if l, err := models.NewLink("likes", map[string]any{models.RoleSubject: john, models.RoleObject: cheese}, structures.NewFullPeriod()); err != nil {
 		t.Log("failed to use object as operand")
 		t.Log(err)
 		t.Fail()
@@ -27,14 +27,14 @@ func TestLinksCreation(t *testing.T) {
 		t.Fail()
 	}
 
-	if l, err := models.NewLink("likes", map[string]any{"subject": []models.Object{john, mary}, "object": cheese}, structures.NewFullPeriod()); err != nil {
+	if l, err := models.NewLink("likes", map[string]any{models.RoleSubject: []models.Object{john, mary}, models.RoleObject: cheese}, structures.NewFullPeriod()); err != nil {
 		t.Log("failed to use group as operand")
 		t.Log(err)
 		t.Fail()
 	} else if l.Name() != "likes" {
 		t.Log("wrong name")
 		t.Fail()
-	} else if k, err := models.NewLink("knows", map[string]any{"subject": mary, "object": l}, structures.NewFullPeriod()); err != nil {
+	} else if k, err := models.NewLink("knows", map[string]any{models.RoleSubject: mary, models.RoleObject: l}, structures.NewFullPeriod()); err != nil {
 		t.Log("failed to use link as operand")
 		t.Fail()
 	} else if k.Name() != "knows" {
@@ -48,8 +48,8 @@ func TestLinkWalkthrough(t *testing.T) {
 	cheese := models.NewTrait("cheese")
 	mary := models.NewObject([]string{"Human"})
 
-	likes, _ := models.NewLink("likes", map[string]any{"subject": []models.Object{john, mary}, "object": cheese}, structures.NewFullPeriod())
-	knows, _ := models.NewLink("knows", map[string]any{"subject": mary, "object": likes}, structures.NewFullPeriod())
+	likes, _ := models.NewLink("likes", map[string]any{models.RoleSubject: []models.Object{john, mary}, models.RoleObject: cheese}, structures.NewFullPeriod())
+	knows, _ := models.NewLink("knows", map[string]any{models.RoleSubject: mary, models.RoleObject: likes}, structures.NewFullPeriod())
 
 	// later, for inner link
 	var innerLink models.Link
@@ -58,7 +58,7 @@ func TestLinkWalkthrough(t *testing.T) {
 	if childs := knows.ValuesPerRole(); len(childs) != 2 {
 		t.Log("wrong link roles")
 		t.Fail()
-	} else if s, found := childs["subject"]; !found {
+	} else if s, found := childs[models.RoleSubject]; !found {
 		t.Log("missing subject child at top level")
 		t.Fail()
 	} else if s.GetType() != models.LinkValueAsObject {
@@ -70,7 +70,7 @@ func TestLinkWalkthrough(t *testing.T) {
 	} else if so.Id != mary.Id {
 		t.Log("wront subject value at top level")
 		t.Fail()
-	} else if o, found := childs["object"]; !found {
+	} else if o, found := childs[models.RoleObject]; !found {
 		t.Log("missing object at top level")
 		t.Fail()
 	} else if o.GetType() != models.LinkValueAsLink {
@@ -87,7 +87,7 @@ func TestLinkWalkthrough(t *testing.T) {
 	if childs := innerLink.ValuesPerRole(); len(childs) != 2 {
 		t.Log("wrong link roles")
 		t.Fail()
-	} else if s, found := childs["subject"]; !found {
+	} else if s, found := childs[models.RoleSubject]; !found {
 		t.Log("missing subject child at inner level")
 		t.Fail()
 	} else if s.GetType() != models.LinkValueAsGroup {
@@ -99,7 +99,7 @@ func TestLinkWalkthrough(t *testing.T) {
 	} else if len(so) != 2 {
 		t.Log("wront subject values at inner level")
 		t.Fail()
-	} else if o, found := childs["object"]; !found {
+	} else if o, found := childs[models.RoleObject]; !found {
 		t.Log("missing object at inner level")
 		t.Fail()
 	} else if o.GetType() != models.LinkValueAsTrait {
@@ -119,8 +119,8 @@ func TestLinkObjectsWalkthrough(t *testing.T) {
 	cheese := models.NewObject([]string{"cheese"})
 	mary := models.NewObject([]string{"Human"})
 
-	likes, _ := models.NewLink("likes", map[string]any{"subject": []models.Object{john, mary}, "object": cheese}, structures.NewFullPeriod())
-	knows, _ := models.NewLink("knows", map[string]any{"subject": mary, "object": likes}, structures.NewFullPeriod())
+	likes, _ := models.NewLink("likes", map[string]any{models.RoleSubject: []models.Object{john, mary}, models.RoleObject: cheese}, structures.NewFullPeriod())
+	knows, _ := models.NewLink("knows", map[string]any{models.RoleSubject: mary, models.RoleObject: likes}, structures.NewFullPeriod())
 
 	if values := likes.AllObjectsOperands(); len(values) != 3 {
 		t.Log("faield to find objects")

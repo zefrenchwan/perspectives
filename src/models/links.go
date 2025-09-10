@@ -41,6 +41,12 @@ const LinkValueAsGroup = 3
 // LinkValueAsObject says that operand is an object
 const LinkValueAsObject = 4
 
+// RoleSubject is the constant value for the subject role
+const RoleSubject = "subject"
+
+// RoleObject is the constant value for the object role
+const RoleObject = "object"
+
 // LinkValue is the union type defintion of any operands
 type LinkValue interface {
 	// GetType returns the actual type of the value
