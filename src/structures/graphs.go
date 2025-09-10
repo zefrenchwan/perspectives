@@ -167,43 +167,54 @@ func (d DVGraph[S, L]) Edges(source S) ([]GraphEdge[S, L], bool) {
 
 // HasCycle returns true if graph contains a cycle
 func (d DVGraph[S, L]) HasCycle() bool {
-	// DFS needs a stack
-	var stack []S
-
 	// nodeExplorationStatus defines the exploration status for a given node
-	// 0: never seen, 1: processing, 2: node and childs were explored
-	nodeExplorationStatus := make(map[S]int)
+	// NO VALUE for a node => first time we see it
+	// TRUE VALUE for that node => node is processed
+	// FALSE VALUE for that node => node is currently processed
+	nodeExplorationStatus := make(map[S]bool)
 
-	// for each unexplored node
+	// for each node
 	for startNode := range d {
-		if nodeExplorationStatus[startNode] == 0 {
+		// if we already processed it, just deal with the next one
+		if processed := nodeExplorationStatus[startNode]; processed {
+			continue
+		}
+
+		// we will make a DFS from that startNode
+		// DFS needs a stack
+		var stack []S
+		// only deal with new nodes
+		if _, alreadySeen := nodeExplorationStatus[startNode]; !alreadySeen {
 			// start a new DFS walkthrough from startNode
 			stack = append(stack, startNode)
-			nodeExplorationStatus[startNode] = 1
 
+			// DFS to find a cycle
 			for len(stack) > 0 {
 				// Get last element
 				node := stack[len(stack)-1]
-
-				// test if all the childs of startNode were explored
+				// test if all the childs of node were explored
 				allChildsExplored := true
-				// for each neighbor
+				// for each child of node
 				for neighbor := range d[node] {
-					switch nodeExplorationStatus[neighbor] {
-					case 1: // we already saw that node. Hence, there is a cycle
-						return true
-					case 0: // first time we see that node, explore it later
+					status, alreadySeen := nodeExplorationStatus[neighbor]
+					if !alreadySeen {
+						// first time we see that node, explore it later
 						allChildsExplored = false
 						// neighbor is then about to be processed
-						nodeExplorationStatus[neighbor] = 1
+						nodeExplorationStatus[neighbor] = false
 						stack = append(stack, neighbor)
+						// focus on that new unexplored node
+						break
+					} else if !status {
+						// we already saw that node. Hence, there is a cycle
+						return true
 					}
 				}
 
 				// If all neighbors (if any) were visited, node is then visited
 				if allChildsExplored {
 					stack = stack[:len(stack)-1]
-					nodeExplorationStatus[node] = 2 // Node is completely visited
+					nodeExplorationStatus[node] = true // Node is completely visited
 				}
 			}
 		}
