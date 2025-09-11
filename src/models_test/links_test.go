@@ -123,7 +123,7 @@ func TestLinkObjectsWalkthrough(t *testing.T) {
 	knows, _ := models.NewLink("knows", map[string]any{models.RoleSubject: mary, models.RoleObject: likes}, structures.NewFullPeriod())
 
 	if values := likes.AllObjectsOperands(); len(values) != 3 {
-		t.Log("faield to find objects")
+		t.Log("failed to find objects")
 		t.Log(values)
 		t.Fail()
 	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == john.Id }) {
@@ -138,7 +138,7 @@ func TestLinkObjectsWalkthrough(t *testing.T) {
 	}
 
 	if values := knows.AllObjectsOperands(); len(values) != 3 {
-		t.Log("faield to find objects")
+		t.Log("failed to find objects")
 		t.Log(values)
 		t.Fail()
 	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == john.Id }) {
@@ -149,6 +149,66 @@ func TestLinkObjectsWalkthrough(t *testing.T) {
 		t.Fail()
 	} else if !slices.ContainsFunc(values, func(o models.Object) bool { return o.Id == cheese.Id }) {
 		t.Log("missing other object")
+		t.Fail()
+	}
+}
+
+func TestLinkWalkthroughFunc(t *testing.T) {
+	john := models.NewObject([]string{"Human"})
+	cheese := models.NewTrait("cheese")
+	if likes, err := models.NewSimpleLink("likes", john, cheese); err != nil {
+		t.Log("failed to create simple link")
+		t.Log(err)
+		t.Fail()
+	} else if knows, err := models.NewSimpleLink("knows", john, likes); err != nil {
+		t.Log("failed to create parent link")
+		t.Log(err)
+		t.Fail()
+	} else if matches := knows.FindAllMatchingCondition(func(lv models.LinkValue) bool { return lv.GetType() == models.LinkValueAsLink }); len(matches) != 2 {
+		t.Log("failed to find links in relation")
+		t.Log(matches)
+		t.Fail()
+	} else {
+		var names []string
+		for _, value := range matches {
+			if value.GetType() != models.LinkValueAsLink {
+				t.Log("failed to read link")
+				t.Fail()
+			} else if l, err := value.AsLink(); err != nil {
+				t.Log("failed to read link")
+				t.Fail()
+			} else {
+				names = append(names, l.Name())
+			}
+		}
+
+		slices.Sort(names)
+		if slices.Compare(names, []string{"knows", "likes"}) != 0 {
+			t.Log("wrong content")
+			t.Fail()
+		}
+	}
+
+	if likes, err := models.NewSimpleLink("likes", john, cheese); err != nil {
+		t.Log("failed to create simple link")
+		t.Log(err)
+		t.Fail()
+	} else if knows, err := models.NewSimpleLink("knows", john, likes); err != nil {
+		t.Log("failed to create parent link")
+		t.Log(err)
+		t.Fail()
+	} else if matches := knows.FindAllMatchingCondition(func(lv models.LinkValue) bool { return lv.GetType() == models.LinkValueAsTrait }); len(matches) != 1 {
+		t.Log("failed to find traits in relation")
+		t.Log(matches)
+		t.Fail()
+	} else if val := matches[0]; val.GetType() != models.LinkValueAsTrait {
+		t.Log("wrong type")
+		t.Fail()
+	} else if trait, err := val.AsTrait(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if !trait.Equals(cheese) {
+		t.Log("wrong read trait")
 		t.Fail()
 	}
 }

@@ -11,6 +11,11 @@ func NewTrait(label string) Trait {
 	return Trait{Name: label}
 }
 
+// Equals returns true if names match
+func (t Trait) Equals(other Trait) bool {
+	return t.Name == other.Name
+}
+
 // ObjectDescription describes the object
 type ObjectDescription struct {
 	// Id of the description (not the object)
