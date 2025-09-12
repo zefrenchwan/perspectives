@@ -22,6 +22,11 @@ type Link struct {
 	operands map[string]LinkValue
 }
 
+// Equals returns true for same links based on id
+func (l Link) Equals(other Link) bool {
+	return l.id == other.id
+}
+
 // LinkValueType defines the accepted types of a link value.
 // So far, accepted types are:
 // objects: for instance: John knows Jane
@@ -68,18 +73,79 @@ type LinkValue interface {
 	AsVariable() (LinkVariable, error)
 }
 
+// AreLinkValuesEquals returns equals based on underlying type
+func AreLinkValuesEquals(a, b LinkValue) bool {
+	if a == nil && b == nil {
+		return true
+	} else if a == nil || b == nil {
+		return false
+	}
+
+	typeA := a.GetType()
+	typeB := b.GetType()
+	if typeA != typeB {
+		return false
+	}
+
+	switch typeA {
+	case LinkValueAsTrait:
+		varA, _ := a.(LinkTrait)
+		varB, _ := b.(LinkTrait)
+		return varA.Equals(varB)
+	case LinkValueAsObject:
+		varA, _ := a.(LinkObject)
+		varB, _ := b.(LinkObject)
+		return varA.Equals(varB)
+	case LinkValueAsVariable:
+		varA, _ := a.(LinkVariable)
+		varB, _ := b.(LinkVariable)
+		return varA.Equals(varB)
+	case LinkValueAsGroup:
+		varA, _ := a.(LinkGroup)
+		varB, _ := b.(LinkGroup)
+		return varA.Equals(varB)
+	case LinkValueAsLink:
+		varA, _ := a.(Link)
+		varB, _ := b.(Link)
+		return varA.Equals(varB)
+	default:
+		// should not happen
+		return false
+	}
+}
+
 // LinkObject is an object as a link operand
 type LinkObject Object
+
+// Equals returns true if objects are equals
+func (lo LinkObject) Equals(other LinkObject) bool {
+	varA := Object(lo)
+	varB := Object(other)
+	return varA.Equals(varB)
+}
 
 // LinkGroup is a group of objects as a link operand
 type LinkGroup []Object
 
+// Equals returns set equality
+func (g LinkGroup) Equals(other LinkGroup) bool {
+	return structures.SlicesEqualsAsSetsFunc(g, other, func(a, b Object) bool { return a.Equals(b) })
+}
+
 // LinkTrait is a trait as a link operand
 type LinkTrait Trait
 
+// Same returns true if underlying traits are the same
 func (lt LinkTrait) Same(t Trait) bool {
 	value := Trait(lt)
 	return value.Equals(t)
+}
+
+// Equals returns true for equal underlying traits
+func (lt LinkTrait) Equals(other LinkTrait) bool {
+	a := Trait(lt)
+	b := Trait(other)
+	return a.Equals(b)
 }
 
 // LinkVariable defines a variable that may be replaced by any other link value
@@ -150,6 +216,23 @@ func NewLinkVariableForLink(name string) LinkVariable {
 		ValidTypes:  []LinkValueType{LinkValueAsLink},
 		ValidTraits: nil,
 	}
+}
+
+// Equals returns true for same variables (name and content match)
+func (lv LinkVariable) Equals(other LinkVariable) bool {
+	if lv.Name != other.Name {
+		return false
+	}
+
+	if !structures.SlicesEqualsAsSetsFunc(lv.ValidTypes, other.ValidTypes, func(a, b LinkValueType) bool { return a == b }) {
+		return false
+	}
+
+	if !structures.SlicesEqualsAsSetsFunc(lv.ValidTraits, other.ValidTraits, func(a, b Trait) bool { return a.Equals(b) }) {
+		return false
+	}
+
+	return true
 }
 
 // MatchesTraits returns true if traits match accepted traits for that variable

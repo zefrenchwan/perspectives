@@ -182,3 +182,8 @@ func (o *Object) Describe() ObjectDescription {
 		Attributes: structures.SliceReduce(attributes),
 	}
 }
+
+// Equals returns true for same object based on id
+func (o *Object) Equals(other Object) bool {
+	return o != nil && o.Id == other.Id
+}

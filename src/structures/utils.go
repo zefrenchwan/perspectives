@@ -79,3 +79,20 @@ func SliceCommonElementFunc[T any](first, second []T, equalsFunc func(a, b T) bo
 
 	return false
 }
+
+// SlicesEqualsAsSetsFunc returns true if slices have the same elements based on a func
+func SlicesEqualsAsSetsFunc[T any](first, second []T, equalsFunc func(a, b T) bool) bool {
+	for _, base := range first {
+		if !slices.ContainsFunc(second, func(element T) bool { return equalsFunc(element, base) }) {
+			return false
+		}
+	}
+
+	for _, base := range second {
+		if !slices.ContainsFunc(first, func(element T) bool { return equalsFunc(element, base) }) {
+			return false
+		}
+	}
+
+	return true
+}
