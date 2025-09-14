@@ -461,6 +461,16 @@ func (l Link) AllObjectsOperands() []Object {
 	return structures.SliceDeduplicateFunc(matches, func(a, b Object) bool { return a.Id == b.Id })
 }
 
+// LocalLinkMapper defines a mapping from a value to another.
+// Accepted transformations are:
+// IF value is anything but a link, THEN its image is also anything but a link
+type LocalLinkMapper func(LinkValue) (LinkValue, bool, error)
+
+// localLinkCaller calls a mapper but ensures invariants are respected
+func localLinkCaller(value LinkValue, mapper LocalLinkMapper) (LinkValue, bool, error) {
+	return mapper(value)
+}
+
 ////////////////////////////////////////////////
 // TECHNICAL IMPLEMENTATION OF LINKS OPERANDS //
 ////////////////////////////////////////////////

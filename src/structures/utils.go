@@ -96,3 +96,15 @@ func SlicesEqualsAsSetsFunc[T any](first, second []T, equalsFunc func(a, b T) bo
 
 	return true
 }
+
+// MapsReverseFind returns all the key containing the value in values
+func MapsReverseFind[T comparable](mapping map[T][]T, value T) []T {
+	var result []T
+	for key, values := range mapping {
+		if slices.Contains(values, value) {
+			result = append(result, key)
+		}
+	}
+
+	return result
+}
