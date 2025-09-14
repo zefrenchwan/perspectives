@@ -59,6 +59,8 @@ const RoleObject = "object"
 
 // LinkValue is the union type defintion of any operands
 type LinkValue interface {
+	// UniqueId returns the unique id of the value in the link
+	UniqueId() string
 	// GetType returns the actual type of the value
 	GetType() LinkValueType
 	// AsLink casts the value as a link, or raises an error it underlying content is not a link
@@ -73,89 +75,48 @@ type LinkValue interface {
 	AsVariable() (LinkVariable, error)
 }
 
-// AreLinkValuesEquals returns equals based on underlying type
-func AreLinkValuesEquals(a, b LinkValue) bool {
-	if a == nil && b == nil {
-		return true
-	} else if a == nil || b == nil {
-		return false
-	}
-
-	typeA := a.GetType()
-	typeB := b.GetType()
-	if typeA != typeB {
-		return false
-	}
-
-	switch typeA {
-	case LinkValueAsTrait:
-		varA, _ := a.(LinkTrait)
-		varB, _ := b.(LinkTrait)
-		return varA.Equals(varB)
-	case LinkValueAsObject:
-		varA, _ := a.(LinkObject)
-		varB, _ := b.(LinkObject)
-		return varA.Equals(varB)
-	case LinkValueAsVariable:
-		varA, _ := a.(LinkVariable)
-		varB, _ := b.(LinkVariable)
-		return varA.Equals(varB)
-	case LinkValueAsGroup:
-		varA, _ := a.(LinkGroup)
-		varB, _ := b.(LinkGroup)
-		return varA.Equals(varB)
-	case LinkValueAsLink:
-		varA, _ := a.(Link)
-		varB, _ := b.(Link)
-		return varA.Equals(varB)
-	default:
-		// should not happen
-		return false
-	}
+// LinkObject is an object as a link operand
+type LinkObject struct {
+	id      string
+	content Object
 }
 
-// LinkObject is an object as a link operand
-type LinkObject Object
-
-// Equals returns true if objects are equals
-func (lo LinkObject) Equals(other LinkObject) bool {
-	varA := Object(lo)
-	varB := Object(other)
-	return varA.Equals(varB)
+// NewLinkObject builds a new link object to decorate an object
+func NewLinkObject(value Object) LinkObject {
+	return LinkObject{id: uuid.NewString(), content: value}
 }
 
 // LinkGroup is a group of objects as a link operand
-type LinkGroup []Object
+type LinkGroup struct {
+	id      string
+	content []Object
+}
 
-// Equals returns set equality
-func (g LinkGroup) Equals(other LinkGroup) bool {
-	return structures.SlicesEqualsAsSetsFunc(g, other, func(a, b Object) bool { return a.Equals(b) })
+// NewLinkGroup decorates values as a link group
+func NewLinkGroup(values []Object) LinkGroup {
+	return LinkGroup{id: uuid.NewString(), content: values}
 }
 
 // LinkTrait is a trait as a link operand
-type LinkTrait Trait
-
-// Same returns true if underlying traits are the same
-func (lt LinkTrait) Same(t Trait) bool {
-	value := Trait(lt)
-	return value.Equals(t)
+type LinkTrait struct {
+	id      string
+	content Trait
 }
 
-// Equals returns true for equal underlying traits
-func (lt LinkTrait) Equals(other LinkTrait) bool {
-	a := Trait(lt)
-	b := Trait(other)
-	return a.Equals(b)
+func NewLinkTrait(trait Trait) LinkTrait {
+	return LinkTrait{id: uuid.NewString(), content: trait}
 }
 
 // LinkVariable defines a variable that may be replaced by any other link value
 type LinkVariable struct {
+	// id as an unique id for that variable
+	id string
 	// Name of the variable (usually "x","y","z")
-	Name string
+	name string
 	// ValidTypes are the union of the valid types to replace this variable for
-	ValidTypes []LinkValueType
+	validTypes []LinkValueType
 	// ValidTraits contain the union of acceptable traits
-	ValidTraits []Trait
+	validTraits []Trait
 }
 
 // NewLinkVariableForObject returns a new variable for that object
@@ -166,9 +127,10 @@ func NewLinkVariableForObject(name string, traits []string) LinkVariable {
 	}
 
 	return LinkVariable{
-		Name:        name,
-		ValidTypes:  []LinkValueType{LinkValueAsObject},
-		ValidTraits: matches,
+		id:          uuid.NewString(),
+		name:        name,
+		validTypes:  []LinkValueType{LinkValueAsObject},
+		validTraits: matches,
 	}
 }
 
@@ -180,18 +142,20 @@ func NewLinkVariableForGroup(name string, traits []string) LinkVariable {
 	}
 
 	return LinkVariable{
-		Name:        name,
-		ValidTypes:  []LinkValueType{LinkValueAsGroup},
-		ValidTraits: matches,
+		id:          uuid.NewString(),
+		name:        name,
+		validTypes:  []LinkValueType{LinkValueAsGroup},
+		validTraits: matches,
 	}
 }
 
 // NewLinkVariableForTrait returns a new variable for that trait
 func NewLinkVariableForTrait(name string) LinkVariable {
 	return LinkVariable{
-		Name:        name,
-		ValidTypes:  []LinkValueType{LinkValueAsTrait},
-		ValidTraits: nil,
+		id:          uuid.NewString(),
+		name:        name,
+		validTypes:  []LinkValueType{LinkValueAsTrait},
+		validTraits: nil,
 	}
 }
 
@@ -203,46 +167,31 @@ func NewLinkVariableForSpecificTraits(name string, traits []string) LinkVariable
 	}
 
 	return LinkVariable{
-		Name:        name,
-		ValidTypes:  []LinkValueType{LinkValueAsTrait},
-		ValidTraits: matches,
+		id:          uuid.NewString(),
+		name:        name,
+		validTypes:  []LinkValueType{LinkValueAsTrait},
+		validTraits: matches,
 	}
 }
 
 // NewLinkVariableForLink returns a new variable for that link
 func NewLinkVariableForLink(name string) LinkVariable {
 	return LinkVariable{
-		Name:        name,
-		ValidTypes:  []LinkValueType{LinkValueAsLink},
-		ValidTraits: nil,
+		id:          uuid.NewString(),
+		name:        name,
+		validTypes:  []LinkValueType{LinkValueAsLink},
+		validTraits: nil,
 	}
-}
-
-// Equals returns true for same variables (name and content match)
-func (lv LinkVariable) Equals(other LinkVariable) bool {
-	if lv.Name != other.Name {
-		return false
-	}
-
-	if !structures.SlicesEqualsAsSetsFunc(lv.ValidTypes, other.ValidTypes, func(a, b LinkValueType) bool { return a == b }) {
-		return false
-	}
-
-	if !structures.SlicesEqualsAsSetsFunc(lv.ValidTraits, other.ValidTraits, func(a, b Trait) bool { return a.Equals(b) }) {
-		return false
-	}
-
-	return true
 }
 
 // MatchesTraits returns true if traits match accepted traits for that variable
 func (lv LinkVariable) MatchesTraits(traits []Trait) bool {
-	if len(lv.ValidTraits) == 0 {
+	if len(lv.validTraits) == 0 {
 		// no prerequisite
 		return true
 	} else {
 		// prerequisites are set, and then should match
-		return structures.SliceCommonElementFunc(lv.ValidTraits, traits, func(a, b Trait) bool { return a.Equals(b) })
+		return structures.SliceCommonElementFunc(lv.validTraits, traits, func(a, b Trait) bool { return a.Equals(b) })
 	}
 }
 
@@ -251,7 +200,7 @@ func (lv LinkVariable) MatchesTraits(traits []Trait) bool {
 // That is: slices of objects, objects, traits, links and related link values
 func (lv LinkVariable) MapAs(other any) (LinkValue, error) {
 	var empty LinkValue
-	expectedTypes := lv.ValidTypes
+	expectedTypes := lv.validTypes
 
 	if v, ok := other.(Object); ok {
 		if !slices.Contains(expectedTypes, LinkValueAsObject) {
@@ -261,7 +210,7 @@ func (lv LinkVariable) MapAs(other any) (LinkValue, error) {
 		// test if object matches the definition.
 		// Accept if there is a matching trait
 		if lv.MatchesTraits(v.traits) {
-			return LinkObject(v), nil
+			return NewLinkObject(v), nil
 		} else {
 			return empty, errors.New("no matching trait compatible with type definition")
 		}
@@ -272,7 +221,7 @@ func (lv LinkVariable) MapAs(other any) (LinkValue, error) {
 
 		// test if object matches the definition.
 		// Accept if there is a matching trait
-		if lv.MatchesTraits(v.traits) {
+		if lv.MatchesTraits(v.content.traits) {
 			return v, nil
 		} else {
 			return empty, errors.New("no matching trait compatible with type definition")
@@ -290,14 +239,14 @@ func (lv LinkVariable) MapAs(other any) (LinkValue, error) {
 			}
 		}
 
-		return LinkGroup(v), nil
+		return NewLinkGroup(v), nil
 	} else if v, ok := other.(LinkGroup); ok {
 		if !slices.Contains(expectedTypes, LinkValueAsGroup) {
 			return empty, errors.New("group does not match expected type")
 		}
 
 		// test if each object within the group matches the trait condition
-		for index, obj := range v {
+		for index, obj := range v.content {
 			if !lv.MatchesTraits(obj.traits) {
 				return empty, fmt.Errorf("value at index %d does not match traits condition", index)
 			}
@@ -310,9 +259,9 @@ func (lv LinkVariable) MapAs(other any) (LinkValue, error) {
 		}
 
 		// for traits, either variable does not specify any, or traits match
-		if len(lv.ValidTraits) == 0 {
+		if len(lv.validTraits) == 0 {
 			return v, nil
-		} else if !slices.ContainsFunc(lv.ValidTraits, func(t Trait) bool { return v.Same(t) }) {
+		} else if !slices.ContainsFunc(lv.validTraits, func(t Trait) bool { return v.content.Equals(t) }) {
 			return empty, errors.New("trait value does not match expected traits")
 		} else {
 			return v, nil
@@ -323,12 +272,12 @@ func (lv LinkVariable) MapAs(other any) (LinkValue, error) {
 		}
 
 		// for traits, either variable does not specify any, or traits match
-		if len(lv.ValidTraits) == 0 {
-			return LinkTrait(v), nil
-		} else if !slices.ContainsFunc(lv.ValidTraits, func(t Trait) bool { return v.Equals(t) }) {
+		if len(lv.validTraits) == 0 {
+			return NewLinkTrait(v), nil
+		} else if !slices.ContainsFunc(lv.validTraits, func(t Trait) bool { return v.Equals(t) }) {
 			return empty, errors.New("trait value does not match expected traits")
 		} else {
-			return LinkTrait(v), nil
+			return NewLinkTrait(v), nil
 		}
 	} else if v, ok := other.(Link); ok {
 		if !slices.Contains(expectedTypes, LinkValueAsLink) {
@@ -366,11 +315,11 @@ func NewLink(name string, values map[string]any, duration structures.Period) (Li
 		} else if l, ok := operand.(Link); ok {
 			link.operands[role] = l
 		} else if g, ok := operand.([]Object); ok {
-			link.operands[role] = LinkGroup(g)
+			link.operands[role] = NewLinkGroup(g)
 		} else if o, ok := operand.(Object); ok {
-			link.operands[role] = LinkObject(o)
+			link.operands[role] = NewLinkObject(o)
 		} else if t, ok := operand.(Trait); ok {
-			link.operands[role] = LinkTrait(t)
+			link.operands[role] = NewLinkTrait(t)
 		} else {
 			return empty, fmt.Errorf("unsupported type for role %s. Expecting either trait or object or link or group of objects", role)
 		}
@@ -461,19 +410,23 @@ func (l Link) AllObjectsOperands() []Object {
 	return structures.SliceDeduplicateFunc(matches, func(a, b Object) bool { return a.Id == b.Id })
 }
 
-// LocalLinkMapper defines a mapping from a value to another.
+// LocalLinkValueMapper defines a mapping from a value to another.
 // Accepted transformations are:
 // IF value is anything but a link, THEN its image is also anything but a link
-type LocalLinkMapper func(LinkValue) (LinkValue, bool, error)
+type LocalLinkValueMapper func(LinkValue) (LinkValue, bool, error)
 
 // localLinkCaller calls a mapper but ensures invariants are respected
-func localLinkCaller(value LinkValue, mapper LocalLinkMapper) (LinkValue, bool, error) {
+func localLinkValueCaller(value LinkValue, mapper LocalLinkValueMapper) (LinkValue, bool, error) {
 	return mapper(value)
 }
 
 ////////////////////////////////////////////////
 // TECHNICAL IMPLEMENTATION OF LINKS OPERANDS //
 ////////////////////////////////////////////////
+
+func (o LinkObject) UniqueId() string {
+	return o.id
+}
 
 func (o LinkObject) GetType() LinkValueType {
 	return LinkValueAsObject
@@ -488,7 +441,7 @@ func (o LinkObject) AsGroup() ([]Object, error) {
 }
 
 func (o LinkObject) AsObject() (Object, error) {
-	return Object(o), nil
+	return o.content, nil
 }
 
 func (o LinkObject) AsTrait() (Trait, error) {
@@ -501,6 +454,10 @@ func (o LinkObject) AsVariable() (LinkVariable, error) {
 	return empty, errors.New("invalid value: expecting variable, got object")
 }
 
+func (g LinkGroup) UniqueId() string {
+	return g.id
+}
+
 func (g LinkGroup) GetType() LinkValueType {
 	return LinkValueAsGroup
 }
@@ -510,7 +467,7 @@ func (g LinkGroup) AsLink() (Link, error) {
 }
 
 func (g LinkGroup) AsGroup() ([]Object, error) {
-	return []Object(g), nil
+	return g.content, nil
 }
 
 func (g LinkGroup) AsObject() (Object, error) {
@@ -526,6 +483,10 @@ func (g LinkGroup) AsTrait() (Trait, error) {
 func (g LinkGroup) AsVariable() (LinkVariable, error) {
 	var empty LinkVariable
 	return empty, errors.New("invalid value: expecting variable, got group")
+}
+
+func (l Link) UniqueId() string {
+	return l.id
 }
 
 func (l Link) GetType() LinkValueType {
@@ -555,6 +516,10 @@ func (l Link) AsVariable() (LinkVariable, error) {
 	return empty, errors.New("invalid value: expecting variable, got link")
 }
 
+func (t LinkTrait) UniqueId() string {
+	return t.id
+}
+
 func (t LinkTrait) GetType() LinkValueType {
 	return LinkValueAsTrait
 }
@@ -574,7 +539,7 @@ func (t LinkTrait) AsObject() (Object, error) {
 }
 
 func (t LinkTrait) AsTrait() (Trait, error) {
-	return Trait(t), nil
+	return t.content, nil
 }
 
 func (t LinkTrait) AsVariable() (LinkVariable, error) {
@@ -582,28 +547,32 @@ func (t LinkTrait) AsVariable() (LinkVariable, error) {
 	return empty, errors.New("invalid value: expecting variable, got trait")
 }
 
-func (o LinkVariable) GetType() LinkValueType {
+func (v LinkVariable) UniqueId() string {
+	return v.id
+}
+
+func (v LinkVariable) GetType() LinkValueType {
 	return LinkValueAsVariable
 }
 
-func (o LinkVariable) AsLink() (Link, error) {
-	return Link{}, errors.New("invalid value: expecting link, got object")
+func (v LinkVariable) AsLink() (Link, error) {
+	return Link{}, errors.New("invalid value: expecting link, got variable")
 }
 
-func (o LinkVariable) AsGroup() ([]Object, error) {
-	return nil, errors.New("invalid value: expecting group, got object")
+func (v LinkVariable) AsGroup() ([]Object, error) {
+	return nil, errors.New("invalid value: expecting group, got variable")
 }
 
-func (o LinkVariable) AsObject() (Object, error) {
+func (v LinkVariable) AsObject() (Object, error) {
 	var object Object
-	return object, nil
+	return object, errors.New("invalid value: expecting object, got variable")
 }
 
-func (o LinkVariable) AsTrait() (Trait, error) {
+func (v LinkVariable) AsTrait() (Trait, error) {
 	var empty Trait
-	return empty, errors.New("invalid value: expecting trait, got object")
+	return empty, errors.New("invalid value: expecting trait, got variable")
 }
 
-func (o LinkVariable) AsVariable() (LinkVariable, error) {
-	return o, nil
+func (v LinkVariable) AsVariable() (LinkVariable, error) {
+	return v, nil
 }
