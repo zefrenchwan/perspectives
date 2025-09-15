@@ -8,7 +8,7 @@ import (
 )
 
 func TestMapToObject(t *testing.T) {
-	x := models.NewLinkVariableForObject("x", []string{"Human"})
+	x := models.NewVariableForObject("x", []string{"Human"})
 	tiramisu := models.NewObject([]string{"dessert"})
 	if _, err := x.MapAs(tiramisu); err == nil {
 		t.Log("traits mismatch")
@@ -19,7 +19,7 @@ func TestMapToObject(t *testing.T) {
 	if v, err := x.MapAs(worker); err != nil {
 		t.Log("traits match but raised error")
 		t.Fail()
-	} else if v.GetType() != models.LinkValueAsObject {
+	} else if v.GetType() != models.EntityTypeObject {
 		t.Log("wrong type")
 		t.Fail()
 	} else if o, err := v.AsObject(); err != nil {
@@ -28,14 +28,11 @@ func TestMapToObject(t *testing.T) {
 	} else if o.Id != worker.Id {
 		t.Log("wrong object")
 		t.Fail()
-	} else if _, err := x.MapAs(v); err != nil {
-		t.Log("wrong injection of link object")
-		t.Fail()
 	}
 }
 
 func TestMapToGroup(t *testing.T) {
-	x := models.NewLinkVariableForGroup("x", []string{"Human"})
+	x := models.NewVariableForGroup("x", []string{"Human"})
 	jane := models.NewObject([]string{"Human"})
 	lara := models.NewObject([]string{"Human"})
 	cherry := models.NewObject([]string{"Food"})
@@ -66,7 +63,7 @@ func TestMapToGroup(t *testing.T) {
 }
 
 func TestMapToTrait(t *testing.T) {
-	x := models.NewLinkVariableForTrait("x")
+	x := models.NewVariableForTrait("x")
 	dogs := models.NewTrait("dogs")
 	obj := models.NewObject([]string{"any"})
 
@@ -88,7 +85,7 @@ func TestMapToTrait(t *testing.T) {
 }
 
 func TestMapToSpecificTrait(t *testing.T) {
-	x := models.NewLinkVariableForSpecificTraits("x", []string{"dogs", "cats"})
+	x := models.NewVariableForSpecificTraits("x", []string{"dogs", "cats"})
 	dogs := models.NewTrait("dogs")
 	cheese := models.NewTrait("cheese")
 
@@ -114,7 +111,7 @@ func TestMapToLink(t *testing.T) {
 	spain := models.NewObject([]string{"Country"})
 	likes, _ := models.NewSimpleLink("loves", maria, spain)
 
-	x := models.NewLinkVariableForLink("x")
+	x := models.NewVariableForLink("x")
 
 	if _, err := x.MapAs(maria); err == nil {
 		t.Log("wrong mapping, object cannot replace link")

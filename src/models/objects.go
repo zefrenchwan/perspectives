@@ -88,6 +88,36 @@ func (o *Object) DeclaringTraits() []string {
 	return structures.SliceReduce(result)
 }
 
+// GetType returns the type of the entity, that is EntityTypeObject
+func (o *Object) GetType() EntityType {
+	return EntityTypeObject
+}
+
+// AsLink would raise an error
+func (o *Object) AsLink() (*Link, error) {
+	return nil, errors.ErrUnsupported
+}
+
+// AsGroup would raise an error
+func (o *Object) AsGroup() ([]Object, error) {
+	return nil, errors.ErrUnsupported
+}
+
+// AsObject returns the object
+func (o *Object) AsObject() (*Object, error) {
+	return o, nil
+}
+
+// AsTrait raises an error
+func (o *Object) AsTrait() (Trait, error) {
+	return Trait{}, errors.ErrUnsupported
+}
+
+// AsVariable raises an error
+func (o *Object) AsVariable() (Variable, error) {
+	return Variable{}, errors.ErrUnsupported
+}
+
 // AddSemanticForAttribute flags this attribute for that particular meaning.
 // If the attribute did not exist before, it is created
 func (o *Object) AddSemanticForAttribute(attribute, meaning string) {
@@ -186,4 +216,37 @@ func (o *Object) Describe() ObjectDescription {
 // Equals returns true for same object based on id
 func (o *Object) Equals(other Object) bool {
 	return o != nil && o.Id == other.Id
+}
+
+// objectsGroup decorates a slice of objects to match a model entity definition
+type objectsGroup []Object
+
+// GetType returns
+func (g objectsGroup) GetType() EntityType {
+	return EntityTypeGroup
+}
+
+// AsLink raises an error
+func (g objectsGroup) AsLink() (*Link, error) {
+	return nil, errors.ErrUnsupported
+}
+
+// AsGroup returns the value as a slice of objects
+func (g objectsGroup) AsGroup() ([]Object, error) {
+	return []Object(g), nil
+}
+
+// AsObject raises an error
+func (g objectsGroup) AsObject() (*Object, error) {
+	return nil, errors.ErrUnsupported
+}
+
+// AsTrait raises an error
+func (g objectsGroup) AsTrait() (Trait, error) {
+	return Trait{}, errors.ErrUnsupported
+}
+
+// AsVariable raises an error
+func (g objectsGroup) AsVariable() (Variable, error) {
+	return Variable{}, errors.ErrUnsupported
 }
