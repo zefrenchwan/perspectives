@@ -218,6 +218,11 @@ func (o *Object) Equals(other Object) bool {
 	return o != nil && o.Id == other.Id
 }
 
+// Duration returns the object's active period
+func (o *Object) Duration() structures.Period {
+	return o.lifetime
+}
+
 // objectsGroup decorates a slice of objects to match a model entity definition
 type objectsGroup []Object
 
