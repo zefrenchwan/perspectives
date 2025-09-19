@@ -18,6 +18,11 @@ type Variable struct {
 	validTraits []Trait
 }
 
+// Name returns the name of the variable
+func (lv Variable) Name() string {
+	return lv.name
+}
+
 // GetType returns EntityTypeVariable
 func (lv Variable) GetType() EntityType {
 	return EntityTypeVariable

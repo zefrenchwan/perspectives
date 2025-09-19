@@ -146,6 +146,8 @@ func NewLink(name string, values map[string]any, duration structures.Period) (Li
 			link.operands[role] = newLinkValue(op)
 		} else if t, ok := operand.(Trait); ok {
 			link.operands[role] = newLinkValue(t)
+		} else if v, ok := operand.(Variable); ok {
+			link.operands[role] = newLinkValue(v)
 		} else {
 			return empty, fmt.Errorf("unsupported type for role %s. Expecting either trait or object or link or group of objects", role)
 		}

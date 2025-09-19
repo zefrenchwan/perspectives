@@ -436,3 +436,64 @@ func TestMappingLongLink(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestMappingToVariables(t *testing.T) {
+	william := models.NewObject([]string{"Human"})
+	william.SetValue("first name", "William")
+	x := models.NewVariableForObject("x", []string{"Human"})
+	// for all x, x and x share the same identity (basic rule for test purpose)
+	basicIdentity, errSource := models.NewSimpleLink("identity", x, x)
+	if errSource != nil {
+		t.Log(errSource)
+		t.Fail()
+	}
+
+	mapping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+		if m.GetType() == models.EntityTypeVariable {
+			if variable, err := m.AsVariable(); err != nil {
+				return nil, false, err
+			} else if variable.Name() != "x" {
+				return nil, false, nil
+			} else {
+				result, errMap := variable.MapAs(william)
+				if errMap != nil {
+					return nil, false, errMap
+				} else {
+					return result, true, nil
+				}
+			}
+		}
+
+		return nil, false, nil
+	}
+
+	instantiation, errInstantiation := basicIdentity.Morphism(mapping)
+	if errInstantiation != nil {
+		t.Log(errInstantiation)
+		t.Fail()
+	} else if instantiation.GetType() != models.EntityTypeLink {
+		t.Log("bad mapping")
+		t.Fail()
+	} else if link, err := instantiation.AsLink(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if link.Name() != "identity" {
+		t.Log("wrong link copy")
+		t.Fail()
+	} else if ops := link.Operands(); len(ops) != 2 {
+		t.Log("bad operands")
+		t.Fail()
+	} else if s, err := ops[models.RoleSubject].AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if s.Id != william.Id {
+		t.Log("bad mapping to subject")
+		t.Fail()
+	} else if o, err := ops[models.RoleObject].AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if o.Id != william.Id {
+		t.Log("bad mapping to object")
+		t.Fail()
+	}
+}
