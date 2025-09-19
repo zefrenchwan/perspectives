@@ -43,7 +43,7 @@ func newLinkValueForObjects(values []Object) linkValue {
 // Link will link objects together (0 level links) or links and object (higher level links).
 // For instance Likes(Steve, Tiramisu) is a basic link and Knows(Paul, Likes(Steve, Tiramisu)) is an higher level link.
 type Link struct {
-	// id of the link
+	// unique id of the link
 	id string
 	// name defines the link semantic
 	name string
@@ -67,10 +67,12 @@ func (l *Link) localCopy() *Link {
 	}
 
 	// and done
-	return &Link{
-		id: l.id, name: l.name, lifetime: l.lifetime,
-		operands: operandCopy,
-	}
+	result := new(Link)
+	result.id = l.id
+	result.name = l.name
+	result.lifetime = l.lifetime
+	result.operands = operandCopy
+	return result
 }
 
 // GetType returns EntityTypeLink
@@ -134,10 +136,14 @@ func NewLink(name string, values map[string]any, duration structures.Period) (Li
 			continue
 		} else if l, ok := operand.(Link); ok {
 			link.operands[role] = newLinkValue(&l)
+		} else if lp, ok := operand.(*Link); ok {
+			link.operands[role] = newLinkValue(lp)
 		} else if g, ok := operand.([]Object); ok {
 			link.operands[role] = newLinkValueForObjects(g)
 		} else if o, ok := operand.(Object); ok {
 			link.operands[role] = newLinkValue(&o)
+		} else if op, ok := operand.(*Object); ok {
+			link.operands[role] = newLinkValue(op)
 		} else if t, ok := operand.(Trait); ok {
 			link.operands[role] = newLinkValue(t)
 		} else {
@@ -273,7 +279,7 @@ func (l *Link) CopyStructure() *Link {
 	return rootAsLink
 }
 
-// Id returns the globally unique id for that link
+// Id returns the id for that link
 func (l *Link) Id() string {
 	return l.id
 }
@@ -368,9 +374,121 @@ func (l *Link) AllObjectsOperands() []Object {
 // LocalLinkValueMapper defines a mapping from a value to another.
 // Accepted transformations are:
 // IF value is anything but a link, THEN its image is also anything but a link
-type LocalLinkValueMapper func(linkValue) (linkValue, bool, error)
+type LocalLinkValueMapper func(ModelEntity) (ModelEntity, bool, error)
 
 // localLinkCaller calls a mapper but ensures invariants are respected
-func localLinkValueCaller(value linkValue, mapper LocalLinkValueMapper) (linkValue, bool, error) {
+func localLinkValueCaller(value ModelEntity, mapper LocalLinkValueMapper) (ModelEntity, bool, error) {
 	return mapper(value)
+}
+
+// Morphism maps a link to another, node per node
+func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
+	// mappedLinkValues contain all the mapped values, links and not links
+	mappedLinkValues := make(map[string]linkValue)
+	// WALKTHROUGH THE TREE TO CALCULATE MAPPING
+	// for each element
+	root := newLinkValue(l) // linkValue fake root matching l
+	// try to map the root because if it is, we just return
+	if rootMapping, toChangeRoot, errRoot := localLinkValueCaller(l, mapper); errRoot != nil {
+		return nil, errRoot
+	} else if toChangeRoot {
+		return rootMapping, nil
+	}
+
+	// elements to run through
+	elements := []linkValue{root}
+	// for each element (bfs)
+	for len(elements) != 0 {
+		// pop next element
+		current := elements[0]
+		elements = elements[1:]
+		// currentId of the current node
+		currentId := current.uniqueId
+		// map it and change if toChange (second result) is true
+		if mappedEntity, toChange, errMapping := localLinkValueCaller(current.content, mapper); errMapping != nil {
+			return nil, errMapping
+		} else if toChange {
+			// build a new value
+			newLeaf := newLinkValue(mappedEntity)
+			// and register the mapping
+			mappedLinkValues[currentId] = newLeaf
+		} else {
+			// for a link, add all its childs as elements to process
+			if current.contentType() == EntityTypeLink {
+				if currentLink, err := current.content.AsLink(); err != nil {
+					return nil, err
+				} else {
+					// keep going in the tree
+					for _, child := range currentLink.operands {
+						elements = append(elements, child)
+					}
+
+					// make a new link and register it.
+					// We make a new link copy because result is a fully independant link (no common descendant)
+					currentLinkCopy := currentLink.localCopy()
+					// new id because it is not the same link as before (we clone or change)
+					currentLinkCopy.id = uuid.NewString()
+					newCopy := newLinkValue(currentLinkCopy)
+					// register old id -> new clone
+					mappedLinkValues[currentId] = newCopy
+				}
+			} else {
+				// make a new value for that content.
+				// It should not appear with that same id in two links.
+				// So, newLinkValue will allocate a new id
+				newCopy := newLinkValue(current.content)
+				mappedLinkValues[currentId] = newCopy
+			}
+		}
+	}
+
+	// At this point, we have the values for each node and the tree structure.
+	// What we do now is to link mapped links with each other.
+	// Starting from the root, we link a mapped node to its mapped childs
+	elements = append(elements, root)
+	// we walk into the SOURCE link and map equivalent nodes.
+	// for each SOURCE node:
+	//    find its equivalent and its childs
+	//    link equivalent childs to equivalent node
+	for len(elements) != 0 {
+		// current SOURCE node
+		current := elements[0]
+		currentId := current.uniqueId
+		elements = elements[1:]
+		// first, ensure the walkthrough.
+		// Second, map the content
+		if current.contentType() == EntityTypeLink {
+			currentLink, errLink := current.content.AsLink()
+			if errLink != nil {
+				return nil, errLink
+			}
+
+			// add childs as nodes to explore
+			for _, childValue := range currentLink.operands {
+				if childValue.contentType() == EntityTypeLink {
+					elements = append(elements, childValue)
+				}
+			}
+
+			// find equivalent
+			equivalent := mappedLinkValues[currentId]
+			// if it is a link, match to new values
+			if equivalent.contentType() == EntityTypeLink {
+				equivalentLink, errLink := equivalent.content.AsLink()
+				if errLink != nil {
+					return nil, errLink
+				}
+
+				for role, childValue := range currentLink.operands {
+					childId := childValue.uniqueId
+					if childEquivalent, found := mappedLinkValues[childId]; found {
+						equivalentLink.operands[role] = childEquivalent
+					}
+				}
+			}
+		}
+	}
+
+	return mappedLinkValues[root.uniqueId].content, nil
+
 }

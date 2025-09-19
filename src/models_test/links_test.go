@@ -181,3 +181,258 @@ func TestCloneLongLink(t *testing.T) {
 	}
 
 }
+
+func TestMappingNoChange(t *testing.T) {
+	william := models.NewObject([]string{"Human"})
+	pizza := models.NewObject([]string{"Food"})
+	eats, errEeats := models.NewSimpleLink("eats", william, pizza)
+	if errEeats != nil {
+		t.Log(errEeats)
+		t.Fail()
+	}
+
+	if same, err := eats.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) { return nil, false, nil }); err != nil {
+		t.Log("failed to map")
+		t.Fail()
+	} else if l, err := same.AsLink(); err != nil {
+		t.Log("failed to create a link")
+		t.Fail()
+	} else if l.Id() == eats.Id() {
+		t.Log("failed to change id")
+		t.Fail()
+	} else if l.Name() != eats.Name() {
+		t.Log("failed to map name")
+		t.Fail()
+	} else if !l.Duration().Equals(eats.Duration()) {
+		t.Log("failed to map duration")
+		t.Fail()
+	} else if ops := l.Operands(); len(ops) != 2 {
+		t.Log("failed to copy operands")
+		t.Fail()
+	} else if s, found := ops[models.RoleSubject]; !found {
+		t.Log("failed to find subject")
+		t.Fail()
+	} else if subject, err := s.AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if subject.Id != william.Id {
+		t.Log("failed to copy subject")
+		t.Fail()
+	} else if o, found := ops[models.RoleSubject]; !found {
+		t.Log("failed to find object")
+		t.Fail()
+	} else if object, err := o.AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if object.Id != pizza.Id {
+		t.Log("failed to copy object")
+	}
+}
+
+func TestMappingRoot(t *testing.T) {
+	jenna := models.NewObject([]string{"Human"})
+	lorie := models.NewObject([]string{"Human"})
+	friends, errSource := models.NewSimpleLink("friends", jenna, lorie)
+	if errSource != nil {
+		t.Log(errSource)
+		t.Fail()
+	}
+
+	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+		if m.GetType() == models.EntityTypeLink {
+			if result, err := models.NewSimpleLink("loves", jenna, lorie); err != nil {
+				return nil, false, err
+			} else {
+				return &result, true, nil
+			}
+		} else {
+			return nil, false, nil
+		}
+	}
+
+	if result, err := friends.Morphism(mappping); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if result.GetType() != models.EntityTypeLink {
+		t.Log("wrong mapping")
+		t.Fail()
+	} else if link, err := result.AsLink(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if link.Name() != "loves" {
+		t.Log("bad mapping")
+		t.Fail()
+	} else if operands := link.Operands(); len(operands) != 2 {
+		t.Log("missing operands")
+		t.Fail()
+	} else if s, found := operands[models.RoleSubject]; !found {
+		t.Log("missing subject")
+		t.Fail()
+	} else if subject, err := s.AsObject(); err != nil {
+		t.Log("wrong subject type")
+		t.Fail()
+	} else if subject.Id != jenna.Id {
+		t.Log("wrong subject")
+		t.Fail()
+	} else if o, found := operands[models.RoleObject]; !found {
+		t.Log("missing object")
+		t.Fail()
+	} else if object, err := o.AsObject(); err != nil {
+		t.Log("wrong object type")
+		t.Fail()
+	} else if object.Id != lorie.Id {
+		t.Log("wrong object")
+		t.Fail()
+	}
+}
+
+func TestMappingLeaf(t *testing.T) {
+	jenna := models.NewObject([]string{"Human"})
+	lorie := models.NewObject([]string{"Human"})
+	marie := models.NewObject([]string{"Human"})
+	friends, errSource := models.NewSimpleLink("friends", jenna, lorie)
+	if errSource != nil {
+		t.Log(errSource)
+		t.Fail()
+	}
+
+	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+		if m.GetType() == models.EntityTypeObject {
+			if o, err := m.AsObject(); err != nil {
+				return nil, false, err
+			} else if o.Id == lorie.Id {
+				return &marie, true, nil
+			}
+		}
+
+		return nil, false, nil
+	}
+
+	if result, err := friends.Morphism(mappping); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if result.GetType() != models.EntityTypeLink {
+		t.Log("wrong mapping")
+		t.Fail()
+	} else if link, err := result.AsLink(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if link.Id() == friends.Id() {
+		t.Log("had to change ids")
+		t.Fail()
+	} else if link.Name() != "friends" {
+		t.Log("bad mapping")
+		t.Fail()
+	} else if operands := link.Operands(); len(operands) != 2 {
+		t.Log("missing operands")
+		t.Fail()
+	} else if s, found := operands[models.RoleSubject]; !found {
+		t.Log("missing subject")
+		t.Fail()
+	} else if subject, err := s.AsObject(); err != nil {
+		t.Log("wrong subject type")
+		t.Fail()
+	} else if subject.Id != jenna.Id {
+		t.Log("wrong subject")
+		t.Fail()
+	} else if o, found := operands[models.RoleObject]; !found {
+		t.Log("missing object")
+		t.Fail()
+	} else if object, err := o.AsObject(); err != nil {
+		t.Log("wrong object type")
+		t.Fail()
+	} else if object.Id == lorie.Id {
+		t.Log("no object change")
+		t.Fail()
+	} else if object.Id != marie.Id {
+		t.Log(object)
+		t.Log("wrong object")
+		t.Fail()
+	}
+}
+
+func TestMappingLongLink(t *testing.T) {
+	jenna := models.NewObject([]string{"Human"})
+	lorie := models.NewObject([]string{"Human"})
+	marie := models.NewObject([]string{"Human"})
+	friends, errSource := models.NewSimpleLink("friends", jenna, lorie)
+	if errSource != nil {
+		t.Log(errSource)
+		t.Fail()
+	}
+
+	knows, errLong := models.NewSimpleLink("knows", marie, friends)
+	if errLong != nil {
+		t.Log(errLong)
+		t.Fail()
+	}
+
+	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+		if m.GetType() == models.EntityTypeObject {
+			if o, err := m.AsObject(); err != nil {
+				return nil, false, err
+			} else if o.Id == lorie.Id {
+				return &marie, true, nil
+			}
+		}
+
+		return nil, false, nil
+	}
+
+	if result, err := knows.Morphism(mappping); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if result.GetType() != models.EntityTypeLink {
+		t.Log("wrong mapping")
+		t.Fail()
+	} else if root, err := result.AsLink(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if root.Id() == knows.Id() {
+		t.Log("failed to change root link")
+		t.Fail()
+	} else if rootOps := root.Operands(); len(rootOps) != 2 {
+		t.Log("wrong root operands")
+		t.Fail()
+	} else if sroot, err := rootOps[models.RoleSubject].AsObject(); err != nil {
+		t.Log("expected object as root subject")
+		t.Fail()
+	} else if sroot.Id != marie.Id {
+		t.Log("failed to map subject for root")
+		t.Fail()
+	} else if link, err := rootOps[models.RoleObject].AsLink(); err != nil {
+		t.Log("faield to map object for root")
+		t.Fail()
+	} else if link.Id() == friends.Id() {
+		t.Log("had to change ids")
+		t.Fail()
+	} else if link.Name() != "friends" {
+		t.Log("bad mapping")
+		t.Fail()
+	} else if operands := link.Operands(); len(operands) != 2 {
+		t.Log("missing operands")
+		t.Fail()
+	} else if s, found := operands[models.RoleSubject]; !found {
+		t.Log("missing subject")
+		t.Fail()
+	} else if subject, err := s.AsObject(); err != nil {
+		t.Log("wrong subject type")
+		t.Fail()
+	} else if subject.Id != jenna.Id {
+		t.Log("wrong subject")
+		t.Fail()
+	} else if o, found := operands[models.RoleObject]; !found {
+		t.Log("missing object")
+		t.Fail()
+	} else if object, err := o.AsObject(); err != nil {
+		t.Log("wrong object type")
+		t.Fail()
+	} else if object.Id == lorie.Id {
+		t.Log("no object change")
+		t.Fail()
+	} else if object.Id != marie.Id {
+		t.Log(object)
+		t.Log("wrong object")
+		t.Fail()
+	}
+}
