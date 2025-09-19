@@ -497,3 +497,110 @@ func TestMappingToVariables(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestMappingLinkToValue(t *testing.T) {
+	pizza := models.NewObject([]string{"food"})
+	tiramisu := models.NewObject([]string{"Food"})
+	middle, _ := models.NewSimpleLink("is before", pizza, tiramisu)
+	burrata := models.NewObject([]string{"Food"})
+	starter, _ := models.NewSimpleLink("starter", burrata, middle)
+	coffee := models.NewObject([]string{"drink"})
+
+	// replace middle with coffee
+	result, errResult := starter.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) {
+		if me.GetType() == models.EntityTypeLink {
+			link, _ := me.AsLink()
+			if link.Id() == middle.Id() {
+				return &coffee, true, nil
+			}
+		}
+
+		return nil, false, nil
+	})
+
+	if errResult != nil {
+		t.Log(errResult)
+		t.Fail()
+	} else if result.GetType() != models.EntityTypeLink {
+		t.Fail()
+	} else if link, err := result.AsLink(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if link.Name() != starter.Name() {
+		t.Log("bad name")
+		t.Fail()
+	} else if ops := link.Operands(); len(ops) != 2 {
+		t.Log("wrong operands")
+		t.Fail()
+	} else if subject, err := ops[models.RoleSubject].AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if subject.Id != burrata.Id {
+		t.Log("bad subject")
+		t.Fail()
+	} else if object, err := ops[models.RoleObject].AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if object.Id != coffee.Id {
+		t.Log(err)
+		t.Fail()
+	}
+}
+
+func TestMappingValueToLink(t *testing.T) {
+	gustave := models.NewObject([]string{"Person"})
+	lisa := models.NewObject([]string{"Person"})
+	loves, _ := models.NewSimpleLink("loves", lisa, gustave)
+	paula := models.NewObject([]string{"Person"})
+	variable := models.NewVariableForLink("x")
+	knows, _ := models.NewSimpleLink("knows", paula, variable)
+
+	// replace variable with loves.
+	// Paula Knows X => Paula Knows Lisa loves Gustave
+	replace, errReplace := knows.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) {
+		if me.GetType() == models.EntityTypeVariable {
+			return &loves, true, nil
+		}
+
+		return nil, false, nil
+	})
+
+	if errReplace != nil {
+		t.Log(errReplace)
+		t.Fail()
+	} else if replace.GetType() != models.EntityTypeLink {
+		t.Fail()
+	} else if root, errRoot := replace.AsLink(); errRoot != nil {
+		t.Log(errRoot)
+		t.Fail()
+	} else if root.Name() != "knows" {
+		t.Log("bad root")
+		t.Fail()
+	} else if rootOps := root.Operands(); len(rootOps) != 2 {
+		t.Fail()
+	} else if rootSubject, err := rootOps[models.RoleSubject].AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if rootSubject.Id != paula.Id {
+		t.Fail()
+	} else if rootObject, err := rootOps[models.RoleObject].AsLink(); err != nil {
+		t.Log("bad link")
+		t.Fail()
+	} else if rootObject.Name() != loves.Name() {
+		t.Log("bad mapped link")
+		t.Fail()
+	} else if ops := rootObject.Operands(); len(ops) != 2 {
+		t.Fail()
+	} else if subject, err := ops[models.RoleSubject].AsObject(); err != nil {
+		t.Fail()
+	} else if subject.Id != lisa.Id {
+		t.Log("not full link")
+		t.Fail()
+	} else if object, err := ops[models.RoleObject].AsObject(); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if object.Id != gustave.Id {
+		t.Log("bad object")
+		t.Fail()
+	}
+}

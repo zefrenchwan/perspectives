@@ -455,42 +455,48 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
 	for len(elements) != 0 {
 		// current SOURCE node
 		current := elements[0]
-		currentId := current.uniqueId
 		elements = elements[1:]
-		// first, ensure the walkthrough.
-		// Second, map the content
-		if current.contentType() == EntityTypeLink {
-			currentLink, errLink := current.content.AsLink()
-			if errLink != nil {
-				return nil, errLink
+		// by invariant:
+		//  current is a link for sure
+		//  its mapped value is a link too with same roles (child values may differ)
+		currentId := current.uniqueId
+		equivalent := mappedLinkValues[currentId]
+
+		// so we will fill those two
+		var currentLink, equivalentLink *Link
+		// map current node and equivalent node to links
+		if clink, errSource := current.content.AsLink(); errSource != nil {
+			return nil, errSource
+		} else if elink, errMapping := equivalent.content.AsLink(); errMapping != nil {
+			return nil, errMapping
+		} else {
+			currentLink, equivalentLink = clink, elink
+		}
+		// OK, so currentLink, equivalentLink are set
+		// And now, we map one by one the childs
+
+		// for each role and value, go on and map childs
+		for role, sourceChild := range currentLink.operands {
+			// find the equivalent
+			equivalentChild, found := mappedLinkValues[sourceChild.uniqueId]
+			if !found {
+				continue
 			}
 
-			// add childs as nodes to explore
-			for _, childValue := range currentLink.operands {
-				if childValue.contentType() == EntityTypeLink {
-					elements = append(elements, childValue)
-				}
-			}
-
-			// find equivalent
-			equivalent := mappedLinkValues[currentId]
-			// if it is a link, match to new values
-			if equivalent.contentType() == EntityTypeLink {
-				equivalentLink, errLink := equivalent.content.AsLink()
-				if errLink != nil {
-					return nil, errLink
-				}
-
-				for role, childValue := range currentLink.operands {
-					childId := childValue.uniqueId
-					if childEquivalent, found := mappedLinkValues[childId]; found {
-						equivalentLink.operands[role] = childEquivalent
-					}
-				}
+			// both are defined, mapping make sense, so update values
+			equivalentLink.operands[role] = equivalentChild
+			// Now what we want is to go through the relevant childs
+			// test if childs are links
+			isSourceChildLink := sourceChild.contentType() == EntityTypeLink
+			isDestChildLink := equivalentChild.contentType() == EntityTypeLink
+			// maintain the invariant
+			if isSourceChildLink && isDestChildLink {
+				elements = append(elements, sourceChild)
 			}
 		}
 	}
 
+	// and now we are done, so just return mapped root
 	return mappedLinkValues[root.uniqueId].content, nil
 
 }
