@@ -498,5 +498,70 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
 
 	// and now we are done, so just return mapped root
 	return mappedLinkValues[root.uniqueId].content, nil
+}
 
+// SameFunc returns true if links match (same structures).
+// In detail, it means same content (same nodes based on nodeComparator) and same structure (for each link, same roles and same size).
+// It is then possible to test if objects are the same based on id, or links based on names.
+// Note that nodeComparator provides a NECESSARY condition, but not a SUFFICIENT condition.
+func (l *Link) SameFunc(other *Link, nodeComparator func(ModelEntity, ModelEntity) bool) bool {
+	if l == nil && other == nil {
+		return true
+	} else if l == nil || other == nil {
+		return false
+	}
+
+	// build link values for each root
+	// root is the linkvalue for l
+	root := newLinkValue(l)
+	// equivalentRoot is the linkedvalue for the other link
+	equivalentRoot := newLinkValue(other)
+	// equivalents maps a node from l to its positional equivalent in other
+	equivalents := make(map[string]linkValue)
+	// register first equivalence we know for sure
+	equivalents[root.uniqueId] = equivalentRoot
+	// queue for BFS walkthrough
+	queue := []linkValue{root}
+
+	// for each node based on a BFS
+	for len(queue) != 0 {
+		// pop next element
+		current := queue[0]
+		queue = queue[1:]
+		// find its equivalent
+		currentEquivalent := equivalents[current.uniqueId]
+		// compare equivalent node based on the nodeComparator
+		localEquivalence := nodeComparator(current.content, currentEquivalent.content)
+		if !localEquivalence {
+			return false
+		}
+
+		// then, for links, go deeper in the links
+		isCurrentLink := current.contentType() == EntityTypeLink
+		isCurrentEquivalentLink := currentEquivalent.contentType() == EntityTypeLink
+		// one is a link, one is not => return false because structures mismpatch
+		if isCurrentEquivalentLink != isCurrentLink {
+			return false
+		} else if isCurrentLink {
+			// go one level further
+			currentLink, _ := current.content.AsLink()
+			equivalentLink, _ := currentEquivalent.content.AsLink()
+			// structures differ => return false
+			if len(currentLink.operands) != len(equivalentLink.operands) {
+				return false
+			}
+
+			for role, child := range currentLink.operands {
+				if equivalentChild, found := equivalentLink.operands[role]; !found {
+					// role mismatch => return false
+					return false
+				} else {
+					queue = append(queue, child)
+					equivalents[child.uniqueId] = equivalentChild
+				}
+			}
+		}
+	}
+
+	return true
 }

@@ -41,6 +41,48 @@ func TestLinksCreation(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestLinksSame(t *testing.T) {
+	amanda := models.NewObject([]string{"Human"})
+	pizza := models.NewObject([]string{"Human"})
+	likes, _ := models.NewSimpleLink("likes", amanda, pizza)
+	espresso := models.NewObject([]string{"coffee"})
+	loves, _ := models.NewSimpleLink("likes", amanda, espresso)
+	knows, _ := models.NewSimpleLink("knows", amanda, loves)
+
+	// test same structure, accept all comparison
+	if !likes.SameFunc(&loves, func(me1, me2 models.ModelEntity) bool { return true }) {
+		t.Log("same structures should match")
+		t.Fail()
+	}
+
+	// sufficient in here, risky elsewhere
+	idBasedEntityComparison := func(me1, me2 models.ModelEntity) bool {
+		if me1.GetType() != me2.GetType() {
+			return false
+		} else if me1.GetType() == models.EntityTypeObject {
+			o1, _ := me1.AsObject()
+			o2, _ := me2.AsObject()
+			return o1.Equals(o2)
+		}
+
+		return true
+	}
+
+	// test same structure, better comparison
+	if likes.SameFunc(&loves, idBasedEntityComparison) {
+		t.Log("same structures should match")
+		t.Fail()
+	}
+
+	// test different structure, no matter the local comparator
+	if likes.SameFunc(&knows, func(me1, me2 models.ModelEntity) bool { return true }) {
+		t.Log("different structures should never match")
+		t.Fail()
+	}
+
+}
+
 func TestCloneSimpleLink(t *testing.T) {
 	sonia := models.NewObject([]string{"Human"})
 	jack := models.NewObject([]string{"Human"})

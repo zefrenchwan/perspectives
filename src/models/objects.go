@@ -214,8 +214,13 @@ func (o *Object) Describe() ObjectDescription {
 }
 
 // Equals returns true for same object based on id
-func (o *Object) Equals(other Object) bool {
-	return o != nil && o.Id == other.Id
+func (o *Object) Equals(other *Object) bool {
+	if o == nil && other == nil {
+		return true
+	} else if o == nil || other == nil {
+		return false
+	}
+	return o.Id == other.Id
 }
 
 // Duration returns the object's active period
