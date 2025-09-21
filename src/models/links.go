@@ -111,6 +111,9 @@ const RoleSubject = "subject"
 // RoleObject is the constant value for the object role
 const RoleObject = "object"
 
+// RoleQualifier is the constant value to qualify an entity
+const RoleQualifier = "qualifier"
+
 // NewLink builds a link, valid for a given period
 // name is the semantic of that link (for instance "loves" or "knows")
 // values are the values (role linked to operand)
@@ -159,6 +162,32 @@ func NewLink(name string, values map[string]any, duration structures.Period) (Li
 // NewSimpleLink is a shortcut to declare a link(subject, object) valid for the full time
 func NewSimpleLink(link string, subject, object any) (Link, error) {
 	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, structures.NewFullPeriod())
+}
+
+// NewQualifier qualifies an entity with an adjective during a given period.
+// Qualifier is different than a trait:
+// A trait defines what is the real nature of an entity (as a fact, something true no matter the "normal" observer)
+// A qualifier defines that an entity may be qualified as this adjective for a given duration
+//
+// For instance, using a qualifier may be revelant for:
+// Mary (object) Thinks (link) that her husband (qualified object) is rude (qualifier) since (a given date)
+func NewQualifier(entity ModelEntity, adjective string, duration structures.Period) (*Link, error) {
+	// refuse nil as an entity to be qualified (makes no sense)
+	if entity == nil {
+		return nil, errors.New("invalid nil value for qualifier")
+	}
+
+	// build the full link
+	link := new(Link)
+	link.id = uuid.NewString()
+	// name is the adjective
+	link.name = adjective
+	link.lifetime = duration
+	link.operands = make(map[string]linkValue)
+	// special operand: use qualifier
+	link.operands[RoleQualifier] = newLinkValue(entity)
+
+	return link, nil
 }
 
 // CopyStructure clones a link.
