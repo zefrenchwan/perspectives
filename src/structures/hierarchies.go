@@ -3,6 +3,7 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"maps"
 )
 
 // parent_link defines an "extends" relation
@@ -150,4 +151,12 @@ func (h Hierarchy[S]) Childs(source string) ([]string, bool) {
 
 		return result, exclusive
 	}
+}
+
+// Elements gets the content of the hierarchy,  not the links.
+// Result is name of the element mapped to its actual content
+func (h Hierarchy[S]) Elements() map[string]S {
+	result := make(map[string]S)
+	maps.Copy(result, h.values)
+	return result
 }

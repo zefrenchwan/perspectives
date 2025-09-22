@@ -77,3 +77,30 @@ func TestMismatch(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestElements(t *testing.T) {
+	hierarchy := structures.NewHierarchy[string]()
+	hierarchy.SetValue("humans", "people")
+	hierarchy.SetValue("men", "male people")
+	hierarchy.SetValue("women", "female people")
+	hierarchy.AddChildInPartition("men", "humans")
+
+	got := hierarchy.Elements()
+	expected := map[string]string{
+		"humans": "people",
+		"men":    "male people",
+		"women":  "female people",
+	}
+
+	if len(got) != len(expected) {
+		t.Fail()
+	} else {
+		for k, v := range expected {
+			if value, found := got[k]; !found {
+				t.Fail()
+			} else if value != v {
+				t.Fail()
+			}
+		}
+	}
+}
