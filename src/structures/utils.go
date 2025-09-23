@@ -108,3 +108,20 @@ func MapsReverseFind[T comparable](mapping map[T][]T, value T) []T {
 
 	return result
 }
+
+// SlicesContainsAll returns true if other is included in base based on an equals function
+func SlicesContainsAllFunc[T any](base []T, other []T, equals func(a, b T) bool) bool {
+	if len(other) == 0 {
+		return true
+	} else if len(base) == 0 {
+		return false
+	}
+
+	for _, value := range other {
+		if !slices.ContainsFunc(base, func(e T) bool { return equals(e, value) }) {
+			return false
+		}
+	}
+
+	return true
+}

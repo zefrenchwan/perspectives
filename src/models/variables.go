@@ -177,3 +177,57 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 		return nil, errors.New("invalid value to map")
 	}
 }
+
+// Matches returns true if other would be acceptable instead of the variable.
+// Conditions are:
+// for variable accepting link, test if other is a link
+// for variable accepting objects or groups, test if traits match
+// for variable accepting variables, same definition
+// for variable accepting traits, test if trait is acceptable
+func (lv Variable) Matches(other ModelEntity) bool {
+	if other == nil {
+		return true
+	} else if other.GetType() == EntityTypeVariable {
+		variable, _ := other.AsVariable()
+		// subsitution may happen, so ensure it makes sense
+		if !structures.SlicesEqualsAsSetsFunc(variable.validTypes, lv.validTypes, func(a, b EntityType) bool { return a == b }) {
+			return false
+		}
+		// and now test traits are the same
+		return variable.MatchesTraits(lv.validTraits)
+	} else if !slices.Contains(lv.validTypes, other.GetType()) {
+		return false
+	}
+
+	switch other.GetType() {
+	case EntityTypeLink:
+		// we already tested that lv accepts links, no other condition
+		return true
+	case EntityTypeGroup:
+		group, _ := other.AsGroup()
+		expectedTraits := lv.validTraits
+		for _, o := range group {
+			commonPoint := structures.SliceCommonElementFunc(expectedTraits, o.traits, func(a, b Trait) bool { return a.Name == b.Name })
+			if !commonPoint {
+				return false
+			}
+		}
+
+		return true
+	case EntityTypeObject:
+		object, _ := other.AsObject()
+		traits := object.traits
+		expectedTraits := lv.validTraits
+		commonPoint := structures.SliceCommonElementFunc(traits, expectedTraits, func(a, b Trait) bool { return a.Name == b.Name })
+		return commonPoint
+	case EntityTypeTrait:
+		trait, _ := other.AsTrait()
+		return lv.validTraits == nil || slices.ContainsFunc(lv.validTraits, func(t Trait) bool { return t.Equals(trait) })
+	case EntityTypeVariable:
+		// What we wanted was same types, same expected traits
+		// But we tested before, so we accept at that point
+		return true
+	default:
+		return false
+	}
+}

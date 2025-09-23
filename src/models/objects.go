@@ -78,6 +78,18 @@ func NewObjectDuring(traits []string, startTime, endTime time.Time) (Object, err
 	return base, nil
 }
 
+// NewObjectGroup builds a group of objects (at least 1)
+func NewObjectsGroup(objects []Object) (ModelEntity, error) {
+	if len(objects) == 0 {
+		return nil, errors.New("empty group not allowed as object group")
+	}
+
+	var result objectsGroup
+	result = append(result, objects...)
+
+	return result, nil
+}
+
 // DeclaringTraits returns the declaring traits for that object
 func (o *Object) DeclaringTraits() []string {
 	var result []string

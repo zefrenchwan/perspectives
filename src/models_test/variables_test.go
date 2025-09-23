@@ -129,3 +129,65 @@ func TestMapToLink(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestMatchesObjectsOrGroups(t *testing.T) {
+	variable := models.NewVariableForObject("x", []string{"Human"})
+	dog := models.NewObject([]string{"Dog"})
+	human := models.NewObject([]string{"Human"})
+	link, _ := models.NewSimpleLink("owns", human, dog)
+
+	if variable.Matches(&link) {
+		t.Log("different type, should refuse")
+		t.Fail()
+	} else if variable.Matches(&dog) {
+		t.Log("different accepted traits, should refuse")
+		t.Fail()
+	} else if !variable.Matches(&human) {
+		t.Log("same traits, should accept")
+		t.Fail()
+	}
+
+	gVar := models.NewVariableForGroup("y", []string{"Human", "Monkey"})
+	values, _ := models.NewObjectsGroup([]models.Object{human, dog})
+	if gVar.Matches(values) {
+		t.Log("dog is neither human nor monkey, should stop")
+		t.Fail()
+	}
+
+	values, _ = models.NewObjectsGroup([]models.Object{human})
+	if !gVar.Matches(values) {
+		t.Log("human accepted")
+		t.Fail()
+	}
+}
+
+func TestMatchesLink(t *testing.T) {
+	lindsley := models.NewObject([]string{"Musician"})
+	iceStorm := models.NewObject([]string{"Song"})
+	link, _ := models.NewSimpleLink("wrote", lindsley, iceStorm)
+
+	variable := models.NewVariableForLink("x")
+	if !variable.Matches(&link) {
+		t.Fail()
+	} else if variable.Matches(&lindsley) {
+		t.Log("link variable cannot match an object")
+		t.Fail()
+	}
+}
+
+func TestMatchesVariables(t *testing.T) {
+	base := models.NewVariableForTrait("x")
+	otherTrait := models.NewVariableForSpecificTraits("y", []string{"Human"})
+	otherGenericTrait := models.NewVariableForTrait("z")
+
+	if base.Matches(otherTrait) {
+		t.Fail()
+	} else if !base.Matches(otherGenericTrait) {
+		t.Fail()
+	}
+
+	base = models.NewVariableForLink("z")
+	if base.Matches(otherTrait) {
+		t.Fail()
+	}
+}
