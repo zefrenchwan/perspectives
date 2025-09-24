@@ -594,3 +594,161 @@ func (l *Link) SameFunc(other *Link, nodeComparator func(ModelEntity, ModelEntit
 
 	return true
 }
+
+// IsSpecializationOf tests if instantiating some variables in other would return l.
+// Either it returns the concrete variables instantiation (by name) if a match is possible, or nil, false
+func (l *Link) IsSpecializationOf(other ModelEntity) (map[string]ModelEntity, bool) {
+	if other == nil && l == nil {
+		return nil, true
+	} else if l == nil || other == nil {
+		return nil, false
+	}
+
+	// possible case would be that other is a variable that matches the link.
+	// In that case, we just map that variable with current link.
+	otherType := other.GetType()
+	if otherType == EntityTypeVariable {
+		variable, _ := other.AsVariable()
+		name := variable.name
+		// Test if variable accepts the link
+		if variable.Matches(l) {
+			result := map[string]ModelEntity{name: l}
+			return result, true
+		} else {
+			return nil, false
+		}
+	} else if otherType != EntityTypeLink {
+		// special case: other may be something that is neither a link nor a variable.
+		// It means that substitution makes no sense
+		return nil, false
+	}
+
+	// both other and l are links, go for a walkthrough
+	root := newLinkValue(l)
+	otherRoot := newLinkValue(other)
+	// maps SOURCE destination with OTHER content
+	structuralMapping := make(map[string]linkValue)
+	structuralMapping[root.uniqueId] = otherRoot
+
+	// BFS
+	queue := []linkValue{root}
+
+	// variables substitution we registered
+	// (even for variable to variable mapping)
+	variablesSubstitution := make(map[string][]ModelEntity)
+
+	// start the walkkthrough
+	for len(queue) != 0 {
+		// current link to process
+		current := queue[0]
+		queue = queue[1:]
+		// equivalent value in OTHER
+		other := structuralMapping[current.uniqueId]
+		// current and mapping are links for sure
+		otherLink, _ := other.content.AsLink()
+		currentLink, _ := current.content.AsLink()
+
+		// basic tests for links: name and operands size should match
+		if len(currentLink.operands) != len(otherLink.operands) {
+			return nil, false
+		} else if currentLink.name != otherLink.name {
+			return nil, false
+		}
+
+		// for each child
+		for role, child := range currentLink.operands {
+			if otherChild, found := otherLink.operands[role]; !found {
+				return nil, false
+			} else {
+				// first, register the mapping
+				structuralMapping[child.uniqueId] = otherChild
+				// compare child and otherChild
+				childType := child.contentType()
+				otherChildType := otherChild.contentType()
+				// depending on types, test for match.
+				// Reference value is actually destination child
+				switch otherChildType {
+				case EntityTypeObject:
+					// for an object, test child is the same as the reference child
+					if childType != EntityTypeObject {
+						return nil, false
+					}
+
+					childObject, _ := child.content.AsObject()
+					otherChildObject, _ := otherChild.content.AsObject()
+					if !childObject.Equals(otherChildObject) {
+						return nil, false
+					}
+
+				case EntityTypeGroup:
+					// for group of objects, test that they are equivalent as sets
+					if childType != EntityTypeGroup {
+						return nil, false
+					}
+
+					childGroup, _ := child.content.AsGroup()
+					otherChildGroup, _ := otherChild.content.AsGroup()
+					if !structures.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, func(a, b Object) bool { return a.Equals(&b) }) {
+						return nil, false
+					}
+				case EntityTypeTrait:
+					// for traits, test same values
+					if childType != EntityTypeTrait {
+						return nil, false
+					}
+
+					childTrait, _ := child.content.AsTrait()
+					otherChildTrait, _ := otherChild.content.AsTrait()
+					if !childTrait.Equals(otherChildTrait) {
+						return nil, false
+					}
+				case EntityTypeVariable:
+					// for  variables, test if child's value matches the variable definition
+					childValue := child.content
+					otherChildVariable, _ := otherChild.content.AsVariable()
+					if !otherChildVariable.Matches(childValue) {
+						return nil, false
+					}
+
+					// register that substitution
+					varName := otherChildVariable.name
+					previousValues := variablesSubstitution[varName]
+					updatedValues := append(previousValues, childValue)
+					variablesSubstitution[varName] = updatedValues
+				case EntityTypeLink:
+					// keep going through if possible
+					if childType != EntityTypeLink {
+						return nil, false
+					}
+
+					// test on name was performed for current, no need on child
+					// add it as a next element to process
+					queue = append(queue, child)
+
+				default:
+					return nil, false
+				}
+			}
+		}
+	}
+
+	// structural mapping matches, but some variables may be mapped with multiple values.
+	// For instance:
+	// is(X, X) as other, mapped to is(France, Spain).
+	// X would be linked to France AND Spain and it is impossible.
+	// So, to accept the substituion, a variable should be linked to ONE value only
+	result := make(map[string]ModelEntity)
+	for name, values := range variablesSubstitution {
+		if len(values) != 0 {
+			singleElements := structures.SliceDeduplicateFunc(values, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
+			size := len(singleElements)
+			if size >= 2 {
+				return nil, false
+			} else if size == 1 {
+				result[name] = singleElements[0]
+			}
+		}
+	}
+
+	return result, true
+}

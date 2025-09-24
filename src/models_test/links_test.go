@@ -646,3 +646,158 @@ func TestMappingValueToLink(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestVariableMatchingGlobalVariable(t *testing.T) {
+	x := models.NewVariableForLink("x")
+	y := models.NewVariableForTrait("y")
+	dog := models.NewObject([]string{"dog"})
+	cat := models.NewObject([]string{"cat"})
+	not, _ := models.NewSimpleLink("is not", dog, cat)
+
+	if mapping, accept := not.IsSpecializationOf(x); !accept {
+		t.Log("x accepts a link, not is a link so it should accept")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[x.Name()], &not) {
+		t.Log("wrong mapping for x")
+		t.Fail()
+	} else if _, accept := not.IsSpecializationOf(y); accept {
+		t.Fail()
+	}
+}
+
+func TestVariableMatchingLeaf(t *testing.T) {
+	pizza := models.NewObject([]string{"food"})
+	italian := models.NewTrait("italian")
+	x := models.NewVariableForObject("x", []string{"food"})
+	y := models.NewVariableForTrait("y")
+	genericRelation, _ := models.NewSimpleLink("is", x, y)
+	baseRelation, _ := models.NewSimpleLink("is", pizza, italian)
+
+	if mapping, accept := baseRelation.IsSpecializationOf(&genericRelation); !accept {
+		t.Log("generic relation is more general than base relation")
+		t.Fail()
+	} else if len(mapping) != 2 {
+		t.Log("bad variables in mapping")
+		t.Fail()
+	} else if value := mapping[x.Name()]; !models.SameModelEntity(value, &pizza) {
+		t.Log("bad allocation for x")
+		t.Fail()
+	} else if value := mapping[y.Name()]; !models.SameModelEntity(value, &italian) {
+		t.Log("bad allocation for y")
+		t.Fail()
+	}
+}
+
+func TestVariableNOTMatchingLeaf(t *testing.T) {
+	pizza := models.NewObject([]string{"food"})
+	italian := models.NewTrait("italian")
+	x := models.NewVariableForObject("x", []string{"food"})
+	y := models.NewVariableForTrait("y")
+	// cannot match because names won't
+	genericRelation, _ := models.NewSimpleLink("is but different than the other", x, y)
+	baseRelation, _ := models.NewSimpleLink("is", pizza, italian)
+
+	if _, accept := baseRelation.IsSpecializationOf(&genericRelation); accept {
+		t.Log("different names, should refuse")
+		t.Fail()
+	}
+
+	// cannot match because double allocation for x
+	genericRelation, _ = models.NewSimpleLink("is", x, x)
+	baseRelation, _ = models.NewSimpleLink("is", pizza, italian)
+
+	if _, accept := baseRelation.IsSpecializationOf(&genericRelation); accept {
+		t.Log("x allocated twice")
+		t.Fail()
+	}
+
+	// cannot match because variables mismatch
+	genericRelation, _ = models.NewSimpleLink("is", y, x)
+	baseRelation, _ = models.NewSimpleLink("is", pizza, italian)
+
+	if _, accept := baseRelation.IsSpecializationOf(&genericRelation); accept {
+		t.Log("bad recognition for types")
+		t.Fail()
+	}
+}
+
+func TestVariableMatchingLinkStructure(t *testing.T) {
+	jane := models.NewObject([]string{"Human"})
+	bobby := models.NewObject([]string{"Human"})
+	martha := models.NewObject([]string{"Human"})
+	friends, _ := models.NewSimpleLink("is friend with", jane, bobby)
+	knows, _ := models.NewSimpleLink("knows", martha, friends)
+	says, _ := models.NewSimpleLink("says", jane, knows)
+	// Jane says that Martha knows that Jane is friend with Bobby
+	// So, it should match
+	// X says that Y knows that Z is friend with Bobby
+	x := models.NewVariableForObject("x", []string{"Human"})
+	y := models.NewVariableForObject("y", []string{"Human"})
+	z := models.NewVariableForObject("z", []string{"Human"})
+	genericFriends, _ := models.NewSimpleLink(friends.Name(), x, bobby)
+	genericKnows, _ := models.NewSimpleLink(knows.Name(), y, genericFriends)
+	genericSays, _ := models.NewSimpleLink(says.Name(), z, genericKnows)
+
+	// test mappings one by one
+	if mapping, accept := friends.IsSpecializationOf(&genericFriends); !accept {
+		t.Log("bad match for links with depth = 1")
+		t.Fail()
+	} else if len(mapping) != 1 {
+		t.Log("bad variable mapping for links with depth = 1")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[x.Name()], &jane) {
+		t.Log("bad mapping for x")
+		t.Fail()
+	}
+
+	if mapping, accept := knows.IsSpecializationOf(&genericKnows); !accept {
+		t.Log("bad match for links with depth = 2")
+		t.Fail()
+	} else if len(mapping) != 2 {
+		t.Log("bad variable mapping for links with depth = 2")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[x.Name()], &jane) {
+		t.Log("bad mapping for x")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[y.Name()], &martha) {
+		t.Log("bad mapping for y")
+		t.Fail()
+	}
+
+	if mapping, accept := says.IsSpecializationOf(&genericSays); !accept {
+		t.Log("bad match for links with depth = 3")
+		t.Fail()
+	} else if len(mapping) != 3 {
+		t.Log("bad variable mapping for links with depth = 3")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[x.Name()], &jane) {
+		t.Log("bad mapping for x")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[y.Name()], &martha) {
+		t.Log("bad mapping for y")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[z.Name()], &jane) {
+		t.Log("bad mapping for z")
+		t.Fail()
+	}
+}
+
+func TestVariableMatchingLinks(t *testing.T) {
+	john := models.NewObject([]string{"Human"})
+	lisa := models.NewObject([]string{"Human"})
+	lara := models.NewObject([]string{"Human"})
+	hates, _ := models.NewSimpleLink("hates", lisa, lara)
+	knows, _ := models.NewSimpleLink("knows", john, hates)
+	// John knows that Lisa hates Lara
+	x := models.NewVariableForLink("x")
+	genericKnows, _ := models.NewSimpleLink("knows", john, x)
+
+	if mapping, accept := knows.IsSpecializationOf(&genericKnows); !accept {
+		t.Log("failed to match")
+		t.Fail()
+	} else if !models.SameModelEntity(mapping[x.Name()], &hates) {
+		t.Log("failed to map x")
+		t.Fail()
+	}
+
+}

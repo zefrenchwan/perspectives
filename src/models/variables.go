@@ -124,6 +124,17 @@ func (lv Variable) MatchesTraits(traits []Trait) bool {
 	}
 }
 
+// Same returns true variables are the same (same name, same traits, same accepted types)
+func (lv Variable) Same(other Variable) bool {
+	if !structures.SlicesEqualsAsSetsFunc(lv.validTypes, other.validTypes, func(a, b EntityType) bool { return a == b }) {
+		return false
+	} else if !structures.SlicesEqualsAsSetsFunc(lv.validTraits, other.validTraits, func(a, b Trait) bool { return a.Equals(b) }) {
+		return false
+	}
+
+	return lv.name == other.name
+}
+
 // MapAs transforms a variable to a value.
 // Accepted values are slices of objects, objects, traits, links and related link values
 func (lv Variable) MapAs(other any) (ModelEntity, error) {

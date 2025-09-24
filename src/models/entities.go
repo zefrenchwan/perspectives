@@ -1,5 +1,7 @@
 package models
 
+import "github.com/zefrenchwan/perspectives.git/structures"
+
 // EntityType defines the type of an entity to use
 // So far, accepted types are:
 // objects: for instance: John knows Jane
@@ -38,4 +40,44 @@ type ModelEntity interface {
 	AsTrait() (Trait, error)
 	// AsVariable returns the value as a variable, or raises an error if underlying content is not a variable
 	AsVariable() (Variable, error)
+}
+
+// SameModelEntity tests if two model entities are the same based on their own definition of same
+func SameModelEntity(a, b ModelEntity) bool {
+	if a == nil && b == nil {
+		return true
+	} else if a == nil || b == nil {
+		return false
+	}
+
+	aType := a.GetType()
+	bType := b.GetType()
+	if aType != bType {
+		return false
+	}
+
+	switch aType {
+	case EntityTypeLink:
+		aLink, _ := a.AsLink()
+		bLink, _ := b.AsLink()
+		return aLink.id == bLink.id
+	case EntityTypeGroup:
+		aGroup, _ := a.AsGroup()
+		bGroup, _ := b.AsGroup()
+		return structures.SlicesEqualsAsSetsFunc(aGroup, bGroup, func(a, b Object) bool { return a.Equals(&b) })
+	case EntityTypeObject:
+		aObject, _ := a.AsObject()
+		bObject, _ := b.AsObject()
+		return aObject.Id == bObject.Id
+	case EntityTypeVariable:
+		aVar, _ := a.AsVariable()
+		bVar, _ := b.AsVariable()
+		return aVar.Same(bVar)
+	case EntityTypeTrait:
+		aTrait, _ := a.AsTrait()
+		bTrait, _ := b.AsTrait()
+		return aTrait.Equals(bTrait)
+	default:
+		return false
+	}
 }
