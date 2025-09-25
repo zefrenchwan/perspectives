@@ -595,9 +595,16 @@ func (l *Link) SameFunc(other *Link, nodeComparator func(ModelEntity, ModelEntit
 	return true
 }
 
-// IsSpecializationOf tests if instantiating some variables in other would return l.
-// Either it returns the concrete variables instantiation (by name) if a match is possible, or nil, false
-func (l *Link) IsSpecializationOf(other ModelEntity) (map[string]ModelEntity, bool) {
+// IsSpecializationFunc returns true if there is a variable instantiation from other leading to l.
+// For instance, Likes(X,Y) would make Likes(John, Tiramisu) for some variable instantiation.
+// If there is a match, result is the variables instantiation leading to that match.
+// Otherwise, result is nil, false.
+// For link comparison, we use a dedicated function:
+// * An option would be to match names of the links
+// * Another would be to use lifetime and name
+// * Or use larger verbs, such as Adore(John, Tiramisu) as a specialization of Loves(X, Tiramisu)
+// To let users decide what makes the most sense, linksSpecialization defines the way to compare links LOCALLY
+func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(value, reference *Link) bool) (map[string]ModelEntity, bool) {
 	if other == nil && l == nil {
 		return nil, true
 	} else if l == nil || other == nil {
@@ -651,7 +658,7 @@ func (l *Link) IsSpecializationOf(other ModelEntity) (map[string]ModelEntity, bo
 		// basic tests for links: name and operands size should match
 		if len(currentLink.operands) != len(otherLink.operands) {
 			return nil, false
-		} else if currentLink.name != otherLink.name {
+		} else if !linksSpecialization(currentLink, otherLink) {
 			return nil, false
 		}
 
@@ -751,4 +758,14 @@ func (l *Link) IsSpecializationOf(other ModelEntity) (map[string]ModelEntity, bo
 	}
 
 	return result, true
+}
+
+// IsSpecializationOf returns true and a variables instantiation that matches from other to l, or false if there is none.
+// This function uses IsSpecializationFunc for name matching, no matter the period.
+func (l *Link) IsSpecializationOf(other ModelEntity) (map[string]ModelEntity, bool) {
+	basicNamesComparison := func(a, b *Link) bool {
+		return a != nil && b != nil && a.name == b.name
+	}
+
+	return l.IsSpecializationFunc(other, basicNamesComparison)
 }
