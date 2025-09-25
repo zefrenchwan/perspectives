@@ -1,3 +1,0 @@
-topic humans 
-
-class Human

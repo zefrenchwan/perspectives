@@ -1,3 +1,0 @@
-topic history 
-
-class King
