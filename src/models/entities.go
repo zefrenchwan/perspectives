@@ -33,7 +33,7 @@ type ModelEntity interface {
 	// AsLink casts the value as a link, or raises an error it underlying content is not a link
 	AsLink() (*Link, error)
 	// AsGroup casts the value as a group of objects, or raises an error it underlying content is not a group
-	AsGroup() ([]Object, error)
+	AsGroup() ([]*Object, error)
 	// AsObject casts the value as an object, or raises an error it underlying content is not an object
 	AsObject() (*Object, error)
 	// AsTrait returns the value as a trait, or raises an error it underlying content is not a trait
@@ -64,7 +64,7 @@ func SameModelEntity(a, b ModelEntity) bool {
 	case EntityTypeGroup:
 		aGroup, _ := a.AsGroup()
 		bGroup, _ := b.AsGroup()
-		return structures.SlicesEqualsAsSetsFunc(aGroup, bGroup, func(a, b Object) bool { return a.Equals(&b) })
+		return structures.SlicesEqualsAsSetsFunc(aGroup, bGroup, func(a, b *Object) bool { return a.Equals(b) })
 	case EntityTypeObject:
 		aObject, _ := a.AsObject()
 		bObject, _ := b.AsObject()

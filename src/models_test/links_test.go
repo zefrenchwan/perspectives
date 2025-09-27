@@ -26,7 +26,7 @@ func TestLinksCreation(t *testing.T) {
 		t.Fail()
 	}
 
-	if l, err := models.NewLink("likes", map[string]any{models.RoleSubject: []models.Object{john, mary}, models.RoleObject: cheese}, structures.NewFullPeriod()); err != nil {
+	if l, err := models.NewLink("likes", map[string]any{models.RoleSubject: []*models.Object{john, mary}, models.RoleObject: cheese}, structures.NewFullPeriod()); err != nil {
 		t.Log("failed to use group as operand")
 		t.Log(err)
 		t.Fail()
@@ -343,7 +343,7 @@ func TestMappingLeaf(t *testing.T) {
 			if o, err := m.AsObject(); err != nil {
 				return nil, false, err
 			} else if o.Id == lorie.Id {
-				return &marie, true, nil
+				return marie, true, nil
 			}
 		}
 
@@ -414,7 +414,7 @@ func TestMappingLongLink(t *testing.T) {
 			if o, err := m.AsObject(); err != nil {
 				return nil, false, err
 			} else if o.Id == lorie.Id {
-				return &marie, true, nil
+				return marie, true, nil
 			}
 		}
 
@@ -553,7 +553,7 @@ func TestMappingLinkToValue(t *testing.T) {
 		if me.GetType() == models.EntityTypeLink {
 			link, _ := me.AsLink()
 			if link.Id() == middle.Id() {
-				return &coffee, true, nil
+				return coffee, true, nil
 			}
 		}
 
@@ -679,7 +679,7 @@ func TestVariableMatchingLeaf(t *testing.T) {
 	} else if len(mapping) != 2 {
 		t.Log("bad variables in mapping")
 		t.Fail()
-	} else if value := mapping[x.Name()]; !models.SameModelEntity(value, &pizza) {
+	} else if value := mapping[x.Name()]; !models.SameModelEntity(value, pizza) {
 		t.Log("bad allocation for x")
 		t.Fail()
 	} else if value := mapping[y.Name()]; !models.SameModelEntity(value, &italian) {
@@ -745,7 +745,7 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 	} else if len(mapping) != 1 {
 		t.Log("bad variable mapping for links with depth = 1")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], &jane) {
+	} else if !models.SameModelEntity(mapping[x.Name()], jane) {
 		t.Log("bad mapping for x")
 		t.Fail()
 	}
@@ -756,10 +756,10 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 	} else if len(mapping) != 2 {
 		t.Log("bad variable mapping for links with depth = 2")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], &jane) {
+	} else if !models.SameModelEntity(mapping[x.Name()], jane) {
 		t.Log("bad mapping for x")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[y.Name()], &martha) {
+	} else if !models.SameModelEntity(mapping[y.Name()], martha) {
 		t.Log("bad mapping for y")
 		t.Fail()
 	}
@@ -770,13 +770,13 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 	} else if len(mapping) != 3 {
 		t.Log("bad variable mapping for links with depth = 3")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], &jane) {
+	} else if !models.SameModelEntity(mapping[x.Name()], jane) {
 		t.Log("bad mapping for x")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[y.Name()], &martha) {
+	} else if !models.SameModelEntity(mapping[y.Name()], martha) {
 		t.Log("bad mapping for y")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[z.Name()], &jane) {
+	} else if !models.SameModelEntity(mapping[z.Name()], jane) {
 		t.Log("bad mapping for z")
 		t.Fail()
 	}

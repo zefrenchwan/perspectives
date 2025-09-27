@@ -37,7 +37,7 @@ func (a *Attribute) IsEmpty() bool {
 }
 
 // NewObject returns an object implementing those traits
-func NewObject(traits []string) Object {
+func NewObject(traits []string) *Object {
 	// map and deduplicate traits
 	declaringTraits := make(map[string]Trait)
 
@@ -51,16 +51,16 @@ func NewObject(traits []string) Object {
 	}
 
 	// then, build the object
-	return Object{
-		Id:         uuid.NewString(),
-		traits:     objectTraits,
-		attributes: make(map[string]Attribute),
-		lifetime:   structures.NewFullPeriod(),
-	}
+	result := new(Object)
+	result.Id = uuid.NewString()
+	result.traits = objectTraits
+	result.attributes = make(map[string]Attribute)
+	result.lifetime = structures.NewFullPeriod()
+	return result
 }
 
 // NewObjectSince returns an object that implements traits, valid since creationTime
-func NewObjectSince(traits []string, creationTime time.Time) Object {
+func NewObjectSince(traits []string, creationTime time.Time) *Object {
 	base := NewObject(traits)
 	base.lifetime = structures.NewPeriodSince(creationTime, true)
 	return base
@@ -68,26 +68,14 @@ func NewObjectSince(traits []string, creationTime time.Time) Object {
 
 // NewObjectDuring returns an object that implements traits, valid during a period.
 // It may raise an error if endTime is before startTime
-func NewObjectDuring(traits []string, startTime, endTime time.Time) (Object, error) {
+func NewObjectDuring(traits []string, startTime, endTime time.Time) (*Object, error) {
 	if endTime.Before(startTime) {
-		return Object{}, errors.New("cannot make an object with an end date before its start date")
+		return nil, errors.New("cannot make an object with an end date before its start date")
 	}
 
 	base := NewObject(traits)
 	base.lifetime = structures.NewFinitePeriod(startTime, endTime, true, true)
 	return base, nil
-}
-
-// NewObjectGroup builds a group of objects (at least 1)
-func NewObjectsGroup(objects []Object) (ModelEntity, error) {
-	if len(objects) == 0 {
-		return nil, errors.New("empty group not allowed as object group")
-	}
-
-	var result objectsGroup
-	result = append(result, objects...)
-
-	return result, nil
 }
 
 // DeclaringTraits returns the declaring traits for that object
@@ -111,7 +99,7 @@ func (o *Object) AsLink() (*Link, error) {
 }
 
 // AsGroup would raise an error
-func (o *Object) AsGroup() ([]Object, error) {
+func (o *Object) AsGroup() ([]*Object, error) {
 	return nil, errors.ErrUnsupported
 }
 
@@ -241,11 +229,23 @@ func (o *Object) Duration() structures.Period {
 }
 
 // objectsGroup decorates a slice of objects to match a model entity definition
-type objectsGroup []Object
+type objectsGroup []*Object
 
 // GetType returns
 func (g objectsGroup) GetType() EntityType {
 	return EntityTypeGroup
+}
+
+// NewObjectGroup builds a group of objects (at least 1)
+func NewObjectsGroup(objects []*Object) (ModelEntity, error) {
+	if len(objects) == 0 {
+		return nil, errors.New("empty group not allowed as object group")
+	}
+
+	var result objectsGroup
+	result = append(result, objects...)
+
+	return result, nil
 }
 
 // AsLink raises an error
@@ -254,8 +254,8 @@ func (g objectsGroup) AsLink() (*Link, error) {
 }
 
 // AsGroup returns the value as a slice of objects
-func (g objectsGroup) AsGroup() ([]Object, error) {
-	return []Object(g), nil
+func (g objectsGroup) AsGroup() ([]*Object, error) {
+	return []*Object(g), nil
 }
 
 // AsObject raises an error

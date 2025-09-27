@@ -34,7 +34,7 @@ func (lv Variable) AsLink() (*Link, error) {
 }
 
 // AsGroup raises an error
-func (lv Variable) AsGroup() ([]Object, error) {
+func (lv Variable) AsGroup() ([]*Object, error) {
 	return nil, errors.ErrUnsupported
 }
 
@@ -164,7 +164,7 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 		} else {
 			return nil, errors.New("no matching trait compatible with type definition")
 		}
-	} else if v, ok := other.([]Object); ok {
+	} else if v, ok := other.([]*Object); ok {
 		if !slices.Contains(expectedTypes, EntityTypeGroup) {
 			return nil, errors.New("group does not match expected type")
 		}

@@ -37,8 +37,8 @@ func TestMapToGroup(t *testing.T) {
 	lara := models.NewObject([]string{"Human"})
 	cherry := models.NewObject([]string{"Food"})
 
-	validGroup := []models.Object{jane, lara}
-	invalidGroup := []models.Object{lara, cherry}
+	validGroup := []*models.Object{jane, lara}
+	invalidGroup := []*models.Object{lara, cherry}
 
 	if g, err := x.MapAs(validGroup); err != nil {
 		t.Log(err)
@@ -49,10 +49,10 @@ func TestMapToGroup(t *testing.T) {
 	} else if group, err := g.AsGroup(); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if !slices.ContainsFunc(group, func(v models.Object) bool { return v.Id == jane.Id }) {
+	} else if !slices.ContainsFunc(group, func(v *models.Object) bool { return v.Id == jane.Id }) {
 		t.Log("missing element")
 		t.Fail()
-	} else if !slices.ContainsFunc(group, func(v models.Object) bool { return v.Id == lara.Id }) {
+	} else if !slices.ContainsFunc(group, func(v *models.Object) bool { return v.Id == lara.Id }) {
 		t.Log("missing element")
 		t.Fail()
 	} else if len(group) != 2 {
@@ -139,22 +139,22 @@ func TestMatchesObjectsOrGroups(t *testing.T) {
 	if variable.Matches(link) {
 		t.Log("different type, should refuse")
 		t.Fail()
-	} else if variable.Matches(&dog) {
+	} else if variable.Matches(dog) {
 		t.Log("different accepted traits, should refuse")
 		t.Fail()
-	} else if !variable.Matches(&human) {
+	} else if !variable.Matches(human) {
 		t.Log("same traits, should accept")
 		t.Fail()
 	}
 
 	gVar := models.NewVariableForGroup("y", []string{"Human", "Monkey"})
-	values, _ := models.NewObjectsGroup([]models.Object{human, dog})
+	values, _ := models.NewObjectsGroup([]*models.Object{human, dog})
 	if gVar.Matches(values) {
 		t.Log("dog is neither human nor monkey, should stop")
 		t.Fail()
 	}
 
-	values, _ = models.NewObjectsGroup([]models.Object{human})
+	values, _ = models.NewObjectsGroup([]*models.Object{human})
 	if !gVar.Matches(values) {
 		t.Log("human accepted")
 		t.Fail()
@@ -169,7 +169,7 @@ func TestMatchesLink(t *testing.T) {
 	variable := models.NewVariableForLink("x")
 	if !variable.Matches(link) {
 		t.Fail()
-	} else if variable.Matches(&lindsley) {
+	} else if variable.Matches(lindsley) {
 		t.Log("link variable cannot match an object")
 		t.Fail()
 	}

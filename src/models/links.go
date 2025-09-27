@@ -36,7 +36,7 @@ func newLinkValue(content ModelEntity) linkValue {
 }
 
 // newLinkValueForObjects builds a link value as a group of objects
-func newLinkValueForObjects(values []Object) linkValue {
+func newLinkValueForObjects(values []*Object) linkValue {
 	return linkValue{uuid.NewString(), objectsGroup(values)}
 }
 
@@ -86,7 +86,7 @@ func (l *Link) AsLink() (*Link, error) {
 }
 
 // AsGroup raises an error
-func (l *Link) AsGroup() ([]Object, error) {
+func (l *Link) AsGroup() ([]*Object, error) {
 	return nil, errors.ErrUnsupported
 }
 
@@ -141,7 +141,7 @@ func NewLink(name string, values map[string]any, duration structures.Period) (*L
 			link.operands[role] = newLinkValue(&l)
 		} else if lp, ok := operand.(*Link); ok {
 			link.operands[role] = newLinkValue(lp)
-		} else if g, ok := operand.([]Object); ok {
+		} else if g, ok := operand.([]*Object); ok {
 			link.operands[role] = newLinkValueForObjects(g)
 		} else if o, ok := operand.(Object); ok {
 			link.operands[role] = newLinkValue(&o)
@@ -380,13 +380,13 @@ func (l *Link) Operands() map[string]ModelEntity {
 // AllObjectsOperands returns the objects appearing recursively in the link.
 // It means that if l is a link of links of objects, descendants objects will appear.
 // Each object appears once per id
-func (l *Link) AllObjectsOperands() []Object {
+func (l *Link) AllObjectsOperands() []*Object {
 	acceptValueAsObject := func(v ModelEntity) bool {
 		matchingTypes := []EntityType{EntityTypeGroup, EntityTypeObject}
 		return slices.Contains(matchingTypes, v.GetType())
 	}
 
-	var matches []Object
+	var matches []*Object
 	values := l.findAllMatchingCondition(acceptValueAsObject)
 	for _, value := range values {
 		switch value.GetType() {
@@ -395,11 +395,11 @@ func (l *Link) AllObjectsOperands() []Object {
 			matches = append(matches, g...)
 		case EntityTypeObject:
 			o, _ := value.AsObject()
-			matches = append(matches, *o)
+			matches = append(matches, o)
 		}
 	}
 
-	return structures.SliceDeduplicateFunc(matches, func(a, b Object) bool { return a.Id == b.Id })
+	return structures.SliceDeduplicateFunc(matches, func(a, b *Object) bool { return a.Equals(b) })
 }
 
 // LocalLinkValueMapper defines a mapping from a value to another.
@@ -695,7 +695,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 
 					childGroup, _ := child.content.AsGroup()
 					otherChildGroup, _ := otherChild.content.AsGroup()
-					if !structures.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, func(a, b Object) bool { return a.Equals(&b) }) {
+					if !structures.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, func(a, b *Object) bool { return a.Equals(b) }) {
 						return nil, false
 					}
 				case EntityTypeTrait:

@@ -29,7 +29,7 @@ func (t Trait) AsLink() (*Link, error) {
 }
 
 // AsGroup raises an error by definition
-func (t Trait) AsGroup() ([]Object, error) {
+func (t Trait) AsGroup() ([]*Object, error) {
 	return nil, errors.ErrUnsupported
 }
 
