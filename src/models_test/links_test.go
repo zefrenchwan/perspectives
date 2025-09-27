@@ -51,7 +51,7 @@ func TestLinksSame(t *testing.T) {
 	knows, _ := models.NewSimpleLink("knows", amanda, loves)
 
 	// test same structure, accept all comparison
-	if !likes.SameFunc(&loves, func(me1, me2 models.ModelEntity) bool { return true }) {
+	if !likes.SameFunc(loves, func(me1, me2 models.ModelEntity) bool { return true }) {
 		t.Log("same structures should match")
 		t.Fail()
 	}
@@ -70,13 +70,13 @@ func TestLinksSame(t *testing.T) {
 	}
 
 	// test same structure, better comparison
-	if likes.SameFunc(&loves, idBasedEntityComparison) {
+	if likes.SameFunc(loves, idBasedEntityComparison) {
 		t.Log("same structures should match")
 		t.Fail()
 	}
 
 	// test different structure, no matter the local comparator
-	if likes.SameFunc(&knows, func(me1, me2 models.ModelEntity) bool { return true }) {
+	if likes.SameFunc(knows, func(me1, me2 models.ModelEntity) bool { return true }) {
 		t.Log("different structures should never match")
 		t.Fail()
 	}
@@ -285,7 +285,7 @@ func TestMappingRoot(t *testing.T) {
 			if result, err := models.NewSimpleLink("loves", jenna, lorie); err != nil {
 				return nil, false, err
 			} else {
-				return &result, true, nil
+				return result, true, nil
 			}
 		} else {
 			return nil, false, nil
@@ -601,7 +601,7 @@ func TestMappingValueToLink(t *testing.T) {
 	// Paula Knows X => Paula Knows Lisa loves Gustave
 	replace, errReplace := knows.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) {
 		if me.GetType() == models.EntityTypeVariable {
-			return &loves, true, nil
+			return loves, true, nil
 		}
 
 		return nil, false, nil
@@ -657,7 +657,7 @@ func TestVariableMatchingGlobalVariable(t *testing.T) {
 	if mapping, accept := not.IsSpecializationOf(x); !accept {
 		t.Log("x accepts a link, not is a link so it should accept")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], &not) {
+	} else if !models.SameModelEntity(mapping[x.Name()], not) {
 		t.Log("wrong mapping for x")
 		t.Fail()
 	} else if _, accept := not.IsSpecializationOf(y); accept {
@@ -673,7 +673,7 @@ func TestVariableMatchingLeaf(t *testing.T) {
 	genericRelation, _ := models.NewSimpleLink("is", x, y)
 	baseRelation, _ := models.NewSimpleLink("is", pizza, italian)
 
-	if mapping, accept := baseRelation.IsSpecializationOf(&genericRelation); !accept {
+	if mapping, accept := baseRelation.IsSpecializationOf(genericRelation); !accept {
 		t.Log("generic relation is more general than base relation")
 		t.Fail()
 	} else if len(mapping) != 2 {
@@ -697,7 +697,7 @@ func TestVariableNOTMatchingLeaf(t *testing.T) {
 	genericRelation, _ := models.NewSimpleLink("is but different than the other", x, y)
 	baseRelation, _ := models.NewSimpleLink("is", pizza, italian)
 
-	if _, accept := baseRelation.IsSpecializationOf(&genericRelation); accept {
+	if _, accept := baseRelation.IsSpecializationOf(genericRelation); accept {
 		t.Log("different names, should refuse")
 		t.Fail()
 	}
@@ -706,7 +706,7 @@ func TestVariableNOTMatchingLeaf(t *testing.T) {
 	genericRelation, _ = models.NewSimpleLink("is", x, x)
 	baseRelation, _ = models.NewSimpleLink("is", pizza, italian)
 
-	if _, accept := baseRelation.IsSpecializationOf(&genericRelation); accept {
+	if _, accept := baseRelation.IsSpecializationOf(genericRelation); accept {
 		t.Log("x allocated twice")
 		t.Fail()
 	}
@@ -715,7 +715,7 @@ func TestVariableNOTMatchingLeaf(t *testing.T) {
 	genericRelation, _ = models.NewSimpleLink("is", y, x)
 	baseRelation, _ = models.NewSimpleLink("is", pizza, italian)
 
-	if _, accept := baseRelation.IsSpecializationOf(&genericRelation); accept {
+	if _, accept := baseRelation.IsSpecializationOf(genericRelation); accept {
 		t.Log("bad recognition for types")
 		t.Fail()
 	}
@@ -739,7 +739,7 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 	genericSays, _ := models.NewSimpleLink(says.Name(), z, genericKnows)
 
 	// test mappings one by one
-	if mapping, accept := friends.IsSpecializationOf(&genericFriends); !accept {
+	if mapping, accept := friends.IsSpecializationOf(genericFriends); !accept {
 		t.Log("bad match for links with depth = 1")
 		t.Fail()
 	} else if len(mapping) != 1 {
@@ -750,7 +750,7 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 		t.Fail()
 	}
 
-	if mapping, accept := knows.IsSpecializationOf(&genericKnows); !accept {
+	if mapping, accept := knows.IsSpecializationOf(genericKnows); !accept {
 		t.Log("bad match for links with depth = 2")
 		t.Fail()
 	} else if len(mapping) != 2 {
@@ -764,7 +764,7 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 		t.Fail()
 	}
 
-	if mapping, accept := says.IsSpecializationOf(&genericSays); !accept {
+	if mapping, accept := says.IsSpecializationOf(genericSays); !accept {
 		t.Log("bad match for links with depth = 3")
 		t.Fail()
 	} else if len(mapping) != 3 {
@@ -792,10 +792,10 @@ func TestVariableMatchingLinks(t *testing.T) {
 	x := models.NewVariableForLink("x")
 	genericKnows, _ := models.NewSimpleLink("knows", john, x)
 
-	if mapping, accept := knows.IsSpecializationOf(&genericKnows); !accept {
+	if mapping, accept := knows.IsSpecializationOf(genericKnows); !accept {
 		t.Log("failed to match")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], &hates) {
+	} else if !models.SameModelEntity(mapping[x.Name()], hates) {
 		t.Log("failed to map x")
 		t.Fail()
 	}

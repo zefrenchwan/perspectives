@@ -152,6 +152,18 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 		} else {
 			return nil, errors.New("no matching trait compatible with type definition")
 		}
+	} else if v, ok := other.(*Object); ok {
+		if !slices.Contains(expectedTypes, EntityTypeObject) {
+			return nil, errors.New("object does not match expected type")
+		}
+
+		// test if object matches the definition.
+		// Accept if there is a matching trait
+		if lv.MatchesTraits(v.traits) {
+			return v, nil
+		} else {
+			return nil, errors.New("no matching trait compatible with type definition")
+		}
 	} else if v, ok := other.([]Object); ok {
 		if !slices.Contains(expectedTypes, EntityTypeGroup) {
 			return nil, errors.New("group does not match expected type")
@@ -183,6 +195,12 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 			return nil, errors.New("group does not match expected type")
 		} else {
 			return &v, nil
+		}
+	} else if v, ok := other.(*Link); ok {
+		if !slices.Contains(expectedTypes, EntityTypeLink) {
+			return nil, errors.New("group does not match expected type")
+		} else {
+			return v, nil
 		}
 	} else {
 		return nil, errors.New("invalid value to map")

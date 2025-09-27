@@ -136,7 +136,7 @@ func TestMatchesObjectsOrGroups(t *testing.T) {
 	human := models.NewObject([]string{"Human"})
 	link, _ := models.NewSimpleLink("owns", human, dog)
 
-	if variable.Matches(&link) {
+	if variable.Matches(link) {
 		t.Log("different type, should refuse")
 		t.Fail()
 	} else if variable.Matches(&dog) {
@@ -167,7 +167,7 @@ func TestMatchesLink(t *testing.T) {
 	link, _ := models.NewSimpleLink("wrote", lindsley, iceStorm)
 
 	variable := models.NewVariableForLink("x")
-	if !variable.Matches(&link) {
+	if !variable.Matches(link) {
 		t.Fail()
 	} else if variable.Matches(&lindsley) {
 		t.Log("link variable cannot match an object")

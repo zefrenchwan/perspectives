@@ -121,14 +121,14 @@ const RoleQualifier = "qualifier"
 //
 // Although formal parameter is any, expected types are:
 // 1. Slices of objects
-// 2. Objects
-// 3. Links
+// 2. Objects (or pointers to objects)
+// 3. Links (or pointers to links)
 // 4. Traits
 // 5. Variables representing previous mentioned types
 //
 // An error will raise if values do not match that constraint
-func NewLink(name string, values map[string]any, duration structures.Period) (Link, error) {
-	var link, empty Link
+func NewLink(name string, values map[string]any, duration structures.Period) (*Link, error) {
+	link := new(Link)
 	link.id = uuid.NewString()
 	link.name = name
 	link.operands = make(map[string]linkValue)
@@ -152,7 +152,7 @@ func NewLink(name string, values map[string]any, duration structures.Period) (Li
 		} else if v, ok := operand.(Variable); ok {
 			link.operands[role] = newLinkValue(v)
 		} else {
-			return empty, fmt.Errorf("unsupported type for role %s. Expecting either trait or object or link or group of objects", role)
+			return nil, fmt.Errorf("unsupported type for role %s. Expecting either trait or object or link or group of objects", role)
 		}
 	}
 
@@ -160,7 +160,7 @@ func NewLink(name string, values map[string]any, duration structures.Period) (Li
 }
 
 // NewSimpleLink is a shortcut to declare a link(subject, object) valid for the full time
-func NewSimpleLink(link string, subject, object any) (Link, error) {
+func NewSimpleLink(link string, subject, object any) (*Link, error) {
 	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, structures.NewFullPeriod())
 }
 
