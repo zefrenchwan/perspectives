@@ -151,6 +151,8 @@ func NewLink(name string, values map[string]any, duration structures.Period) (*L
 			link.operands[role] = newLinkValue(t)
 		} else if v, ok := operand.(Variable); ok {
 			link.operands[role] = newLinkValue(v)
+		} else if v, ok := operand.(ModelEntity); ok {
+			link.operands[role] = newLinkValue(v)
 		} else {
 			return nil, fmt.Errorf("unsupported type for role %s. Expecting either trait or object or link or group of objects", role)
 		}

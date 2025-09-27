@@ -12,12 +12,12 @@ func TestLinksCreation(t *testing.T) {
 	cheese := models.NewTrait("cheese")
 	mary := models.NewObject([]string{"Human"})
 
-	if _, err := models.NewLink("likes", map[string]any{models.RoleSubject: john, models.RoleObject: "cheese"}, structures.NewFullPeriod()); err == nil {
+	if _, err := models.NewSimpleLink("likes", john, "cheese"); err == nil {
 		t.Log("failed to detect wrong object operand")
 		t.Fail()
 	}
 
-	if l, err := models.NewLink("likes", map[string]any{models.RoleSubject: john, models.RoleObject: cheese}, structures.NewFullPeriod()); err != nil {
+	if l, err := models.NewSimpleLink("likes", john, cheese); err != nil {
 		t.Log("failed to use object as operand")
 		t.Log(err)
 		t.Fail()
@@ -33,7 +33,39 @@ func TestLinksCreation(t *testing.T) {
 	} else if l.Name() != "likes" {
 		t.Log("wrong name")
 		t.Fail()
-	} else if k, err := models.NewLink("knows", map[string]any{models.RoleSubject: mary, models.RoleObject: l}, structures.NewFullPeriod()); err != nil {
+	} else if k, err := models.NewSimpleLink("knows", mary, l); err != nil {
+		t.Log("failed to use link as operand")
+		t.Fail()
+	} else if k.Name() != "knows" {
+		t.Log("wrong composite name")
+		t.Fail()
+	}
+
+	group, _ := models.NewObjectsGroup([]*models.Object{john, mary})
+	if l, err := models.NewSimpleLink("likes", group, cheese); err != nil {
+		t.Log("failed to use group as operand")
+		t.Log(err)
+		t.Fail()
+	} else if l.Name() != "likes" {
+		t.Log("wrong name")
+		t.Fail()
+	} else if k, err := models.NewSimpleLink("knows", mary, l); err != nil {
+		t.Log("failed to use link as operand")
+		t.Fail()
+	} else if k.Name() != "knows" {
+		t.Log("wrong composite name")
+		t.Fail()
+	}
+
+	group, _ = models.NewGroupOfObjects(john, mary)
+	if l, err := models.NewSimpleLink("likes", group, cheese); err != nil {
+		t.Log("failed to use group as operand")
+		t.Log(err)
+		t.Fail()
+	} else if l.Name() != "likes" {
+		t.Log("wrong name")
+		t.Fail()
+	} else if k, err := models.NewSimpleLink("knows", mary, l); err != nil {
 		t.Log("failed to use link as operand")
 		t.Fail()
 	} else if k.Name() != "knows" {

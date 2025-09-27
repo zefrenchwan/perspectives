@@ -242,10 +242,12 @@ func NewObjectsGroup(objects []*Object) (ModelEntity, error) {
 		return nil, errors.New("empty group not allowed as object group")
 	}
 
-	var result objectsGroup
-	result = append(result, objects...)
+	result := structures.SliceDeduplicate(objects)
+	return objectsGroup(result), nil
+}
 
-	return result, nil
+func NewGroupOfObjects(objects ...*Object) (ModelEntity, error) {
+	return NewObjectsGroup(objects)
 }
 
 // AsLink raises an error
