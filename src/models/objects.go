@@ -246,6 +246,7 @@ func NewObjectsGroup(objects []*Object) (ModelEntity, error) {
 	return objectsGroup(result), nil
 }
 
+// NewGroupOfObjects builds a group of objects from single elements
 func NewGroupOfObjects(objects ...*Object) (ModelEntity, error) {
 	return NewObjectsGroup(objects)
 }

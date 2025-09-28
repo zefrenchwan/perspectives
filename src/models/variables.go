@@ -8,7 +8,12 @@ import (
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
-// Variable defines a variable that may be replaced by any other link value
+// Variable defines a variable that may be replaced by any other value.
+// A value means basically any model entity but a variable, that is:
+// trait, pointers to link, pointer to object, or group of objects ([]*Object).
+// Typical use would be to have generic definition using links based on variables.
+// For instance, X( as human) Thinks Y (as a Link).
+// Using this generic link, we may apply "rules" flagging that Y is not necessarily a fact.
 type Variable struct {
 	// Name of the variable (usually "x","y","z")
 	name string
@@ -136,7 +141,11 @@ func (lv Variable) Same(other Variable) bool {
 }
 
 // MapAs transforms a variable to a value.
-// Accepted values are slices of objects, objects, traits, links and related link values
+// Accepted values are:
+// slices of pointers to objects,
+// objects or objects pointers,
+// traits,
+// links or links pointers
 func (lv Variable) MapAs(other any) (ModelEntity, error) {
 	expectedTypes := lv.validTypes
 

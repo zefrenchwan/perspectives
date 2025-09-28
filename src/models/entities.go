@@ -26,7 +26,13 @@ const EntityTypeGroup = 4
 // EntityTypeVariable is the type for variables
 const EntityTypeVariable = 5
 
-// ModelEntity is the general definition of an entity in the model we use
+// ModelEntity is the general definition of an entity in the model we use.
+// It decorates:
+// links as pointers because we may modify them
+// Objects as pointers because we may modify them too
+// Group of objects (as pointers for the same reason)
+// Traits as immutable objects
+// Variables as immutable objects
 type ModelEntity interface {
 	// GetType returns the type of the entity (trait ? link ? object ? )
 	GetType() EntityType
