@@ -12,19 +12,19 @@ import "github.com/zefrenchwan/perspectives.git/structures"
 type EntityType int
 
 // EntityTypeTrait is the type for traits
-const EntityTypeTrait = 1
+const EntityTypeTrait EntityType = 1
 
 // EntityTypeLink is the type for links
-const EntityTypeLink = 2
+const EntityTypeLink EntityType = 2
 
 // EntityTypeObject is the type for objects
-const EntityTypeObject = 3
+const EntityTypeObject EntityType = 3
 
 // EntityTypeGroup is the type for slices of objects
-const EntityTypeGroup = 4
+const EntityTypeGroup EntityType = 4
 
 // EntityTypeVariable is the type for variables
-const EntityTypeVariable = 5
+const EntityTypeVariable EntityType = 5
 
 // ModelEntity is the general definition of an entity in the model we use.
 // It decorates:
@@ -46,6 +46,16 @@ type ModelEntity interface {
 	AsTrait() (Trait, error)
 	// AsVariable returns the value as a variable, or raises an error if underlying content is not a variable
 	AsVariable() (Variable, error)
+}
+
+// TemporalEntity defines an entity with a duration.
+// For links, it means the period a link is active during.
+// For objects, it means the period the object is alive during.
+type TemporalEntity interface {
+	// We want a temporal entity to be an entity
+	ModelEntity
+	// ActivePeriod is the period the entity is active during
+	ActivePeriod() structures.Period
 }
 
 // SameModelEntity tests if two model entities are the same based on their own definition of same

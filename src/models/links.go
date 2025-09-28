@@ -329,8 +329,8 @@ func (l *Link) Name() string {
 	return l.name
 }
 
-// Duration returns the link's active period
-func (l *Link) Duration() structures.Period {
+// ActivePeriod returns the link's active period
+func (l *Link) ActivePeriod() structures.Period {
 	return l.lifetime
 }
 

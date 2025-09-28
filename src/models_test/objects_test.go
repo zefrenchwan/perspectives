@@ -3,8 +3,10 @@ package models_test
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/zefrenchwan/perspectives.git/models"
+	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
 func TestObjectTraits(t *testing.T) {
@@ -52,6 +54,28 @@ func TestObjectAttributesPartiallyFilled(t *testing.T) {
 		t.Fail()
 	} else if slices.Compare([]string{"Doe"}, values["last name"]) != 0 {
 		t.Log("missing content for attribute")
+		t.Fail()
+	}
+}
+
+func TestObjectGetValue(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	before := now.AddDate(-1, 0, 0)
+	object := models.NewObjectSince([]string{"Human"}, before)
+	object.SetValue("name", "John Doe")
+	period := structures.NewPeriodSince(before, true)
+
+	if _, found := object.GetValue("non existing"); found {
+		t.Log("found non existing attribute")
+		t.Fail()
+	} else if values, found := object.GetValue("name"); !found {
+		t.Log("should find attribute")
+		t.Fail()
+	} else if len(values) != 1 {
+		t.Log("bad values")
+		t.Fail()
+	} else if p := values["John Doe"]; !p.Equals(period) {
+		t.Log("no lifetime intersection")
 		t.Fail()
 	}
 }

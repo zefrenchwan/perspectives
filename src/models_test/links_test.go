@@ -83,7 +83,7 @@ func TestLinksTimedCreation(t *testing.T) {
 	if knows, err := models.NewTimedSimpleLink("knows", matchingPeriod, christopher, jacques); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if !knows.Duration().Equals(matchingPeriod) {
+	} else if !knows.ActivePeriod().Equals(matchingPeriod) {
 		t.Log("bad time management for links")
 		t.Fail()
 	}
@@ -147,7 +147,7 @@ func TestCloneSimpleLink(t *testing.T) {
 	} else if clone.Id() != married.Id() {
 		t.Log("copy should keep id")
 		t.Fail()
-	} else if !clone.Duration().Equals(married.Duration()) {
+	} else if !clone.ActivePeriod().Equals(married.ActivePeriod()) {
 		t.Log("copy should keep duration")
 		t.Fail()
 	}
@@ -292,7 +292,7 @@ func TestMappingNoChange(t *testing.T) {
 	} else if l.Name() != eats.Name() {
 		t.Log("failed to map name")
 		t.Fail()
-	} else if !l.Duration().Equals(eats.Duration()) {
+	} else if !l.ActivePeriod().Equals(eats.ActivePeriod()) {
 		t.Log("failed to map duration")
 		t.Fail()
 	} else if ops := l.Operands(); len(ops) != 2 {

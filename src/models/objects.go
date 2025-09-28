@@ -185,6 +185,34 @@ func (o *Object) GetAllValues() map[string][]string {
 	return result
 }
 
+// GetValue returns the value for an attribute (by name) if any.
+// Result (if any) is then the mapping value -> validity, true or nil, false for no match.
+// Note that the validity is then the intersection of the object lifetime and the attribute validity
+func (o *Object) GetValue(attribute string) (map[string]structures.Period, bool) {
+	if o == nil {
+		return nil, false
+	}
+
+	// values are the values from the attribute.
+	var values map[string]structures.Period
+	if attr, found := o.attributes[attribute]; !found {
+		return nil, false
+	} else {
+		values = attr.values.Get()
+	}
+
+	// result contains the intersection with the object's lifetime
+	result := make(map[string]structures.Period)
+	for key, period := range values {
+		inter := period.Intersection(o.lifetime)
+		if !inter.IsEmpty() {
+			result[key] = inter
+		}
+	}
+
+	return result, true
+}
+
 // Describe returns the structure of the object
 func (o *Object) Describe() ObjectDescription {
 	if o == nil {
@@ -223,8 +251,8 @@ func (o *Object) Equals(other *Object) bool {
 	return o.Id == other.Id
 }
 
-// Duration returns the object's active period
-func (o *Object) Duration() structures.Period {
+// ActivePeriod returns the object's active period
+func (o *Object) ActivePeriod() structures.Period {
 	return o.lifetime
 }
 
