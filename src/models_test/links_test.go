@@ -2,6 +2,7 @@ package models
 
 import (
 	"testing"
+	"time"
 
 	"github.com/zefrenchwan/perspectives.git/models"
 	"github.com/zefrenchwan/perspectives.git/structures"
@@ -70,6 +71,20 @@ func TestLinksCreation(t *testing.T) {
 		t.Fail()
 	} else if k.Name() != "knows" {
 		t.Log("wrong composite name")
+		t.Fail()
+	}
+}
+
+func TestLinksTimedCreation(t *testing.T) {
+	christopher := models.NewObject([]string{"Human"})
+	jacques := models.NewObject([]string{"Human"})
+	moment := time.Now().Truncate(time.Hour)
+	matchingPeriod := structures.NewPeriodSince(moment, true)
+	if knows, err := models.NewTimedSimpleLink("knows", matchingPeriod, christopher, jacques); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if !knows.Duration().Equals(matchingPeriod) {
+		t.Log("bad time management for links")
 		t.Fail()
 	}
 }

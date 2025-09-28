@@ -66,7 +66,8 @@ func (h Hierarchy[S]) AddChildInPartition(child, parent string) error {
 }
 
 // addLink is private method to deal with links.
-// It adds a
+// It adds a node as a child of a parent, for a given type.
+// It raises an error if type of link mismatches.
 func (h Hierarchy[S]) addLink(child, parent string, link int) error {
 	// test if values exist or not
 	_, sourceExists := h.values[child]

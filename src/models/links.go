@@ -42,6 +42,7 @@ func newLinkValueForObjects(values []*Object) linkValue {
 
 // Link will link objects together (0 level links) or links and object (higher level links).
 // For instance Likes(Steve, Tiramisu) is a basic link and Knows(Paul, Likes(Steve, Tiramisu)) is an higher level link.
+// A link also has a lifetime, the period of time during the link is valid.
 type Link struct {
 	// unique id of the link
 	id string
@@ -164,6 +165,12 @@ func NewLink(name string, values map[string]any, duration structures.Period) (*L
 // NewSimpleLink is a shortcut to declare a link(subject, object) valid for the full time
 func NewSimpleLink(link string, subject, object any) (*Link, error) {
 	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, structures.NewFullPeriod())
+}
+
+// NewTimedSimpleLink builds a link during a given period, with given subject and object.
+// For instance, John likes Tiramisu since 2020-01-01.
+func NewTimedSimpleLink(link string, duration structures.Period, subject, object any) (*Link, error) {
+	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, duration)
 }
 
 // NewQualifier qualifies an entity with an adjective during a given period.
