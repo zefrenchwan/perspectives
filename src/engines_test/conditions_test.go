@@ -165,6 +165,25 @@ func TestCombineConditions(t *testing.T) {
 	}
 }
 
+func TestCombineConditionsLongTree(t *testing.T) {
+	object := models.NewObject([]string{"Human"})
+	object.SetValue("first name", "Jane")
+	object.SetValue("last name", "Doe")
+	object.SetValue("age", "21")
+
+	fnCondition := engines.NewAttributeValueCondition("first name", "Jane", engines.ValuesEqualIgnoreCase)
+	lnCondition := engines.NewAttributeValueCondition("last name", "Doe", engines.ValuesEqualIgnoreCase)
+	nameCond := engines.AndConditions([]engines.LocalCondition{fnCondition, lnCondition})
+	ageCondition := engines.NewAttributeValueCondition("age", "21", engines.ValuesEqualIgnoreCase)
+	personCond := engines.AndConditions([]engines.LocalCondition{nameCond, ageCondition})
+
+	if !personCond.Matches(object) {
+		t.Fail()
+	} else if notCond := engines.NotCondition(personCond); notCond.Matches(object) {
+		t.Fail()
+	}
+}
+
 func TestLinkValueCondition(t *testing.T) {
 	homer := models.NewObject([]string{"Human"})
 	donuts := models.NewObject([]string{"Food"})

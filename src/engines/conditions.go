@@ -1,10 +1,12 @@
 package engines
 
 import (
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/zefrenchwan/perspectives.git/models"
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
@@ -97,54 +99,169 @@ const AlwaysFalseCombiner LogicalCombinationOperator = 101
 // LocalCompositeCondition defines a local condition as a combination of local other conditions.
 // For instance, if a and b are conditions, then a AND b is a condition
 type LocalCompositeCondition struct {
+	id       string                     // id of the node
 	operator LogicalCombinationOperator // operator to combine conditions
 	operands []LocalCondition           // the conditions to combine
 }
 
-// Matches returns the combined results of its operands
-func (c LocalCompositeCondition) Matches(m models.ModelEntity) bool {
-	if len(c.operands) == 0 {
+func (l LocalCompositeCondition) evaluate(values []bool) bool {
+	if len(values) == 0 {
 		return false
 	}
 
-	switch c.operator {
-	case AlwaysFalseCombiner:
-		return false
-	case AlwaysTrueCombiner:
-		return true
-
+	switch l.operator {
 	case NegateCombineConditions:
-		operand := c.operands[0]
-		return !operand.Matches(m)
-
-	case AndCombineConditions:
-		for _, condition := range c.operands {
-			if !condition.Matches(m) {
-				return false
-			}
-		}
-
-		return true
+		return !values[0]
 	case OrCombineConditions:
-		for _, condition := range c.operands {
-			if condition.Matches(m) {
+		for _, value := range values {
+			if value {
 				return true
 			}
 		}
 
 		return false
+	case AndCombineConditions:
+		for _, value := range values {
+			if !value {
+				return false
+			}
+		}
+
+		return true
 	default:
 		return false
 	}
+}
+
+// Matches returns the combined results of its operands.
+// To avoid stack forcing with a recursive solution, it is a tree walkthrough.
+// We look for leafs to evaluate and then walk back until the root
+func (c LocalCompositeCondition) Matches(m models.ModelEntity) bool {
+	// childs contain composite childs of a composite node.
+	childs := make(map[string][]string)
+	// content gets the value of a composition node
+	content := make(map[string]LocalCompositeCondition)
+	// resolved contains all composite conditions evaluated.
+	// At the end of the algorithm, we know root
+	resolved := make(map[string]bool)
+	// parents maps a composite node to its parent
+	parents := make(map[string]string)
+
+	// BFS to get composite conditions structure
+	queue := []LocalCompositeCondition{c}
+	// for each node
+	for len(queue) != 0 {
+		current := queue[0]
+		queue = queue[1:]
+		// map it to its actual value
+		content[current.id] = current
+
+		// true of all childs are leafs (and then node may be evaluated)
+		allLeafs := true
+		for _, child := range current.operands {
+			if childComposite, ok := child.(LocalCompositeCondition); ok {
+				// register structure
+				currentChilds := childs[current.id]
+				currentChilds = append(currentChilds, childComposite.id)
+				childs[current.id] = currentChilds
+				parents[childComposite.id] = current.id
+				// add the child node for a later processing
+				queue = append(queue, childComposite)
+				// node is not a leaf
+				allLeafs = false
+			}
+		}
+
+		// if allLeafs, we may evaluate current node
+		if allLeafs {
+			var operands []bool
+			for _, child := range current.operands {
+				if child != nil {
+					operands = append(operands, child.Matches(m))
+				}
+			}
+
+			localResult := current.evaluate(operands)
+			// flag the node as resolved
+			resolved[current.id] = localResult
+		}
+	}
+
+	// deal with special case: root is already solved
+	if result, found := resolved[c.id]; found {
+		return result
+	}
+
+	// it means that root is not resolved.
+	// We dealt with leafs, we know the graph structure.
+	// So, starting from resolved nodes, go a level higher if possible.
+	currents := make(map[string]bool)
+	maps.Copy(currents, resolved)
+
+	// until we solve the root, go from childs to parent
+	for foundRoot := currents[c.id]; !foundRoot; {
+		// we know currents, we feed nexts with parents of nodes to process if possible
+		nexts := make(map[string]bool)
+		// for each node we get solution for
+		for node, value := range currents {
+			// special case: root is already solved
+			if node == c.id {
+				return value
+			}
+
+			// Root is not resolved, so each node in there should have a parent.
+			// Find parents and try to solve them
+			parent := parents[node]
+			// true if the brothers of the current node are ALL solved.
+			// It means that we may evaluate the parent and move up
+			allSolved := true
+			// in case of all brothers are set, collect them right now
+			var allBrothersSolutions []bool
+			// for each child of the parent, that is, for each brother of the node
+			for _, brother := range childs[parent] {
+				// if we already solved that brother
+				if value, solved := resolved[brother]; !solved {
+					allSolved = false
+				} else {
+					allBrothersSolutions = append(allBrothersSolutions, value)
+				}
+			}
+
+			// if allSolved is true, it means that we may evaluate the parent.
+			// All operands to evaluate parent are in allBrothersSolutions
+			if allSolved {
+				parentOperation := content[parent]
+				solution := parentOperation.evaluate(allBrothersSolutions)
+				resolved[parent] = solution
+				nexts[parent] = solution
+			}
+		}
+
+		if len(nexts) == 0 {
+			// cannot happen but stop loop
+			break
+		}
+
+		// update currents
+		currents = nexts
+	}
+
+	// at this point for sure, tree is completely solved, so find root solution
+	return currents[c.id]
 }
 
 // NotCondition returns the not condition as a local condition.
 // Special case: if condition is nil, result will return false no matter the value
 func NotCondition(condition LocalCondition) LocalCondition {
 	if condition == nil {
-		return LocalCompositeCondition{operator: AlwaysFalseCombiner}
+		return LocalCompositeCondition{id: uuid.NewString(), operator: AlwaysFalseCombiner}
 	}
-	return LocalCompositeCondition{operator: NegateCombineConditions, operands: []LocalCondition{condition}}
+
+	return LocalCompositeCondition{
+		id:       uuid.NewString(),
+		operator: NegateCombineConditions,
+		operands: []LocalCondition{condition},
+	}
 }
 
 // buildLocalConditionsCombiner picks only not null conditions and build the combined local condition.
@@ -158,10 +275,17 @@ func buildLocalConditionsCombiner(conditions []LocalCondition, operation Logical
 	}
 
 	if len(operands) == 0 {
-		return LocalCompositeCondition{operator: AlwaysFalseCombiner}
+		return LocalCompositeCondition{
+			id:       uuid.NewString(),
+			operator: AlwaysFalseCombiner,
+		}
 	}
 
-	return LocalCompositeCondition{operator: operation, operands: operands}
+	return LocalCompositeCondition{
+		id:       uuid.NewString(),
+		operator: operation,
+		operands: operands,
+	}
 }
 
 // OrConditions builds an OR applied to non nil conditions parameter.
