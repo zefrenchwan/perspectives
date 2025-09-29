@@ -307,7 +307,7 @@ func TestMappingNoChange(t *testing.T) {
 	} else if subject.Id != william.Id {
 		t.Log("failed to copy subject")
 		t.Fail()
-	} else if o, found := ops[models.RoleSubject]; !found {
+	} else if o, found := ops[models.RoleObject]; !found {
 		t.Log("failed to find object")
 		t.Fail()
 	} else if object, err := o.AsObject(); err != nil {
@@ -315,6 +315,7 @@ func TestMappingNoChange(t *testing.T) {
 		t.Fail()
 	} else if object.Id != pizza.Id {
 		t.Log("failed to copy object")
+		t.Fail()
 	}
 }
 

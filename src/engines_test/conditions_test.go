@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zefrenchwan/perspectives.git/engines"
 	"github.com/zefrenchwan/perspectives.git/models"
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
@@ -12,7 +13,7 @@ func TestTypeCondition(t *testing.T) {
 	object := models.NewObject([]string{"Human"})
 	link, _ := models.NewQualifier(object, "good", structures.NewFullPeriod())
 
-	condition := models.NewTypeCondition(models.EntityTypeLink)
+	condition := engines.NewTypeCondition(models.EntityTypeLink)
 	if condition.Matches(object) {
 		t.Log("should accept link only")
 		t.Fail()
@@ -24,12 +25,12 @@ func TestTypeCondition(t *testing.T) {
 
 func TestObjectAttributeCondition(t *testing.T) {
 	// gender = M no matter the period
-	condition := models.LocalMatchingAttributeCondition{
+	condition := engines.LocalMatchingAttributeCondition{
 		AttributeName:     "gender",
 		AttributeValue:    "M",
-		AttributeOperator: models.ValuesEqual,
+		AttributeOperator: engines.ValuesEqual,
 		ReferencePeriod:   structures.NewFullPeriod(),
-		PeriodOperator:    models.AcceptsAllPeriods,
+		PeriodOperator:    engines.AcceptsAllPeriods,
 	}
 
 	objectNoMatch := models.NewObject([]string{"Human"})
@@ -53,12 +54,12 @@ func TestObjectAttributeCondition(t *testing.T) {
 	date := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
 	birthdate := time.Now().Add(-24 * time.Hour).Truncate(time.Minute)
 	// gender = F since a date
-	condition = models.LocalMatchingAttributeCondition{
+	condition = engines.LocalMatchingAttributeCondition{
 		AttributeName:     "gender",
 		AttributeValue:    "F",
-		AttributeOperator: models.ValuesEqual,
+		AttributeOperator: engines.ValuesEqual,
 		ReferencePeriod:   structures.NewPeriodSince(date, true),
-		PeriodOperator:    models.NonDisjoinPeriods,
+		PeriodOperator:    engines.NonDisjoinPeriods,
 	}
 
 	mary := models.NewObjectSince([]string{"Human"}, birthdate)
@@ -72,7 +73,7 @@ func TestObjectAttributeRegexpCondition(t *testing.T) {
 	objectValueMatch := models.NewObject([]string{"Human"})
 	objectValueMatch.SetValue("attr", "abc")
 
-	if condition, err := models.NewAttributeRegexpCondition("attr", "\\w"); err != nil {
+	if condition, err := engines.NewAttributeRegexpCondition("attr", "\\w"); err != nil {
 		t.Log("valid regexp should not fail")
 		t.Fail()
 	} else if !condition.Matches(objectValueMatch) {
@@ -81,7 +82,7 @@ func TestObjectAttributeRegexpCondition(t *testing.T) {
 	}
 
 	objectValueMatch.SetValue("attr", "a")
-	if condition, err := models.NewAttributeRegexpCondition("attr", "\\d+"); err != nil {
+	if condition, err := engines.NewAttributeRegexpCondition("attr", "\\d+"); err != nil {
 		t.Log("valid regexp should not fail")
 		t.Fail()
 	} else if condition.Matches(objectValueMatch) {
@@ -95,7 +96,7 @@ func TestActiveConditionForTemporalEntities(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	after := now.AddDate(10, 0, 0)
 	valid := models.NewObjectSince([]string{"Human"}, birthdate)
-	condition := models.NewActiveCondition(structures.NewPeriodSince(now, true))
+	condition := engines.NewActiveCondition(structures.NewPeriodSince(now, true))
 	invalid := models.NewObjectSince([]string{"Human"}, after)
 
 	if !condition.Matches(valid) {
@@ -111,7 +112,7 @@ func TestActiveConditionForTemporalEntities(t *testing.T) {
 	}
 
 	// test forever condition
-	condition = models.NewActiveCondition(structures.NewFullPeriod())
+	condition = engines.NewActiveCondition(structures.NewFullPeriod())
 	if !condition.Matches(object) {
 		t.Fail()
 	}
@@ -125,8 +126,60 @@ func TestActiveConditionForTemporalEntities(t *testing.T) {
 	}
 
 	// test when equals
-	condition = models.NewActiveCondition(structures.NewPeriodSince(now, true))
+	condition = engines.NewActiveCondition(structures.NewPeriodSince(now, true))
 	if !condition.Matches(likes) {
 		t.Fail()
 	}
+}
+
+func TestCombineConditions(t *testing.T) {
+	object := models.NewObject([]string{"Human"})
+	object.SetValue("name", "Doe")
+
+	// testing NOT condition
+	condition := engines.NewActiveCondition(structures.NewPeriodSince(time.Now(), true))
+	if !condition.Matches(object) {
+		t.Fail()
+	} else if notCondition := engines.NotCondition(condition); notCondition.Matches(object) {
+		t.Fail()
+	}
+
+	otherCondition := engines.NewAttributeValueCondition("name", "Danny", engines.ValuesEqualIgnoreCase)
+	if otherCondition.Matches(object) {
+		t.Fail()
+	} else if !engines.NotCondition(otherCondition).Matches(object) {
+		t.Fail()
+	}
+
+	// condition should accept and otherCondition should not
+	// So test OR and AND.
+	// And should be false because one is false,
+	// Or should be true because one is true
+	orCondition := engines.OrConditions([]engines.LocalCondition{otherCondition, condition})
+	andCondition := engines.AndConditions([]engines.LocalCondition{otherCondition, condition})
+
+	if andCondition.Matches(object) {
+		t.Fail()
+	} else if !orCondition.Matches(object) {
+		t.Fail()
+	}
+}
+
+func TestLinkValueCondition(t *testing.T) {
+	homer := models.NewObject([]string{"Human"})
+	donuts := models.NewObject([]string{"Food"})
+	likes, _ := models.NewSimpleLink("likes", homer, donuts)
+
+	// test when condition matches
+	condition := engines.NewLinkNameInValuesCondition([]string{"likes", "loves", "adores"}, engines.ValuesEqualIgnoreCase)
+	if !condition.Matches(likes) {
+		t.Fail()
+	}
+
+	// test for no match
+	condition = engines.NewLinkNameInValuesCondition([]string{"hates", "do not like", "ignores"}, engines.ValuesEqualIgnoreCase)
+	if condition.Matches(likes) {
+		t.Fail()
+	}
+
 }
