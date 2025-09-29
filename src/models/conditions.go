@@ -1,6 +1,7 @@
 package models
 
 import (
+	"regexp"
 	"slices"
 	"strings"
 
@@ -19,8 +20,11 @@ type ValueOperator int
 // ValuesEqual test if values are the same (including case)
 const ValuesEqual ValueOperator = 1
 
-// ValuesEqualIgnoreCase test if values are the same no matter the case
+// ValuesEqualIgnoreCase tests if values are the same no matter the case
 const ValuesEqualIgnoreCase ValueOperator = 2
+
+// ValueMatchesRegexp tests if a value matches a given regexp as a reference
+const ValueMatchesRegexp ValueOperator = 3
 
 // valuesOperatorRun applies the ValueOperator on source (parameter) and reference (from condition)
 func valuesOperatorRun(source, reference string, operator ValueOperator) bool {
@@ -29,6 +33,12 @@ func valuesOperatorRun(source, reference string, operator ValueOperator) bool {
 		return source == reference
 	case ValuesEqualIgnoreCase:
 		return strings.EqualFold(source, reference)
+	case ValueMatchesRegexp:
+		if validator := regexp.MustCompile(reference); validator == nil {
+			return false
+		} else {
+			return validator.MatchString(source)
+		}
 	default:
 		return false
 	}
@@ -43,13 +53,18 @@ const NonDisjoinPeriods PeriodOperator = 1
 // SamePeriods tests if periods are equals
 const SamePeriods PeriodOperator = 2
 
-// AcceptsAllOperator returns true no matter the condition
-const AcceptsAllOperator PeriodOperator = 3
+// AcceptsAllPeriods returns true no matter the condition
+const AcceptsAllPeriods PeriodOperator = 3
+
+// IsIncludedInReferencePeriod tests if current period is in reference period
+const IsIncludedInReferencePeriod PeriodOperator = 4
 
 // periodOperatorRun returns true if operator applied to current and reference matches
 func periodOperatorRun(current, reference structures.Period, operator PeriodOperator) bool {
 	switch operator {
-	case AcceptsAllOperator:
+	case IsIncludedInReferencePeriod:
+		return reference.Intersection(current).Equals(reference)
+	case AcceptsAllPeriods:
 		return true
 	case NonDisjoinPeriods:
 		return !current.Intersection(reference).IsEmpty()
@@ -86,6 +101,28 @@ func (l LocalTypeCondition) Matches(e ModelEntity) bool {
 	}
 }
 
+// LocalActiveCondition means that a temporal entity is active during that reference period
+type LocalActiveCondition struct {
+	ReferencePeriod structures.Period
+}
+
+// Matches returns true if m is a temporal entity with a period included in reference period
+func (l LocalActiveCondition) Matches(m ModelEntity) bool {
+	if m == nil {
+		return false
+	} else if t, ok := m.(TemporalEntity); !ok {
+		return false
+	} else {
+		return periodOperatorRun(t.ActivePeriod(), l.ReferencePeriod, IsIncludedInReferencePeriod)
+	}
+}
+
+// NewActiveCondition builds a condition to be active during a provided period.
+// Condition is true if object has an active period that contains reference (or is equals to)
+func NewActiveCondition(reference structures.Period) LocalCondition {
+	return LocalActiveCondition{ReferencePeriod: reference}
+}
+
 // LocalMatchingAttributeCondition is a condition for an object attribute on a given period.
 // For instance, nationality = "french" during a period
 type LocalMatchingAttributeCondition struct {
@@ -93,7 +130,7 @@ type LocalMatchingAttributeCondition struct {
 	AttributeValue    string            // Value of the attribute to compare with
 	AttributeOperator ValueOperator     // Operator for value (such as equals)
 	ReferencePeriod   structures.Period // Period to match attribute during
-	PeriodOoperator   PeriodOperator    // Operator for the period (such as with at least a common point)
+	PeriodOperator    PeriodOperator    // Operator for the period (such as with at least a common point)
 }
 
 // Matches returns true if all of those conditions apply :
@@ -113,7 +150,7 @@ func (l LocalMatchingAttributeCondition) Matches(e ModelEntity) bool {
 	} else {
 		for value, period := range matchingValues {
 			if valuesOperatorRun(value, l.AttributeValue, l.AttributeOperator) {
-				if periodOperatorRun(period, l.ReferencePeriod, l.PeriodOoperator) {
+				if periodOperatorRun(period, l.ReferencePeriod, l.PeriodOperator) {
 					return true
 				}
 			}
@@ -121,4 +158,32 @@ func (l LocalMatchingAttributeCondition) Matches(e ModelEntity) bool {
 	}
 
 	return false
+}
+
+// NewAttributeValueCondition builds a time independant condition on attribute and value.
+// For instance, attribute = value no matter the time.
+func NewAttributeValueCondition(attribute, value string, operator ValueOperator) LocalCondition {
+	return LocalMatchingAttributeCondition{
+		AttributeName:     attribute,
+		AttributeValue:    value,
+		AttributeOperator: operator,
+		ReferencePeriod:   structures.NewFullPeriod(),
+		PeriodOperator:    AcceptsAllPeriods,
+	}
+}
+
+// NewAttributeRegexpCondition builds a condition for an attribute value matching a regexp no matter the period.
+// The regexp definition may not be valid, so we return an error if so.
+func NewAttributeRegexpCondition(attribute, regexpDefinition string) (LocalCondition, error) {
+	if _, err := regexp.Compile(regexpDefinition); err != nil {
+		return nil, err
+	}
+
+	return LocalMatchingAttributeCondition{
+		AttributeName:     attribute,
+		AttributeValue:    regexpDefinition,
+		AttributeOperator: ValueMatchesRegexp,
+		ReferencePeriod:   structures.NewFullPeriod(),
+		PeriodOperator:    AcceptsAllPeriods,
+	}, nil
 }
