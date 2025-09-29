@@ -13,14 +13,6 @@ type LocalCondition interface {
 	Matches(ModelEntity) bool
 }
 
-// LocalTemporalCondition accepts a temporal entity for a given period.
-// By convention, if period is empty, then entity is refused.
-// For instance, a condition may be to be active since a given period.
-type LocalTemporalCondition interface {
-	// MatchesDuring may accept an entity for a given period
-	MatchesDuring(TemporalEntity) structures.Period
-}
-
 // ValueOperator applies to values (such as string) for conditions definition
 type ValueOperator int
 
@@ -51,6 +43,23 @@ const NonDisjoinPeriods PeriodOperator = 1
 // SamePeriods tests if periods are equals
 const SamePeriods PeriodOperator = 2
 
+// AcceptsAllOperator returns true no matter the condition
+const AcceptsAllOperator PeriodOperator = 3
+
+// periodOperatorRun returns true if operator applied to current and reference matches
+func periodOperatorRun(current, reference structures.Period, operator PeriodOperator) bool {
+	switch operator {
+	case AcceptsAllOperator:
+		return true
+	case NonDisjoinPeriods:
+		return !current.Intersection(reference).IsEmpty()
+	case SamePeriods:
+		return current.Equals(reference)
+	default:
+		return false
+	}
+}
+
 // LocalTypeCondition accepts entities if they match a type.
 // For instance, a condition may be "only links" or "links or objects".
 type LocalTypeCondition struct {
@@ -75,4 +84,41 @@ func (l LocalTypeCondition) Matches(e ModelEntity) bool {
 	} else {
 		return slices.Contains(l.values, e.GetType())
 	}
+}
+
+// LocalMatchingAttributeCondition is a condition for an object attribute on a given period.
+// For instance, nationality = "french" during a period
+type LocalMatchingAttributeCondition struct {
+	AttributeName     string            // Name of the attribute to find in the object
+	AttributeValue    string            // Value of the attribute to compare with
+	AttributeOperator ValueOperator     // Operator for value (such as equals)
+	ReferencePeriod   structures.Period // Period to match attribute during
+	PeriodOoperator   PeriodOperator    // Operator for the period (such as with at least a common point)
+}
+
+// Matches returns true if all of those conditions apply :
+// The parameter is indeed an object and has that attribute
+// The condition on attribute compared to value matches
+// The period of matching is acceptable regarding the period condition
+func (l LocalMatchingAttributeCondition) Matches(e ModelEntity) bool {
+	if e == nil {
+		return false
+	} else if e.GetType() != EntityTypeObject {
+		return false
+	}
+
+	object, _ := e.AsObject()
+	if matchingValues, found := object.GetValue(l.AttributeName); !found {
+		return false
+	} else {
+		for value, period := range matchingValues {
+			if valuesOperatorRun(value, l.AttributeValue, l.AttributeOperator) {
+				if periodOperatorRun(period, l.ReferencePeriod, l.PeriodOoperator) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
