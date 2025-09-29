@@ -175,7 +175,8 @@ func TestCombineConditionsLongTree(t *testing.T) {
 	lnCondition := engines.NewAttributeValueCondition("last name", "Doe", engines.ValuesEqualIgnoreCase)
 	nameCond := engines.AndConditions([]engines.LocalCondition{fnCondition, lnCondition})
 	ageCondition := engines.NewAttributeValueCondition("age", "21", engines.ValuesEqualIgnoreCase)
-	personCond := engines.AndConditions([]engines.LocalCondition{nameCond, ageCondition})
+	ageLongCondition := engines.NotCondition(engines.NotCondition(ageCondition))
+	personCond := engines.AndConditions([]engines.LocalCondition{nameCond, ageLongCondition})
 
 	if !personCond.Matches(object) {
 		t.Fail()

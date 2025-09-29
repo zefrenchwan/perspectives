@@ -104,6 +104,12 @@ type LocalCompositeCondition struct {
 	operands []LocalCondition           // the conditions to combine
 }
 
+// evaluate returns the result of operation applied to booleans.
+// For instance, if composite is AND, then it returns true if all values are true.
+// By default, for no value, it returns false no matter the operator.
+// Otherwise, it just applies:
+// "and" and "or" to all values
+// "not" only to first value
 func (l LocalCompositeCondition) evaluate(values []bool) bool {
 	if len(values) == 0 {
 		return false
