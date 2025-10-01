@@ -45,6 +45,30 @@ func NewValueDuring[T interface{ comparable }](element T, leftMoment, rightMomen
 	return result
 }
 
+// NewValueDuringPeriod sets the value during a given period
+func NewValueDuringPeriod[T interface{ comparable }](element T, period Period) Mapping[T] {
+	result := make(Mapping[T])
+	var nonEmptyIntervals []interval
+	for _, interval := range period.intervals {
+		if !interval.empty {
+			nonEmptyIntervals = append(nonEmptyIntervals, interval)
+		}
+	}
+
+	// get first value to build the result
+	result[nonEmptyIntervals[0]] = element
+
+	// add other values
+	nonEmptyIntervals = nonEmptyIntervals[1:]
+	for len(nonEmptyIntervals) != 0 {
+		current := nonEmptyIntervals[0]
+		nonEmptyIntervals = nonEmptyIntervals[1:]
+		result.addValue(element, current)
+	}
+
+	return result
+}
+
 // addValue sets value for given interval
 func (m Mapping[T]) addValue(value T, i interval) {
 	if i.empty {
@@ -113,6 +137,15 @@ func (m Mapping[T]) SetDuring(value T, leftBound, rightBound time.Time, leftIn, 
 	period := newIntervalDuring(leftBound, rightBound, leftIn, rightIn)
 	if !period.empty {
 		m.addValue(value, period)
+	}
+}
+
+// SetDuringPeriod sets the value during a given period
+func (m Mapping[T]) SetDuringPeriod(value T, period Period) {
+	for _, interval := range period.intervals {
+		if !interval.empty {
+			m.addValue(value, interval)
+		}
 	}
 }
 

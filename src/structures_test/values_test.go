@@ -125,3 +125,29 @@ func TestValuesCut(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestValuesSetDuringPeriod(t *testing.T) {
+	value := structures.NewValue("test")
+	now := time.Now().Truncate(time.Hour)
+	after := now.AddDate(1, 0, 0)
+	before := now.AddDate(-1, 0, 0)
+	value.SetUntil("other", now, true)
+	// value is
+	// ]-oo,now[ => "other"
+	// [now, +oo[ => test
+
+	if result, found := value.GetValue(after); !found || result != "test" {
+		t.Fail()
+	} else if result, found := value.GetValue(before); !found || result != "other" {
+		t.Fail()
+	}
+
+	// value changes back forever.
+	// ]-oo,+oo[ => "final"
+	value.Set("final")
+	if result, found := value.GetValue(after); !found || result != "final" {
+		t.Fail()
+	} else if result, found := value.GetValue(before); !found || result != "final" {
+		t.Fail()
+	}
+}

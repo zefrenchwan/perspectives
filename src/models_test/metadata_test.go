@@ -3,6 +3,7 @@ package models_test
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/zefrenchwan/perspectives.git/models"
 	"github.com/zefrenchwan/perspectives.git/structures"
@@ -55,7 +56,7 @@ func TestObjectDescription(t *testing.T) {
 	}
 }
 
-func TestObjectBuildFromDescription(t *testing.T) {
+func TestEmptyObjectBuildFromDescription(t *testing.T) {
 	description := models.ObjectDescription{
 		Id:       "id",
 		IdObject: "id object",
@@ -66,9 +67,9 @@ func TestObjectBuildFromDescription(t *testing.T) {
 		},
 	}
 
-	object := description.BuildEmptyObjectFromDescription()
+	object := description.BuildEmptyObjectFromDescription("other id")
 
-	if object.Id != "id object" {
+	if object.Id != "other id" {
 		t.Log("wrong id")
 		t.Fail()
 	} else if !object.ActivePeriod().Equals(structures.NewFullPeriod()) {
@@ -106,4 +107,61 @@ func TestObjectBuildFromDescription(t *testing.T) {
 			t.Logf("no attr for %s", attr)
 		}
 	}
+}
+
+func TestObjectBuildFromDescription(t *testing.T) {
+	base := models.NewObject([]string{"Human"})
+	base.SetValue("test", "value")
+	base.AddSemanticForAttribute("account", "email account")
+	base.SetValue("other field", "value")
+
+	description := base.Describe()
+	values := map[string]string{"test": "other value", "account": "dev@dev.com"}
+
+	period := structures.NewPeriodSince(time.Now().Truncate(time.Second), true)
+	object := description.BuildObjectFromDescription("id object", period, values)
+
+	if object.Id != "id object" {
+		t.Log("wrong id")
+		t.Fail()
+	} else if !object.ActivePeriod().Equals(period) {
+		t.Log("wrong period")
+		t.Fail()
+	}
+
+	traits := object.DeclaringTraits()
+	if len(traits) != 1 {
+		t.Log("missing traits")
+		t.Fail()
+	} else if !slices.Contains(traits, "Human") {
+		t.Log("wrong traits")
+		t.Fail()
+	}
+
+	attributes := object.Attributes()
+	if len(attributes) != 3 {
+		t.Log(attributes)
+		t.Log("missing attributes")
+		t.Fail()
+	} else if !slices.Contains(attributes, "test") {
+		t.Fail()
+	} else if !slices.Contains(attributes, "account") {
+		t.Fail()
+	} else if !slices.Contains(attributes, "other field") {
+		t.Fail()
+	}
+
+	allValues := object.GetAllValues(true)
+	if len(allValues) != 3 {
+		t.Log(allValues)
+		t.Log("missing values")
+		t.Fail()
+	} else if !slices.Equal(allValues["test"], []string{"other value"}) {
+		t.Fail()
+	} else if !slices.Equal(allValues["other field"], nil) {
+		t.Fail()
+	} else if !slices.Equal(allValues["account"], []string{"dev@dev.com"}) {
+		t.Fail()
+	}
+
 }
