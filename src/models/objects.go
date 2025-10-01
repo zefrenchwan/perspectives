@@ -19,6 +19,15 @@ type Attribute struct {
 	values structures.Mapping[string]
 }
 
+// newAttribute returns a new attribute with no value based on parameters
+func newAttribute(name string, semantics []string) Attribute {
+	return Attribute{
+		name:      name,
+		semantics: structures.SliceDeduplicate(semantics),
+		values:    make(structures.Mapping[string]),
+	}
+}
+
 // Object defines an object for a given lifetime with values
 type Object struct {
 	// Id of the object (assumed to be unique)
@@ -221,11 +230,10 @@ func (o *Object) Describe() ObjectDescription {
 		}
 	}
 
-	var attributes []string
+	attributes := make(map[string][]string)
 	for name, attr := range o.attributes {
-		if !attr.IsEmpty() {
-			attributes = append(attributes, name)
-		}
+		semantics := structures.SliceDeduplicate(attr.semantics)
+		attributes[name] = semantics
 	}
 
 	var traits []string
@@ -237,7 +245,7 @@ func (o *Object) Describe() ObjectDescription {
 		Id:         uuid.NewString(),
 		IdObject:   o.Id,
 		Traits:     structures.SliceReduce(traits),
-		Attributes: structures.SliceReduce(attributes),
+		Attributes: attributes,
 	}
 }
 

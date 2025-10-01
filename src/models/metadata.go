@@ -1,6 +1,10 @@
 package models
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/zefrenchwan/perspectives.git/structures"
+)
 
 // Trait defines a general label for an object
 type Trait struct {
@@ -57,5 +61,30 @@ type ObjectDescription struct {
 	// Traits of the object
 	Traits []string
 	// Attributes of the object
-	Attributes []string
+	Attributes map[string][]string
+}
+
+// BuildEmptyObjectFromDescription returns an EMPTY object from a description.
+// Result has:
+// the id of the object provided in description,
+// a lifetime set to full period,
+// and attributes with provided semantics
+//
+// Once built, it is strongly encouraged to change lifetime
+func (d ObjectDescription) BuildEmptyObjectFromDescription() *Object {
+	result := new(Object)
+	result.Id = d.IdObject
+	result.attributes = make(map[string]Attribute)
+	result.lifetime = structures.NewFullPeriod()
+
+	for _, trait := range structures.SliceDeduplicate(d.Traits) {
+		newTrait := NewTrait(trait)
+		result.traits = append(result.traits, newTrait)
+	}
+
+	for name, semantics := range d.Attributes {
+		result.attributes[name] = newAttribute(name, semantics)
+	}
+
+	return result
 }

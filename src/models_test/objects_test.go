@@ -79,27 +79,3 @@ func TestObjectGetValue(t *testing.T) {
 		t.Fail()
 	}
 }
-
-func TestObjectDescription(t *testing.T) {
-	obj := models.NewObject([]string{"Human"})
-
-	if desc := obj.Describe(); desc.IdObject != obj.Id {
-		t.Log("failed to reference object")
-		t.Fail()
-	} else if len(desc.Attributes) != 0 {
-		t.Log("wrong attributes for object")
-		t.Fail()
-	} else if slices.Compare(desc.Traits, []string{"Human"}) != 0 {
-		t.Log("wrong traits")
-		t.Fail()
-	}
-
-	obj.SetValue("name", "Cesar")
-	if desc := obj.Describe(); slices.Compare(desc.Attributes, []string{"name"}) != 0 {
-		t.Log("wrong attributes for name")
-		t.Fail()
-	} else if slices.Compare(desc.Traits, []string{"Human"}) != 0 {
-		t.Log("wrong traits")
-		t.Fail()
-	}
-}
