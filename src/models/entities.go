@@ -76,7 +76,7 @@ func SameModelEntity(a, b ModelEntity) bool {
 	case EntityTypeLink:
 		aLink, _ := a.AsLink()
 		bLink, _ := b.AsLink()
-		return aLink.id == bLink.id
+		return aLink.Same(bLink)
 	case EntityTypeGroup:
 		aGroup, _ := a.AsGroup()
 		bGroup, _ := b.AsGroup()
@@ -84,7 +84,7 @@ func SameModelEntity(a, b ModelEntity) bool {
 	case EntityTypeObject:
 		aObject, _ := a.AsObject()
 		bObject, _ := b.AsObject()
-		return aObject.Id == bObject.Id
+		return aObject.Same(bObject)
 	case EntityTypeVariable:
 		aVar, _ := a.AsVariable()
 		bVar, _ := b.AsVariable()

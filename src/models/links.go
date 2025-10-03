@@ -199,9 +199,21 @@ func NewQualifier(entity ModelEntity, adjective string, duration structures.Peri
 	return link, nil
 }
 
-// CopyStructure clones a link.
+// Same for links is based on ids
+func (l *Link) Same(other *Link) bool {
+	if l == nil && other == nil {
+		return true
+	} else if l == nil || other == nil {
+		return false
+	}
+
+	return l.id == other.id
+}
+
+// CopyStructure clones a link by cloning its structure and keeping values as is.
 // It copies the structure of the node, but uses the same content for anything but links.
 // To rephrase: copies all the links, keep the rest as is.
+// Especially, it means that links id are kept, not changed.
 func (l *Link) CopyStructure() *Link {
 	// content links a value to its original id.
 	// We only store links in content

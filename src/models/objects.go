@@ -40,6 +40,17 @@ type Object struct {
 	lifetime structures.Period
 }
 
+// Same returns true if objects share the same id (one id should be unique)
+func (o *Object) Same(other *Object) bool {
+	if o == nil && other == nil {
+		return true
+	} else if o == nil || other == nil {
+		return false
+	}
+
+	return o.Id == other.Id
+}
+
 // IsEmpty returns true if the attribute contains no data
 func (a *Attribute) IsEmpty() bool {
 	return a == nil || len(a.values) == 0
