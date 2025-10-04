@@ -137,8 +137,10 @@ func TestValuesSetDuringPeriod(t *testing.T) {
 	// [now, +oo[ => test
 
 	if result, found := value.GetValue(after); !found || result != "test" {
+		t.Log("failed to deal with interval intersection for now")
 		t.Fail()
 	} else if result, found := value.GetValue(before); !found || result != "other" {
+		t.Log("failed to deal with interval intersection for now")
 		t.Fail()
 	}
 
@@ -146,8 +148,10 @@ func TestValuesSetDuringPeriod(t *testing.T) {
 	// ]-oo,+oo[ => "final"
 	value.Set("final")
 	if result, found := value.GetValue(after); !found || result != "final" {
+		t.Log("failed to set value in the future")
 		t.Fail()
 	} else if result, found := value.GetValue(before); !found || result != "final" {
+		t.Log("failed to set value in the past")
 		t.Fail()
 	}
 }

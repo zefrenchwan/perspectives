@@ -1,6 +1,10 @@
 package models
 
-import "github.com/zefrenchwan/perspectives.git/structures"
+import (
+	"errors"
+
+	"github.com/zefrenchwan/perspectives.git/structures"
+)
 
 // EntityType defines the type of an entity to use
 // So far, accepted types are:
@@ -36,16 +40,61 @@ const EntityTypeVariable EntityType = 5
 type ModelEntity interface {
 	// GetType returns the type of the entity (trait ? link ? object ? )
 	GetType() EntityType
-	// AsLink casts the value as a link, or raises an error it underlying content is not a link
-	AsLink() (*Link, error)
-	// AsGroup casts the value as a group of objects, or raises an error it underlying content is not a group
-	AsGroup() ([]*Object, error)
-	// AsObject casts the value as an object, or raises an error it underlying content is not an object
-	AsObject() (*Object, error)
-	// AsTrait returns the value as a trait, or raises an error it underlying content is not a trait
-	AsTrait() (Trait, error)
-	// AsVariable returns the value as a variable, or raises an error if underlying content is not a variable
-	AsVariable() (Variable, error)
+}
+
+// AsTrait returns the model entiy as a trait if possible, or an error
+func AsTrait(e ModelEntity) (Trait, error) {
+	if e == nil {
+		return Trait{}, errors.New("nil value")
+	} else if result, ok := e.(Trait); !ok {
+		return Trait{}, errors.New("failed to cast as a trait")
+	} else {
+		return result, nil
+	}
+}
+
+// AsLink returns the entity as a link, or raises an error if e was not a link
+func AsLink(e ModelEntity) (*Link, error) {
+	if e == nil {
+		return nil, nil
+	} else if result, ok := e.(*Link); !ok {
+		return nil, errors.New("failed to cast as a link")
+	} else {
+		return result, nil
+	}
+}
+
+// AsObject returns the entity as an object, or raises an error if e was not an object
+func AsObject(e ModelEntity) (*Object, error) {
+	if e == nil {
+		return nil, nil
+	} else if result, ok := e.(*Object); !ok {
+		return nil, errors.New("failed to cast as an object")
+	} else {
+		return result, nil
+	}
+}
+
+// AsVariable returns the entity as a variable, or raises an error if e was not a variable
+func AsVariable(e ModelEntity) (Variable, error) {
+	if e == nil {
+		return Variable{}, errors.New("nil value")
+	} else if result, ok := e.(Variable); !ok {
+		return Variable{}, errors.New("failed to cast as a variable")
+	} else {
+		return result, nil
+	}
+}
+
+// AsGroup returns the entity as a group of objects, or an error if e was not a group of objects
+func AsGroup(e ModelEntity) ([]*Object, error) {
+	if e == nil {
+		return nil, errors.New("nil value")
+	} else if result, ok := e.(objectsGroup); !ok {
+		return nil, errors.New("failed to cast as a group")
+	} else {
+		return result, nil
+	}
 }
 
 // TemporalEntity defines an entity with a duration.
@@ -74,24 +123,24 @@ func SameModelEntity(a, b ModelEntity) bool {
 
 	switch aType {
 	case EntityTypeLink:
-		aLink, _ := a.AsLink()
-		bLink, _ := b.AsLink()
+		aLink, _ := AsLink(a)
+		bLink, _ := AsLink(b)
 		return aLink.Same(bLink)
 	case EntityTypeGroup:
-		aGroup, _ := a.AsGroup()
-		bGroup, _ := b.AsGroup()
+		aGroup, _ := AsGroup(a)
+		bGroup, _ := AsGroup(b)
 		return structures.SlicesEqualsAsSetsFunc(aGroup, bGroup, func(a, b *Object) bool { return a.Equals(b) })
 	case EntityTypeObject:
-		aObject, _ := a.AsObject()
-		bObject, _ := b.AsObject()
+		aObject, _ := AsObject(a)
+		bObject, _ := AsObject(b)
 		return aObject.Same(bObject)
 	case EntityTypeVariable:
-		aVar, _ := a.AsVariable()
-		bVar, _ := b.AsVariable()
+		aVar, _ := AsVariable(a)
+		bVar, _ := AsVariable(b)
 		return aVar.Same(bVar)
 	case EntityTypeTrait:
-		aTrait, _ := a.AsTrait()
-		bTrait, _ := b.AsTrait()
+		aTrait, _ := AsTrait(a)
+		bTrait, _ := AsTrait(b)
 		return aTrait.Equals(bTrait)
 	default:
 		return false

@@ -33,31 +33,6 @@ func (lv Variable) GetType() EntityType {
 	return EntityTypeVariable
 }
 
-// AsLink raises an error
-func (lv Variable) AsLink() (*Link, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsGroup raises an error
-func (lv Variable) AsGroup() ([]*Object, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsObject raises an error
-func (lv Variable) AsObject() (*Object, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsTrait raises an error
-func (lv Variable) AsTrait() (Trait, error) {
-	return Trait{}, errors.ErrUnsupported
-}
-
-// AsVariable returns the value as a variable
-func (lv Variable) AsVariable() (Variable, error) {
-	return lv, nil
-}
-
 // NewVariableForObject returns a new variable for that object
 func NewVariableForObject(name string, traits []string) Variable {
 	var matches []Trait
@@ -188,7 +163,7 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 		return objectsGroup(v), nil
 	} else if v, ok := other.(Trait); ok {
 		if !slices.Contains(expectedTypes, EntityTypeTrait) {
-			return nil, errors.New("group does not match expected type")
+			return nil, errors.New("trait does not match expected type")
 		}
 
 		// for traits, either variable does not specify any, or traits match
@@ -197,7 +172,7 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 		} else if !slices.ContainsFunc(lv.validTraits, func(t Trait) bool { return v.Equals(t) }) {
 			return nil, errors.New("trait value does not match expected traits")
 		} else {
-			return &v, nil
+			return v, nil
 		}
 	} else if v, ok := other.(Link); ok {
 		if !slices.Contains(expectedTypes, EntityTypeLink) {
@@ -226,7 +201,7 @@ func (lv Variable) Matches(other ModelEntity) bool {
 	if other == nil {
 		return true
 	} else if other.GetType() == EntityTypeVariable {
-		variable, _ := other.AsVariable()
+		variable, _ := AsVariable(other)
 		// subsitution may happen, so ensure it makes sense
 		if !structures.SlicesEqualsAsSetsFunc(variable.validTypes, lv.validTypes, func(a, b EntityType) bool { return a == b }) {
 			return false
@@ -242,7 +217,7 @@ func (lv Variable) Matches(other ModelEntity) bool {
 		// we already tested that lv accepts links, no other condition
 		return true
 	case EntityTypeGroup:
-		group, _ := other.AsGroup()
+		group, _ := AsGroup(other)
 		expectedTraits := lv.validTraits
 		for _, o := range group {
 			commonPoint := structures.SliceCommonElementFunc(expectedTraits, o.traits, func(a, b Trait) bool { return a.Name == b.Name })
@@ -253,13 +228,13 @@ func (lv Variable) Matches(other ModelEntity) bool {
 
 		return true
 	case EntityTypeObject:
-		object, _ := other.AsObject()
+		object, _ := AsObject(other)
 		traits := object.traits
 		expectedTraits := lv.validTraits
 		commonPoint := structures.SliceCommonElementFunc(traits, expectedTraits, func(a, b Trait) bool { return a.Name == b.Name })
 		return commonPoint
 	case EntityTypeTrait:
-		trait, _ := other.AsTrait()
+		trait, _ := AsTrait(other)
 		return lv.validTraits == nil || slices.ContainsFunc(lv.validTraits, func(t Trait) bool { return t.Equals(trait) })
 	case EntityTypeVariable:
 		// What we wanted was same types, same expected traits

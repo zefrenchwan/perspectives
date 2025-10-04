@@ -84,14 +84,14 @@ func (m Mapping[T]) addValue(value T, i interval) {
 	//   else, we remove i to the current period, remaining part keeps its value
 	// then we regroup the rest into a common interval with value as value
 	var intervalsWithSameValue []interval
-	for period, matchingValue := range m {
-		if matchingValue == value {
-			intervalsWithSameValue = append(intervalsWithSameValue, period)
+	for existingPeriod, existingValue := range m {
+		if existingValue == value {
+			intervalsWithSameValue = append(intervalsWithSameValue, existingPeriod)
 		} else {
-			remainings := period.remove(i)
+			remainings := existingPeriod.remove(i)
 			for _, remaining := range remainings {
 				if !remaining.empty {
-					newValues[remaining] = matchingValue
+					newValues[remaining] = existingValue
 				}
 			}
 		}

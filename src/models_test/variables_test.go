@@ -22,7 +22,7 @@ func TestMapToObject(t *testing.T) {
 	} else if v.GetType() != models.EntityTypeObject {
 		t.Log("wrong type")
 		t.Fail()
-	} else if o, err := v.AsObject(); err != nil {
+	} else if o, err := models.AsObject(v); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if o.Id != worker.Id {
@@ -46,7 +46,7 @@ func TestMapToGroup(t *testing.T) {
 	} else if _, err := x.MapAs(invalidGroup); err == nil {
 		t.Log("failed to detect non matching element")
 		t.Fail()
-	} else if group, err := g.AsGroup(); err != nil {
+	} else if group, err := models.AsGroup(g); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !slices.ContainsFunc(group, func(v *models.Object) bool { return v.Id == jane.Id }) {
@@ -70,7 +70,7 @@ func TestMapToTrait(t *testing.T) {
 	if d, err := x.MapAs(dogs); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if trait, err := d.AsTrait(); err != nil {
+	} else if trait, err := models.AsTrait(d); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !trait.Equals(dogs) {
@@ -92,7 +92,7 @@ func TestMapToSpecificTrait(t *testing.T) {
 	if d, err := x.MapAs(dogs); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if trait, err := d.AsTrait(); err != nil {
+	} else if trait, err := models.AsTrait(d); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !trait.Equals(dogs) {
@@ -121,7 +121,7 @@ func TestMapToLink(t *testing.T) {
 	if l, err := x.MapAs(likes); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if link, err := l.AsLink(); err != nil {
+	} else if link, err := models.AsLink(l); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if link.Id() != likes.Id() {

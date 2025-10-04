@@ -81,31 +81,6 @@ func (l *Link) GetType() EntityType {
 	return EntityTypeLink
 }
 
-// AsLink returns the link
-func (l *Link) AsLink() (*Link, error) {
-	return l, nil
-}
-
-// AsGroup raises an error
-func (l *Link) AsGroup() ([]*Object, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsObject raises an error
-func (l *Link) AsObject() (*Object, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsTrait raises an error
-func (l *Link) AsTrait() (Trait, error) {
-	return Trait{}, errors.ErrUnsupported
-}
-
-// AsVariable raises an error
-func (l *Link) AsVariable() (Variable, error) {
-	return Variable{}, errors.ErrUnsupported
-}
-
 // RoleSubject is the constant value for the subject role
 const RoleSubject = "subject"
 
@@ -235,7 +210,7 @@ func (l *Link) CopyStructure() *Link {
 		current := queue[0]
 		queue = queue[1:]
 		// we only put links, so it is safe to assume that current is indeed a link
-		currentLink, _ := current.content.AsLink()
+		currentLink, _ := AsLink(current.content)
 		if currentLink == nil {
 			continue
 		} else if _, found := content[current.uniqueId]; found {
@@ -283,7 +258,7 @@ func (l *Link) CopyStructure() *Link {
 		// for each node, locally map it
 		for _, node := range currentElements {
 			// build the local copy
-			currentLink, _ := node.content.AsLink()
+			currentLink, _ := AsLink(node.content)
 			newLink := currentLink.localCopy()
 			// change the links childs to read mapped values
 			for role, value := range currentLink.operands {
@@ -327,7 +302,7 @@ func (l *Link) CopyStructure() *Link {
 
 	// at this point, we made the root
 	processedRoot := newLinks[root.uniqueId]
-	rootAsLink, _ := processedRoot.content.AsLink()
+	rootAsLink, _ := AsLink(processedRoot.content)
 	return rootAsLink
 }
 
@@ -358,7 +333,7 @@ func (l *Link) findAllMatchingCondition(acceptance func(ModelEntity) bool) []Mod
 
 		// STEP ONE: DEAL WITH THE WALKTHROUGH
 		if current.GetType() == EntityTypeLink {
-			link, _ := current.AsLink()
+			link, _ := AsLink(current)
 			if linksAlreadyVisited[link.id] {
 				continue
 			} else {
@@ -367,7 +342,7 @@ func (l *Link) findAllMatchingCondition(acceptance func(ModelEntity) bool) []Mod
 
 			for _, value := range link.operands {
 				if value.contentType() == EntityTypeLink {
-					childLlink, _ := value.content.AsLink()
+					childLlink, _ := AsLink(value.content)
 					elements = append(elements, childLlink)
 				}
 			}
@@ -412,10 +387,10 @@ func (l *Link) AllObjectsOperands() []*Object {
 	for _, value := range values {
 		switch value.GetType() {
 		case EntityTypeGroup:
-			g, _ := value.AsGroup()
+			g, _ := AsGroup(value)
 			matches = append(matches, g...)
 		case EntityTypeObject:
-			o, _ := value.AsObject()
+			o, _ := AsObject(value)
 			matches = append(matches, o)
 		}
 	}
@@ -467,7 +442,7 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
 		} else {
 			// for a link, add all its childs as elements to process
 			if current.contentType() == EntityTypeLink {
-				if currentLink, err := current.content.AsLink(); err != nil {
+				if currentLink, err := AsLink(current.content); err != nil {
 					return nil, err
 				} else {
 					// keep going in the tree
@@ -515,9 +490,9 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
 		// so we will fill those two
 		var currentLink, equivalentLink *Link
 		// map current node and equivalent node to links
-		if clink, errSource := current.content.AsLink(); errSource != nil {
+		if clink, errSource := AsLink(current.content); errSource != nil {
 			return nil, errSource
-		} else if elink, errMapping := equivalent.content.AsLink(); errMapping != nil {
+		} else if elink, errMapping := AsLink(equivalent.content); errMapping != nil {
 			return nil, errMapping
 		} else {
 			currentLink, equivalentLink = clink, elink
@@ -594,8 +569,8 @@ func (l *Link) SameFunc(other *Link, nodeComparator func(ModelEntity, ModelEntit
 			return false
 		} else if isCurrentLink {
 			// go one level further
-			currentLink, _ := current.content.AsLink()
-			equivalentLink, _ := currentEquivalent.content.AsLink()
+			currentLink, _ := AsLink(current.content)
+			equivalentLink, _ := AsLink(currentEquivalent.content)
 			// structures differ => return false
 			if len(currentLink.operands) != len(equivalentLink.operands) {
 				return false
@@ -636,7 +611,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 	// In that case, we just map that variable with current link.
 	otherType := other.GetType()
 	if otherType == EntityTypeVariable {
-		variable, _ := other.AsVariable()
+		variable, _ := AsVariable(other)
 		name := variable.name
 		// Test if variable accepts the link
 		if variable.Matches(l) {
@@ -673,8 +648,8 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 		// equivalent value in OTHER
 		other := structuralMapping[current.uniqueId]
 		// current and mapping are links for sure
-		otherLink, _ := other.content.AsLink()
-		currentLink, _ := current.content.AsLink()
+		otherLink, _ := AsLink(other.content)
+		currentLink, _ := AsLink(current.content)
 
 		// basic tests for links: name and operands size should match
 		if len(currentLink.operands) != len(otherLink.operands) {
@@ -702,8 +677,8 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 						return nil, false
 					}
 
-					childObject, _ := child.content.AsObject()
-					otherChildObject, _ := otherChild.content.AsObject()
+					childObject, _ := AsObject(child.content)
+					otherChildObject, _ := AsObject(otherChild.content)
 					if !childObject.Equals(otherChildObject) {
 						return nil, false
 					}
@@ -714,8 +689,8 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 						return nil, false
 					}
 
-					childGroup, _ := child.content.AsGroup()
-					otherChildGroup, _ := otherChild.content.AsGroup()
+					childGroup, _ := AsGroup(child.content)
+					otherChildGroup, _ := AsGroup(otherChild.content)
 					if !structures.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, func(a, b *Object) bool { return a.Equals(b) }) {
 						return nil, false
 					}
@@ -725,15 +700,15 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 						return nil, false
 					}
 
-					childTrait, _ := child.content.AsTrait()
-					otherChildTrait, _ := otherChild.content.AsTrait()
+					childTrait, _ := AsTrait(child.content)
+					otherChildTrait, _ := AsTrait(otherChild.content)
 					if !childTrait.Equals(otherChildTrait) {
 						return nil, false
 					}
 				case EntityTypeVariable:
 					// for  variables, test if child's value matches the variable definition
 					childValue := child.content
-					otherChildVariable, _ := otherChild.content.AsVariable()
+					otherChildVariable, _ := AsVariable(otherChild.content)
 					if !otherChildVariable.Matches(childValue) {
 						return nil, false
 					}

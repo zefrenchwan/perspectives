@@ -113,31 +113,6 @@ func (o *Object) GetType() EntityType {
 	return EntityTypeObject
 }
 
-// AsLink would raise an error
-func (o *Object) AsLink() (*Link, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsGroup would raise an error
-func (o *Object) AsGroup() ([]*Object, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsObject returns the object
-func (o *Object) AsObject() (*Object, error) {
-	return o, nil
-}
-
-// AsTrait raises an error
-func (o *Object) AsTrait() (Trait, error) {
-	return Trait{}, errors.ErrUnsupported
-}
-
-// AsVariable raises an error
-func (o *Object) AsVariable() (Variable, error) {
-	return Variable{}, errors.ErrUnsupported
-}
-
 // AddSemanticForAttribute flags this attribute for that particular meaning.
 // If the attribute did not exist before, it is created
 func (o *Object) AddSemanticForAttribute(attribute, meaning string) {
@@ -342,52 +317,4 @@ func (o *Object) Equals(other *Object) bool {
 // ActivePeriod returns the object's active period
 func (o *Object) ActivePeriod() structures.Period {
 	return o.lifetime
-}
-
-// objectsGroup decorates a slice of objects to match a model entity definition
-type objectsGroup []*Object
-
-// GetType returns
-func (g objectsGroup) GetType() EntityType {
-	return EntityTypeGroup
-}
-
-// NewObjectGroup builds a group of objects (at least 1)
-func NewObjectsGroup(objects []*Object) (ModelEntity, error) {
-	if len(objects) == 0 {
-		return nil, errors.New("empty group not allowed as object group")
-	}
-
-	result := structures.SliceDeduplicate(objects)
-	return objectsGroup(result), nil
-}
-
-// NewGroupOfObjects builds a group of objects from single elements
-func NewGroupOfObjects(objects ...*Object) (ModelEntity, error) {
-	return NewObjectsGroup(objects)
-}
-
-// AsLink raises an error
-func (g objectsGroup) AsLink() (*Link, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsGroup returns the value as a slice of objects
-func (g objectsGroup) AsGroup() ([]*Object, error) {
-	return []*Object(g), nil
-}
-
-// AsObject raises an error
-func (g objectsGroup) AsObject() (*Object, error) {
-	return nil, errors.ErrUnsupported
-}
-
-// AsTrait raises an error
-func (g objectsGroup) AsTrait() (Trait, error) {
-	return Trait{}, errors.ErrUnsupported
-}
-
-// AsVariable raises an error
-func (g objectsGroup) AsVariable() (Variable, error) {
-	return Variable{}, errors.ErrUnsupported
 }

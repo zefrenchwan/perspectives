@@ -707,6 +707,8 @@ func (i interval) remove(other interval) []interval {
 		return nil
 	} else if i.empty {
 		return nil
+	} else if other.isFull() {
+		return []interval{}
 	}
 
 	complements := other.complement()

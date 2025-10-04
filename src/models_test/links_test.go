@@ -108,8 +108,8 @@ func TestLinksSame(t *testing.T) {
 		if me1.GetType() != me2.GetType() {
 			return false
 		} else if me1.GetType() == models.EntityTypeObject {
-			o1, _ := me1.AsObject()
-			o2, _ := me2.AsObject()
+			o1, _ := models.AsObject(me1)
+			o2, _ := models.AsObject(me2)
 			return o1.Equals(o2)
 		}
 
@@ -159,7 +159,7 @@ func TestCloneSimpleLink(t *testing.T) {
 	} else if s, found := operands[models.RoleSubject]; !found {
 		t.Log("missing subject")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if subject.Id != sonia.Id {
@@ -168,7 +168,7 @@ func TestCloneSimpleLink(t *testing.T) {
 	} else if o, found := operands[models.RoleObject]; !found {
 		t.Log("object not found")
 		t.Fail()
-	} else if object, err := o.AsObject(); err != nil {
+	} else if object, err := models.AsObject(o); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if object.Id != jack.Id {
@@ -204,7 +204,7 @@ func TestCloneLongLink(t *testing.T) {
 	} else if s, found := knowsOperands[models.RoleSubject]; !found {
 		t.Log("root subject failed")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if subject.Id != jack.Id {
@@ -218,7 +218,7 @@ func TestCloneLongLink(t *testing.T) {
 		t.Fail()
 	}
 
-	ignoresLink, _ := knowsOperands[models.RoleObject].AsLink()
+	ignoresLink, _ := models.AsLink(knowsOperands[models.RoleObject])
 	if ignoresLink.Id() != ignores.Id() {
 		t.Log("failed first level id")
 		t.Fail()
@@ -231,7 +231,7 @@ func TestCloneLongLink(t *testing.T) {
 	} else if s, found := operands[models.RoleSubject]; !found {
 		t.Log("missing subject at first level")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if subject.Id != marcel.Id {
@@ -239,7 +239,7 @@ func TestCloneLongLink(t *testing.T) {
 		t.Fail()
 	}
 
-	marriedLink, _ := ignoresLink.Operands()[models.RoleObject].AsLink()
+	marriedLink, _ := models.AsLink(ignoresLink.Operands()[models.RoleObject])
 	if marriedLink.Id() != married.Id() {
 		t.Log("failed second level id")
 		t.Fail()
@@ -252,7 +252,7 @@ func TestCloneLongLink(t *testing.T) {
 	} else if s, found := operands[models.RoleSubject]; !found {
 		t.Log("missing subject at level 2")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if subject.Id != sonia.Id {
@@ -261,7 +261,7 @@ func TestCloneLongLink(t *testing.T) {
 	} else if o, found := operands[models.RoleObject]; !found {
 		t.Log("missing object at level 2")
 		t.Fail()
-	} else if object, err := o.AsObject(); err != nil {
+	} else if object, err := models.AsObject(o); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if object.Id != jack.Id {
@@ -283,7 +283,7 @@ func TestMappingNoChange(t *testing.T) {
 	if same, err := eats.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) { return nil, false, nil }); err != nil {
 		t.Log("failed to map")
 		t.Fail()
-	} else if l, err := same.AsLink(); err != nil {
+	} else if l, err := models.AsLink(same); err != nil {
 		t.Log("failed to create a link")
 		t.Fail()
 	} else if l.Id() == eats.Id() {
@@ -301,7 +301,7 @@ func TestMappingNoChange(t *testing.T) {
 	} else if s, found := ops[models.RoleSubject]; !found {
 		t.Log("failed to find subject")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if subject.Id != william.Id {
@@ -310,7 +310,7 @@ func TestMappingNoChange(t *testing.T) {
 	} else if o, found := ops[models.RoleObject]; !found {
 		t.Log("failed to find object")
 		t.Fail()
-	} else if object, err := o.AsObject(); err != nil {
+	} else if object, err := models.AsObject(o); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if object.Id != pizza.Id {
@@ -346,7 +346,7 @@ func TestMappingRoot(t *testing.T) {
 	} else if result.GetType() != models.EntityTypeLink {
 		t.Log("wrong mapping")
 		t.Fail()
-	} else if link, err := result.AsLink(); err != nil {
+	} else if link, err := models.AsLink(result); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if link.Name() != "loves" {
@@ -358,7 +358,7 @@ func TestMappingRoot(t *testing.T) {
 	} else if s, found := operands[models.RoleSubject]; !found {
 		t.Log("missing subject")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log("wrong subject type")
 		t.Fail()
 	} else if subject.Id != jenna.Id {
@@ -367,7 +367,7 @@ func TestMappingRoot(t *testing.T) {
 	} else if o, found := operands[models.RoleObject]; !found {
 		t.Log("missing object")
 		t.Fail()
-	} else if object, err := o.AsObject(); err != nil {
+	} else if object, err := models.AsObject(o); err != nil {
 		t.Log("wrong object type")
 		t.Fail()
 	} else if object.Id != lorie.Id {
@@ -388,7 +388,7 @@ func TestMappingLeaf(t *testing.T) {
 
 	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
 		if m.GetType() == models.EntityTypeObject {
-			if o, err := m.AsObject(); err != nil {
+			if o, err := models.AsObject(m); err != nil {
 				return nil, false, err
 			} else if o.Id == lorie.Id {
 				return marie, true, nil
@@ -404,7 +404,7 @@ func TestMappingLeaf(t *testing.T) {
 	} else if result.GetType() != models.EntityTypeLink {
 		t.Log("wrong mapping")
 		t.Fail()
-	} else if link, err := result.AsLink(); err != nil {
+	} else if link, err := models.AsLink(result); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if link.Id() == friends.Id() {
@@ -419,7 +419,7 @@ func TestMappingLeaf(t *testing.T) {
 	} else if s, found := operands[models.RoleSubject]; !found {
 		t.Log("missing subject")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log("wrong subject type")
 		t.Fail()
 	} else if subject.Id != jenna.Id {
@@ -428,7 +428,7 @@ func TestMappingLeaf(t *testing.T) {
 	} else if o, found := operands[models.RoleObject]; !found {
 		t.Log("missing object")
 		t.Fail()
-	} else if object, err := o.AsObject(); err != nil {
+	} else if object, err := models.AsObject(o); err != nil {
 		t.Log("wrong object type")
 		t.Fail()
 	} else if object.Id == lorie.Id {
@@ -459,7 +459,7 @@ func TestMappingLongLink(t *testing.T) {
 
 	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
 		if m.GetType() == models.EntityTypeObject {
-			if o, err := m.AsObject(); err != nil {
+			if o, err := models.AsObject(m); err != nil {
 				return nil, false, err
 			} else if o.Id == lorie.Id {
 				return marie, true, nil
@@ -475,7 +475,7 @@ func TestMappingLongLink(t *testing.T) {
 	} else if result.GetType() != models.EntityTypeLink {
 		t.Log("wrong mapping")
 		t.Fail()
-	} else if root, err := result.AsLink(); err != nil {
+	} else if root, err := models.AsLink(result); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if root.Id() == knows.Id() {
@@ -484,13 +484,13 @@ func TestMappingLongLink(t *testing.T) {
 	} else if rootOps := root.Operands(); len(rootOps) != 2 {
 		t.Log("wrong root operands")
 		t.Fail()
-	} else if sroot, err := rootOps[models.RoleSubject].AsObject(); err != nil {
+	} else if sroot, err := models.AsObject(rootOps[models.RoleSubject]); err != nil {
 		t.Log("expected object as root subject")
 		t.Fail()
 	} else if sroot.Id != marie.Id {
 		t.Log("failed to map subject for root")
 		t.Fail()
-	} else if link, err := rootOps[models.RoleObject].AsLink(); err != nil {
+	} else if link, err := models.AsLink(rootOps[models.RoleObject]); err != nil {
 		t.Log("faield to map object for root")
 		t.Fail()
 	} else if link.Id() == friends.Id() {
@@ -505,7 +505,7 @@ func TestMappingLongLink(t *testing.T) {
 	} else if s, found := operands[models.RoleSubject]; !found {
 		t.Log("missing subject")
 		t.Fail()
-	} else if subject, err := s.AsObject(); err != nil {
+	} else if subject, err := models.AsObject(s); err != nil {
 		t.Log("wrong subject type")
 		t.Fail()
 	} else if subject.Id != jenna.Id {
@@ -514,7 +514,7 @@ func TestMappingLongLink(t *testing.T) {
 	} else if o, found := operands[models.RoleObject]; !found {
 		t.Log("missing object")
 		t.Fail()
-	} else if object, err := o.AsObject(); err != nil {
+	} else if object, err := models.AsObject(o); err != nil {
 		t.Log("wrong object type")
 		t.Fail()
 	} else if object.Id == lorie.Id {
@@ -540,7 +540,7 @@ func TestMappingToVariables(t *testing.T) {
 
 	mapping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
 		if m.GetType() == models.EntityTypeVariable {
-			if variable, err := m.AsVariable(); err != nil {
+			if variable, err := models.AsVariable(m); err != nil {
 				return nil, false, err
 			} else if variable.Name() != "x" {
 				return nil, false, nil
@@ -564,7 +564,7 @@ func TestMappingToVariables(t *testing.T) {
 	} else if instantiation.GetType() != models.EntityTypeLink {
 		t.Log("bad mapping")
 		t.Fail()
-	} else if link, err := instantiation.AsLink(); err != nil {
+	} else if link, err := models.AsLink(instantiation); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if link.Name() != "identity" {
@@ -573,13 +573,13 @@ func TestMappingToVariables(t *testing.T) {
 	} else if ops := link.Operands(); len(ops) != 2 {
 		t.Log("bad operands")
 		t.Fail()
-	} else if s, err := ops[models.RoleSubject].AsObject(); err != nil {
+	} else if s, err := models.AsObject(ops[models.RoleSubject]); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if s.Id != william.Id {
 		t.Log("bad mapping to subject")
 		t.Fail()
-	} else if o, err := ops[models.RoleObject].AsObject(); err != nil {
+	} else if o, err := models.AsObject(ops[models.RoleObject]); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if o.Id != william.Id {
@@ -599,7 +599,7 @@ func TestMappingLinkToValue(t *testing.T) {
 	// replace middle with coffee
 	result, errResult := starter.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) {
 		if me.GetType() == models.EntityTypeLink {
-			link, _ := me.AsLink()
+			link, _ := models.AsLink(me)
 			if link.Id() == middle.Id() {
 				return coffee, true, nil
 			}
@@ -613,7 +613,7 @@ func TestMappingLinkToValue(t *testing.T) {
 		t.Fail()
 	} else if result.GetType() != models.EntityTypeLink {
 		t.Fail()
-	} else if link, err := result.AsLink(); err != nil {
+	} else if link, err := models.AsLink(result); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if link.Name() != starter.Name() {
@@ -622,13 +622,13 @@ func TestMappingLinkToValue(t *testing.T) {
 	} else if ops := link.Operands(); len(ops) != 2 {
 		t.Log("wrong operands")
 		t.Fail()
-	} else if subject, err := ops[models.RoleSubject].AsObject(); err != nil {
+	} else if subject, err := models.AsObject(ops[models.RoleSubject]); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if subject.Id != burrata.Id {
 		t.Log("bad subject")
 		t.Fail()
-	} else if object, err := ops[models.RoleObject].AsObject(); err != nil {
+	} else if object, err := models.AsObject(ops[models.RoleObject]); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if object.Id != coffee.Id {
@@ -660,7 +660,7 @@ func TestMappingValueToLink(t *testing.T) {
 		t.Fail()
 	} else if replace.GetType() != models.EntityTypeLink {
 		t.Fail()
-	} else if root, errRoot := replace.AsLink(); errRoot != nil {
+	} else if root, errRoot := models.AsLink(replace); errRoot != nil {
 		t.Log(errRoot)
 		t.Fail()
 	} else if root.Name() != "knows" {
@@ -668,12 +668,12 @@ func TestMappingValueToLink(t *testing.T) {
 		t.Fail()
 	} else if rootOps := root.Operands(); len(rootOps) != 2 {
 		t.Fail()
-	} else if rootSubject, err := rootOps[models.RoleSubject].AsObject(); err != nil {
+	} else if rootSubject, err := models.AsObject(rootOps[models.RoleSubject]); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if rootSubject.Id != paula.Id {
 		t.Fail()
-	} else if rootObject, err := rootOps[models.RoleObject].AsLink(); err != nil {
+	} else if rootObject, err := models.AsLink(rootOps[models.RoleObject]); err != nil {
 		t.Log("bad link")
 		t.Fail()
 	} else if rootObject.Name() != loves.Name() {
@@ -681,12 +681,12 @@ func TestMappingValueToLink(t *testing.T) {
 		t.Fail()
 	} else if ops := rootObject.Operands(); len(ops) != 2 {
 		t.Fail()
-	} else if subject, err := ops[models.RoleSubject].AsObject(); err != nil {
+	} else if subject, err := models.AsObject(ops[models.RoleSubject]); err != nil {
 		t.Fail()
 	} else if subject.Id != lisa.Id {
 		t.Log("not full link")
 		t.Fail()
-	} else if object, err := ops[models.RoleObject].AsObject(); err != nil {
+	} else if object, err := models.AsObject(ops[models.RoleObject]); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if object.Id != gustave.Id {
@@ -730,7 +730,7 @@ func TestVariableMatchingLeaf(t *testing.T) {
 	} else if value := mapping[x.Name()]; !models.SameModelEntity(value, pizza) {
 		t.Log("bad allocation for x")
 		t.Fail()
-	} else if value := mapping[y.Name()]; !models.SameModelEntity(value, &italian) {
+	} else if value := mapping[y.Name()]; !models.SameModelEntity(value, italian) {
 		t.Log("bad allocation for y")
 		t.Fail()
 	}
