@@ -191,6 +191,29 @@ func TestPeriodRemove(t *testing.T) {
 	}
 }
 
+func TestPeriodRemoveLargerPeriod(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	before := now.AddDate(-10, 0, 0)
+	after := now.AddDate(10, 0, 0)
+	period := structures.NewFinitePeriod(before, now, true, true)
+	toRemove := structures.NewPeriodUntil(after, true)
+	remaining := period.Remove(toRemove)
+	// remaining should be empty because [before, now] is in ]-oo, after]
+	if !remaining.IsEmpty() {
+		t.Log("remaining should be empty because toRemove contains each point of period")
+		t.Fail()
+	}
+
+	toRemove = structures.NewFullPeriod()
+	remaining = period.Remove(toRemove)
+	// remaining should be empty because [before, now] is in the full period
+	if !remaining.IsEmpty() {
+		t.Log("remaining should be empty because toRemove contains period")
+		t.Fail()
+	}
+
+}
+
 func TestPeriodSerde(t *testing.T) {
 	tested := structures.NewEmptyPeriod()
 	if res, err := structures.PeriodLoad(tested.AsStrings()); err != nil {
