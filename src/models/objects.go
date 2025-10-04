@@ -28,6 +28,11 @@ func newAttribute(name string, semantics []string) Attribute {
 	}
 }
 
+// IsEmpty returns true if the attribute contains no data
+func (a *Attribute) IsEmpty() bool {
+	return a == nil || len(a.values) == 0
+}
+
 // Object defines an object for a given lifetime with values
 type Object struct {
 	// Id of the object (assumed to be unique)
@@ -40,6 +45,18 @@ type Object struct {
 	lifetime structures.Period
 }
 
+// ObjectDescription describes the object
+type ObjectDescription struct {
+	// Id of the description (not the object)
+	Id string
+	// Id of the object
+	IdObject string
+	// Traits of the object
+	Traits []string
+	// Attributes of the object
+	Attributes map[string][]string
+}
+
 // Same returns true if objects share the same id (one id should be unique)
 func (o *Object) Same(other *Object) bool {
 	if o == nil && other == nil {
@@ -49,11 +66,6 @@ func (o *Object) Same(other *Object) bool {
 	}
 
 	return o.Id == other.Id
-}
-
-// IsEmpty returns true if the attribute contains no data
-func (a *Attribute) IsEmpty() bool {
-	return a == nil || len(a.values) == 0
 }
 
 // NewObject returns an object implementing those traits
@@ -96,6 +108,48 @@ func NewObjectDuring(traits []string, startTime, endTime time.Time) (*Object, er
 	base := NewObject(traits)
 	base.lifetime = structures.NewFinitePeriod(startTime, endTime, true, true)
 	return base, nil
+}
+
+// BuildEmptyObjectFromDescription returns an EMPTY object from a description.
+// Result has:
+// the id provided in parameter
+// a lifetime set to full period,
+// and attributes with provided semantics
+//
+// Once built, it is strongly encouraged to change lifetime
+func (d ObjectDescription) BuildEmptyObjectFromDescription(newId string) *Object {
+	result := new(Object)
+	result.Id = newId
+	result.attributes = make(map[string]Attribute)
+	result.lifetime = structures.NewFullPeriod()
+
+	for _, trait := range structures.SliceDeduplicate(d.Traits) {
+		newTrait := NewTrait(trait)
+		result.traits = append(result.traits, newTrait)
+	}
+
+	for name, semantics := range d.Attributes {
+		result.attributes[name] = newAttribute(name, semantics)
+	}
+
+	return result
+}
+
+// BuildObjectFromDescription builds an object from a description, changes its lifetime and sets values.
+// Result is an object with:
+// Id as the newId
+// Attributes set from description or coming from values
+// Values set as constant values (no period for attributes)
+// Object's lifetime is lifetime
+func (d ObjectDescription) BuildObjectFromDescription(newId string, lifetime structures.Period, values map[string]string) *Object {
+	result := d.BuildEmptyObjectFromDescription(newId)
+	result.Id = newId
+	result.lifetime = lifetime
+	for k, v := range values {
+		result.SetValue(k, v)
+	}
+
+	return result
 }
 
 // DeclaringTraits returns the declaring traits for that object
