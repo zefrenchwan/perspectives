@@ -326,37 +326,42 @@ func (l *Link) findAllMatchingCondition(acceptance func(ModelEntity) bool) []Mod
 	matches := make([]ModelEntity, 0)
 	linksAlreadyVisited := make(map[string]bool)
 
+	// elements contains the links to walkthrough
 	elements := []*Link{l}
+	// for each link
 	for len(elements) != 0 {
+		// pop it
 		current := elements[0]
 		elements = elements[1:]
-
-		// STEP ONE: DEAL WITH THE WALKTHROUGH
-		if current.GetType() == EntityTypeLink {
-			link, _ := AsLink(current)
-			if linksAlreadyVisited[link.id] {
-				continue
-			} else {
-				linksAlreadyVisited[link.id] = true
-			}
-
-			for _, value := range link.operands {
-				if value.contentType() == EntityTypeLink {
-					childLlink, _ := AsLink(value.content)
-					elements = append(elements, childLlink)
-				}
-			}
+		link, _ := AsLink(current)
+		if linksAlreadyVisited[link.id] {
+			continue
+		} else {
+			linksAlreadyVisited[link.id] = true
 		}
-		// END OF WALKTHROUGH
 
-		// STEP TWO: TEST MATCH AND ADD IN MATCHES ACCORDINGLY
+		// first time we see the link
 		if acceptance(current) {
 			matches = append(matches, current)
 		}
 
+		// for each child
+		// Either it is a link and we will see it later
+		// Or it is not a link and we test it
+		for _, value := range link.operands {
+			if value.contentType() == EntityTypeLink {
+				childLlink, _ := AsLink(value.content)
+				elements = append(elements, childLlink)
+			} else if acceptance(value.content) {
+				matches = append(matches, value.content)
+			}
+		}
+
 	}
 
-	return matches
+	// deduplicate and return
+	deduplicates := structures.SliceDeduplicateFunc(matches, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
+	return deduplicates
 }
 
 // Operands returns the operands of the link as a map of roles and linked entities
@@ -373,10 +378,10 @@ func (l *Link) Operands() map[string]ModelEntity {
 	return result
 }
 
-// AllObjectsOperands returns the objects appearing recursively in the link.
+// AllObjectsLeafs returns the objects appearing recursively in the link.
 // It means that if l is a link of links of objects, descendants objects will appear.
 // Each object appears once per id
-func (l *Link) AllObjectsOperands() []*Object {
+func (l *Link) AllObjectsLeafs() []*Object {
 	acceptValueAsObject := func(v ModelEntity) bool {
 		matchingTypes := []EntityType{EntityTypeGroup, EntityTypeObject}
 		return slices.Contains(matchingTypes, v.GetType())
@@ -396,6 +401,25 @@ func (l *Link) AllObjectsOperands() []*Object {
 	}
 
 	return structures.SliceDeduplicateFunc(matches, func(a, b *Object) bool { return a.Equals(b) })
+}
+
+// AllVariablesLeafs returns the variables the link contains as a whole.
+// For instance, Knows(X, Loves(Y, Z)) would return X, Y and Z
+func (l *Link) AllVariablesLeafs() []Variable {
+	acceptVariables := func(e ModelEntity) bool {
+		return e != nil && e.GetType() == EntityTypeVariable
+	}
+
+	matches := l.findAllMatchingCondition(acceptVariables)
+	var result []Variable
+
+	for _, entity := range matches {
+		if value, ok := entity.(Variable); ok {
+			result = append(result, value)
+		}
+	}
+
+	return result
 }
 
 // LocalLinkValueMapper defines a mapping from a value to another.

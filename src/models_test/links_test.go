@@ -1,6 +1,7 @@
 package models
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -269,6 +270,70 @@ func TestCloneLongLink(t *testing.T) {
 		t.Fail()
 	}
 
+}
+
+func TestFindObjectsInLink(t *testing.T) {
+	pierre := models.NewObject([]string{"Human"})
+	laure := models.NewObject([]string{"Human"})
+	loves, _ := models.NewSimpleLink("loves", pierre, laure)
+	knows, _ := models.NewSimpleLink("knows", pierre, loves)
+	if result := knows.AllObjectsLeafs(); len(result) != 2 {
+		t.Log("three values but two objects")
+		t.Fail()
+	} else if !slices.ContainsFunc(result, func(e *models.Object) bool { return e.Equals(pierre) }) {
+		t.Log("no pierre")
+		t.Fail()
+	} else if !slices.ContainsFunc(result, func(e *models.Object) bool { return e.Equals(laure) }) {
+		t.Log("no laure")
+		t.Fail()
+	}
+}
+
+func TestFindVariablesInLink(t *testing.T) {
+	pierre := models.NewObject([]string{"Human"})
+	laure := models.NewObject([]string{"Human"})
+	jacques := models.NewObject([]string{"Human"})
+
+	x := models.NewVariableForObject("x", []string{"Human"})
+	y := models.NewVariableForObject("y", []string{"Human"})
+	z := models.NewVariableForObject("z", []string{"Human"})
+
+	// case 1: no variable
+	loves, _ := models.NewSimpleLink("loves", laure, jacques)
+	knows, _ := models.NewSimpleLink("knows", pierre, loves)
+	if result := knows.AllVariablesLeafs(); len(result) != 0 {
+		t.Log("no variable => expected no result")
+		t.Fail()
+	}
+
+	// case 2: with variables on direct link
+	knowsX, _ := models.NewSimpleLink("knows", x, loves)
+	if result := knowsX.AllVariablesLeafs(); len(result) != 1 {
+		t.Log(result)
+		t.Log("x in main link expected")
+		t.Fail()
+	} else if !result[0].Same(x) {
+		t.Log("expected x")
+		t.Fail()
+	}
+
+	// case 3: with variables anywhere
+	lovesXY, _ := models.NewSimpleLink("loves", x, y)
+	knowsZ, _ := models.NewSimpleLink("knows", z, lovesXY)
+	if result := knowsZ.AllVariablesLeafs(); len(result) != 3 {
+		t.Log(result)
+		t.Log("expected all variables")
+		t.Fail()
+	} else if !slices.ContainsFunc(result, func(e models.Variable) bool { return e.Name() == "x" }) {
+		t.Log("missing leaf value")
+		t.Fail()
+	} else if !slices.ContainsFunc(result, func(e models.Variable) bool { return e.Name() == "y" }) {
+		t.Log("missing leaf value")
+		t.Fail()
+	} else if !slices.ContainsFunc(result, func(e models.Variable) bool { return e.Name() == "z" }) {
+		t.Log("missing main value")
+		t.Fail()
+	}
 }
 
 func TestMappingNoChange(t *testing.T) {
