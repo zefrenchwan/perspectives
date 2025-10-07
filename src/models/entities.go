@@ -86,11 +86,11 @@ func AsVariable(e ModelEntity) (Variable, error) {
 	}
 }
 
-// AsGroup returns the entity as a group of objects, or an error if e was not a group of objects
-func AsGroup(e ModelEntity) ([]*Object, error) {
+// AsGroup returns the entity as a group, or an error if e was not a group
+func AsGroup(e ModelEntity) ([]ModelEntity, error) {
 	if e == nil {
 		return nil, errors.New("nil value")
-	} else if result, ok := e.(objectsGroup); !ok {
+	} else if result, ok := e.(entitiesGroup); !ok {
 		return nil, errors.New("failed to cast as a group")
 	} else {
 		return result, nil
@@ -129,7 +129,7 @@ func SameModelEntity(a, b ModelEntity) bool {
 	case EntityTypeGroup:
 		aGroup, _ := AsGroup(a)
 		bGroup, _ := AsGroup(b)
-		return structures.SlicesEqualsAsSetsFunc(aGroup, bGroup, func(a, b *Object) bool { return a.Equals(b) })
+		return structures.SlicesEqualsAsSetsFunc(aGroup, bGroup, SameModelEntity)
 	case EntityTypeObject:
 		aObject, _ := AsObject(a)
 		bObject, _ := AsObject(b)

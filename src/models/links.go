@@ -35,9 +35,10 @@ func newLinkValue(content ModelEntity) linkValue {
 	}
 }
 
-// newLinkValueForObjects builds a link value as a group of objects
-func newLinkValueForObjects(values []*Object) linkValue {
-	return linkValue{uuid.NewString(), objectsGroup(values)}
+// newLinkValueForEntities builds a link value as a group of entities
+func newLinkValueForEntities(values []ModelEntity) linkValue {
+	cleanValues := structures.SliceDeduplicateFunc(values, SameModelEntity)
+	return linkValue{uuid.NewString(), entitiesGroup(cleanValues)}
 }
 
 // Link will link objects together (0 level links) or links and object (higher level links).
@@ -96,7 +97,7 @@ const RoleQualifier = "qualifier"
 // duration is the period the link is valid for
 //
 // Although formal parameter is any, expected types are:
-// 1. Slices of objects
+// 1. Slices of entities, or slices of objects, or slices or links
 // 2. Objects (or pointers to objects)
 // 3. Links (or pointers to links)
 // 4. Traits
@@ -118,7 +119,13 @@ func NewLink(name string, values map[string]any, duration structures.Period) (*L
 		} else if lp, ok := operand.(*Link); ok {
 			link.operands[role] = newLinkValue(lp)
 		} else if g, ok := operand.([]*Object); ok {
-			link.operands[role] = newLinkValueForObjects(g)
+			mappedValues := objectsToEntities(g)
+			link.operands[role] = newLinkValueForEntities(mappedValues)
+		} else if g, ok := operand.([]*Link); ok {
+			mappedValues := linksToEntities(g)
+			link.operands[role] = newLinkValueForEntities(mappedValues)
+		} else if g, ok := operand.([]ModelEntity); ok {
+			link.operands[role] = newLinkValueForEntities(g)
 		} else if o, ok := operand.(Object); ok {
 			link.operands[role] = newLinkValue(&o)
 		} else if op, ok := operand.(*Object); ok {
@@ -130,7 +137,7 @@ func NewLink(name string, values map[string]any, duration structures.Period) (*L
 		} else if v, ok := operand.(ModelEntity); ok {
 			link.operands[role] = newLinkValue(v)
 		} else {
-			return nil, fmt.Errorf("unsupported type for role %s. Expecting either trait or object or link or group of objects", role)
+			return nil, fmt.Errorf("unsupported type for role %s", role)
 		}
 	}
 
@@ -393,7 +400,13 @@ func (l *Link) AllObjectsLeafs() []*Object {
 		switch value.GetType() {
 		case EntityTypeGroup:
 			g, _ := AsGroup(value)
-			matches = append(matches, g...)
+			for _, value := range g {
+				if value != nil && value.GetType() == EntityTypeObject {
+					object, _ := AsObject(value)
+					matches = append(matches, object)
+				}
+			}
+
 		case EntityTypeObject:
 			o, _ := AsObject(value)
 			matches = append(matches, o)
@@ -730,14 +743,14 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 					}
 
 				case EntityTypeGroup:
-					// for group of objects, test that they are equivalent as sets
+					// for group of entities, test that they are equivalent as sets
 					if childType != EntityTypeGroup {
 						return nil, false
 					}
 
 					childGroup, _ := AsGroup(child.content)
 					otherChildGroup, _ := AsGroup(otherChild.content)
-					if !structures.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, func(a, b *Object) bool { return a.Equals(b) }) {
+					if !structures.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, SameModelEntity) {
 						return nil, false
 					}
 				case EntityTypeTrait:

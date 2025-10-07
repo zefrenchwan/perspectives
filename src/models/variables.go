@@ -156,13 +156,17 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 		}
 
 		// test if each object within the group matches the trait condition
+		// If so, add it as an element to append
+		var elements []ModelEntity
 		for index, obj := range v {
 			if !lv.MatchesTraits(obj.traits) {
 				return nil, fmt.Errorf("value at index %d does not match traits condition", index)
+			} else {
+				elements = append(elements, obj)
 			}
 		}
 
-		return objectsGroup(v), nil
+		return entitiesGroup(elements), nil
 	} else if v, ok := other.(Trait); ok {
 		if !slices.Contains(expectedTypes, EntityTypeTrait) {
 			return nil, errors.New("trait does not match expected type")
@@ -196,7 +200,7 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 // Matches returns true if other would be acceptable instead of the variable.
 // Conditions are:
 // for variable accepting link, test if other is a link
-// for variable accepting objects or groups, test if traits match
+// for variable accepting objects or groups of objects, test if traits match
 // for variable accepting variables, same definition
 // for variable accepting traits, test if trait is acceptable
 func (lv Variable) Matches(other ModelEntity) bool {
@@ -221,8 +225,13 @@ func (lv Variable) Matches(other ModelEntity) bool {
 	case EntityTypeGroup:
 		group, _ := AsGroup(other)
 		expectedTraits := lv.validTraits
-		for _, o := range group {
-			commonPoint := structures.SliceCommonElementFunc(expectedTraits, o.traits, func(a, b Trait) bool { return a.Name == b.Name })
+		for _, entity := range group {
+			if entity.GetType() != EntityTypeObject {
+				return false
+			}
+
+			object, _ := AsObject(entity)
+			commonPoint := structures.SliceCommonElementFunc(expectedTraits, object.traits, func(a, b Trait) bool { return a.Equals(b) })
 			if !commonPoint {
 				return false
 			}
