@@ -935,7 +935,7 @@ func TestFindAndReplaceVariables(t *testing.T) {
 	christophe := models.NewObject([]string{"Human"})
 	gaelle := models.NewObject([]string{"Human"})
 
-	instantiation := models.NewVariablesToObjectsLinkValueMapper(map[string]*models.Object{"x": christophe, "y": gaelle})
+	instantiation := models.NewVariablesInstantiation(map[string]models.ModelEntity{"x": christophe, "y": gaelle})
 
 	mapped, _ := knowsXY.Morphism(instantiation)
 	if mapped.GetType() != models.EntityTypeLink {
