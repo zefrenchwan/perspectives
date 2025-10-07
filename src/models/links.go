@@ -427,6 +427,28 @@ func (l *Link) AllVariablesLeafs() []Variable {
 // IF value is anything but a link, THEN its image is also anything but a link
 type LocalLinkValueMapper func(ModelEntity) (ModelEntity, bool, error)
 
+// NewVariablesInstantiation defines a link from variables to values.
+// It eases the definition of a LocalLinkValueMapper to map variables to values.
+// Typical use would be:
+// given a link knows(X,Y) with variables X and Y, given two persons Lucian and Selene
+// When using "X" =>  Selene and "Y" => Lucian (that is, this specific function),
+// Then result should be Knows(Selene, Lucian)
+func NewVariablesInstantiation(values map[string]ModelEntity) LocalLinkValueMapper {
+	return func(e ModelEntity) (ModelEntity, bool, error) {
+		if e == nil {
+			return nil, false, nil
+		} else if e.GetType() != EntityTypeVariable {
+			return nil, false, nil
+		} else if variable, err := AsVariable(e); err != nil {
+			return nil, false, err
+		} else if value, found := values[variable.Name()]; !found {
+			return nil, false, nil
+		} else {
+			return value, true, nil
+		}
+	}
+}
+
 // localLinkCaller calls a mapper but ensures invariants are respected
 func localLinkValueCaller(value ModelEntity, mapper LocalLinkValueMapper) (ModelEntity, bool, error) {
 	return mapper(value)

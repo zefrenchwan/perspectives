@@ -914,3 +914,59 @@ func TestVariableMatchingLinks(t *testing.T) {
 	}
 
 }
+
+func TestFindAndReplaceVariables(t *testing.T) {
+	x := models.NewVariableForObject("x", []string{"Human"})
+	y := models.NewVariableForObject("y", []string{"Human"})
+	knowsXY, _ := models.NewSimpleLink("knows", x, y)
+
+	variables := knowsXY.AllVariablesLeafs()
+	if len(variables) != 2 {
+		t.Log("missing variables")
+		t.Fail()
+	} else if !slices.ContainsFunc(variables, func(v models.Variable) bool { return v.Same(x) }) {
+		t.Log("missing x")
+		t.Fail()
+	} else if !slices.ContainsFunc(variables, func(v models.Variable) bool { return v.Same(y) }) {
+		t.Log("missing y")
+		t.Fail()
+	}
+
+	christophe := models.NewObject([]string{"Human"})
+	gaelle := models.NewObject([]string{"Human"})
+
+	instantiation := models.NewVariablesToObjectsLinkValueMapper(map[string]*models.Object{"x": christophe, "y": gaelle})
+
+	mapped, _ := knowsXY.Morphism(instantiation)
+	if mapped.GetType() != models.EntityTypeLink {
+		t.Log("bad mapping")
+		t.Fail()
+	} else if mappedLink, err := models.AsLink(mapped); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if mappedLink.Name() != "knows" {
+		t.Log("link name failed")
+		t.Fail()
+	} else if operands := mappedLink.Operands(); len(operands) != 2 {
+		t.Log("bad operands")
+		t.Fail()
+	} else if s, found := operands[models.RoleSubject]; !found {
+		t.Log("no subject")
+		t.Fail()
+	} else if subject, err := models.AsObject(s); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if subject.Id != christophe.Id {
+		t.Log("bad subject")
+		t.Fail()
+	} else if o, found := operands[models.RoleObject]; !found {
+		t.Log("no object")
+		t.Fail()
+	} else if object, err := models.AsObject(o); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if object.Id != gaelle.Id {
+		t.Log("bad object")
+		t.Fail()
+	}
+}
