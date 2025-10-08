@@ -142,6 +142,28 @@ func TestMapToLink(t *testing.T) {
 	}
 }
 
+func TestMapToLinksGroupShouldFail(t *testing.T) {
+	x := models.NewVariableForGroup("x", []string{"Human"})
+	marie := models.NewObject([]string{"Human"})
+	anna := models.NewObject([]string{"Human"})
+	am, _ := models.NewSimpleLink("knows", anna, marie)
+	ma, _ := models.NewSimpleLink("knows", marie, anna)
+
+	objectsGroup, _ := models.NewGroupOfObjects(anna, marie)
+	mixedGroup, _ := models.NewLinksGroup([]*models.Link{am, ma})
+	// objects should map
+	if !x.Matches(objectsGroup) {
+		t.Log("objects should match")
+		t.Fail()
+	}
+
+	// links as groups should NOT
+	if x.Matches(mixedGroup) {
+		t.Log("links should fail")
+		t.Fail()
+	}
+}
+
 func TestMatchesObjectsOrGroups(t *testing.T) {
 	variable := models.NewVariableForObject("x", []string{"Human"})
 	dog := models.NewObject([]string{"Dog"})
