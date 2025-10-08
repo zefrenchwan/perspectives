@@ -24,7 +24,7 @@ const EntityTypeLink EntityType = 2
 // EntityTypeObject is the type for objects
 const EntityTypeObject EntityType = 3
 
-// EntityTypeGroup is the type for slices of objects
+// EntityTypeGroup is the type for slices of entities
 const EntityTypeGroup EntityType = 4
 
 // EntityTypeVariable is the type for variables
@@ -34,7 +34,7 @@ const EntityTypeVariable EntityType = 5
 // It decorates:
 // links as pointers because we may modify them
 // Objects as pointers because we may modify them too
-// Group of objects (as pointers for the same reason)
+// Group of entities
 // Traits as immutable objects
 // Variables as immutable objects
 type ModelEntity interface {
