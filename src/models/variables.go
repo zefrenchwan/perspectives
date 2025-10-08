@@ -8,9 +8,15 @@ import (
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
-// Variable defines a variable that may be replaced by any other value.
-// A value means basically any model entity but a variable, that is:
-// trait, pointers to link, pointer to object, or group of objects ([]*Object).
+// Variable defines a variable that may be replaced by almost any other value.
+// An accepted value so far is:
+// trait, objet link
+// pointers to link, pointer to object, or group of objects ([]*Object).
+//
+// Note that, in general, groups may be mixed groups of entities, for instance with a link and an object.
+// For variables, it makes no sense, we restrict ON PURPOSE variables to group of objects only.
+// If you are sure about extending groups to something else than objects, change MasAs and Matches.
+//
 // Typical use would be to have generic definition using links based on variables.
 // For instance, X( as human) Thinks Y (as a Link).
 // Using this generic link, we may apply "rules" flagging that Y is not necessarily a fact.
