@@ -15,7 +15,7 @@ func testIfEntityIsObjectWithId(e models.ModelEntity, objectId string) bool {
 	} else if o, err := models.AsObject(e); err != nil {
 		return false
 	} else {
-		return o.Id == objectId
+		return o.Id() == objectId
 	}
 }
 
@@ -37,7 +37,7 @@ func TestMapToObject(t *testing.T) {
 	} else if o, err := models.AsObject(v); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if o.Id != worker.Id {
+	} else if o.Id() != worker.Id() {
 		t.Log("wrong object")
 		t.Fail()
 	}
@@ -61,10 +61,10 @@ func TestMapToGroup(t *testing.T) {
 	} else if group, err := models.AsGroup(g); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if !slices.ContainsFunc(group, func(e models.ModelEntity) bool { return testIfEntityIsObjectWithId(e, jane.Id) }) {
+	} else if !slices.ContainsFunc(group, func(e models.ModelEntity) bool { return testIfEntityIsObjectWithId(e, jane.Id()) }) {
 		t.Log("missing element")
 		t.Fail()
-	} else if !slices.ContainsFunc(group, func(e models.ModelEntity) bool { return testIfEntityIsObjectWithId(e, lara.Id) }) {
+	} else if !slices.ContainsFunc(group, func(e models.ModelEntity) bool { return testIfEntityIsObjectWithId(e, lara.Id()) }) {
 		t.Log("missing element")
 		t.Fail()
 	} else if len(group) != 2 {

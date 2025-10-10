@@ -328,6 +328,13 @@ func (l *Link) ActivePeriod() structures.Period {
 	return l.lifetime
 }
 
+// SetActivity forces the activity for that link (not recursive)
+func (l *Link) SetActivity(newPeriod structures.Period) {
+	if l != nil {
+		l.lifetime = newPeriod
+	}
+}
+
 // findAllMatchingCondition goes through the full link and find elements matching condition
 func (l *Link) findAllMatchingCondition(acceptance func(ModelEntity) bool) []ModelEntity {
 	matches := make([]ModelEntity, 0)

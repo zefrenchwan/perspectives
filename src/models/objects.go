@@ -36,7 +36,7 @@ func (a *Attribute) IsEmpty() bool {
 // Object defines an object for a given lifetime with values
 type Object struct {
 	// Id of the object (assumed to be unique)
-	Id string
+	id string
 	// traits of the object, by name
 	traits []Trait
 	// attributes of the object, key is attribute name
@@ -57,6 +57,11 @@ type ObjectDescription struct {
 	Attributes map[string][]string
 }
 
+// Id of the object
+func (o *Object) Id() string {
+	return o.id
+}
+
 // Same returns true if objects share the same id (one id should be unique)
 func (o *Object) Same(other *Object) bool {
 	if o == nil && other == nil {
@@ -65,7 +70,7 @@ func (o *Object) Same(other *Object) bool {
 		return false
 	}
 
-	return o.Id == other.Id
+	return o.id == other.id
 }
 
 // NewObject returns an object implementing those traits
@@ -84,7 +89,7 @@ func NewObject(traits []string) *Object {
 
 	// then, build the object
 	result := new(Object)
-	result.Id = uuid.NewString()
+	result.id = uuid.NewString()
 	result.traits = objectTraits
 	result.attributes = make(map[string]Attribute)
 	result.lifetime = structures.NewFullPeriod()
@@ -119,7 +124,7 @@ func NewObjectDuring(traits []string, startTime, endTime time.Time) (*Object, er
 // Once built, it is strongly encouraged to change lifetime
 func (d ObjectDescription) BuildEmptyObjectFromDescription(newId string) *Object {
 	result := new(Object)
-	result.Id = newId
+	result.id = newId
 	result.attributes = make(map[string]Attribute)
 	result.lifetime = structures.NewFullPeriod()
 
@@ -143,7 +148,7 @@ func (d ObjectDescription) BuildEmptyObjectFromDescription(newId string) *Object
 // Object's lifetime is lifetime
 func (d ObjectDescription) BuildObjectFromDescription(newId string, lifetime structures.Period, values map[string]string) *Object {
 	result := d.BuildEmptyObjectFromDescription(newId)
-	result.Id = newId
+	result.id = newId
 	result.lifetime = lifetime
 	for k, v := range values {
 		result.SetValue(k, v)
@@ -352,7 +357,7 @@ func (o *Object) Describe() ObjectDescription {
 
 	return ObjectDescription{
 		Id:         uuid.NewString(),
-		IdObject:   o.Id,
+		IdObject:   o.id,
 		Traits:     structures.SliceReduce(traits),
 		Attributes: attributes,
 	}
@@ -365,10 +370,17 @@ func (o *Object) Equals(other *Object) bool {
 	} else if o == nil || other == nil {
 		return false
 	}
-	return o.Id == other.Id
+	return o.id == other.id
 }
 
 // ActivePeriod returns the object's active period
 func (o *Object) ActivePeriod() structures.Period {
 	return o.lifetime
+}
+
+// SetActivity forces the period for that object
+func (o *Object) SetActivity(period structures.Period) {
+	if o != nil {
+		o.lifetime = period
+	}
 }

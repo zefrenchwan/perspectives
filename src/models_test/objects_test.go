@@ -161,10 +161,26 @@ func TestObjectGetValue(t *testing.T) {
 	}
 }
 
+func TestObjectTemporalFeatures(t *testing.T) {
+	mario := models.NewObject([]string{"Human"})
+	period := structures.NewPeriodSince(time.Now().AddDate(-30, 0, 0), true)
+
+	if !mario.ActivePeriod().Equals(structures.NewFullPeriod()) {
+		t.Log("default value for lifetime is full")
+		t.Fail()
+	}
+
+	mario.SetActivity(period)
+	if !mario.ActivePeriod().Equals(period) {
+		t.Log("no impact when changing period")
+		t.Fail()
+	}
+}
+
 func TestObjectDescription(t *testing.T) {
 	obj := models.NewObject([]string{"Human"})
 
-	if desc := obj.Describe(); desc.IdObject != obj.Id {
+	if desc := obj.Describe(); desc.IdObject != obj.Id() {
 		t.Log("failed to reference object")
 		t.Fail()
 	} else if len(desc.Attributes) != 0 {
@@ -180,7 +196,7 @@ func TestObjectDescription(t *testing.T) {
 	obj.AddSemanticForAttribute("email", "email account")
 	desc := obj.Describe()
 
-	if desc.IdObject != obj.Id {
+	if desc.IdObject != obj.Id() {
 		t.Log("object id failed")
 		t.Fail()
 	} else if slices.Compare(desc.Traits, []string{"Human"}) != 0 {
@@ -221,7 +237,7 @@ func TestEmptyObjectBuildFromDescription(t *testing.T) {
 
 	object := description.BuildEmptyObjectFromDescription("other id")
 
-	if object.Id != "other id" {
+	if object.Id() != "other id" {
 		t.Log("wrong id")
 		t.Fail()
 	} else if !object.ActivePeriod().Equals(structures.NewFullPeriod()) {
@@ -273,7 +289,7 @@ func TestObjectBuildFromDescription(t *testing.T) {
 	period := structures.NewPeriodSince(time.Now().Truncate(time.Second), true)
 	object := description.BuildObjectFromDescription("id object", period, values)
 
-	if object.Id != "id object" {
+	if object.Id() != "id object" {
 		t.Log("wrong id")
 		t.Fail()
 	} else if !object.ActivePeriod().Equals(period) {

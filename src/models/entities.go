@@ -6,7 +6,7 @@ import (
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
-// EntityType defines the type of an entity to use
+// EntityType defines the type of an entity to use.
 // So far, accepted types are:
 // objects: for instance: John knows Jane
 // traits: for instance John Likes Chocolate (with Chocolate a trait)
@@ -105,6 +105,8 @@ type TemporalEntity interface {
 	ModelEntity
 	// ActivePeriod is the period the entity is active during
 	ActivePeriod() structures.Period
+	// SetActivity forces the period for that temporal entity
+	SetActivity(newPeriod structures.Period)
 }
 
 // SameModelEntity tests if two model entities are the same based on their own definition of same
@@ -145,4 +147,11 @@ func SameModelEntity(a, b ModelEntity) bool {
 	default:
 		return false
 	}
+}
+
+// IdentifiableEntity defines an entity that has an id.
+// An id should be globally unique : no link should have the same id as an object.
+// An entity has an id if any observer may distinguish it from another.
+type IdentifiableEntity interface {
+	Id() string // Id returns the id of that entity.
 }
