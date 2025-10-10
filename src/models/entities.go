@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
@@ -154,4 +155,10 @@ func SameModelEntity(a, b ModelEntity) bool {
 // An entity has an id if any observer may distinguish it from another.
 type IdentifiableEntity interface {
 	Id() string // Id returns the id of that entity.
+}
+
+// NewId builds a new unique id.
+// Two different calls should return two different values.
+func NewId() string {
+	return uuid.NewString()
 }

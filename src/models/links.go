@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/google/uuid"
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
@@ -30,7 +29,7 @@ func (v linkValue) contentType() EntityType {
 // newLinkValue builds a new node in a link based on a content
 func newLinkValue(content ModelEntity) linkValue {
 	return linkValue{
-		uniqueId: uuid.NewString(),
+		uniqueId: NewId(),
 		content:  content,
 	}
 }
@@ -38,7 +37,7 @@ func newLinkValue(content ModelEntity) linkValue {
 // newLinkValueForEntities builds a link value as a group of entities
 func newLinkValueForEntities(values []ModelEntity) linkValue {
 	cleanValues := structures.SliceDeduplicateFunc(values, SameModelEntity)
-	return linkValue{uuid.NewString(), entitiesGroup(cleanValues)}
+	return linkValue{NewId(), entitiesGroup(cleanValues)}
 }
 
 // Link will link objects together (0 level links) or links and object (higher level links).
@@ -106,7 +105,7 @@ const RoleQualifier = "qualifier"
 // An error will raise if values do not match that constraint
 func NewLink(name string, values map[string]any, duration structures.Period) (*Link, error) {
 	link := new(Link)
-	link.id = uuid.NewString()
+	link.id = NewId()
 	link.name = name
 	link.operands = make(map[string]linkValue)
 	link.lifetime = duration
@@ -170,7 +169,7 @@ func NewQualifier(entity ModelEntity, adjective string, duration structures.Peri
 
 	// build the full link
 	link := new(Link)
-	link.id = uuid.NewString()
+	link.id = NewId()
 	// name is the adjective
 	link.name = adjective
 	link.lifetime = duration
@@ -530,7 +529,7 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
 					// We make a new link copy because result is a fully independant link (no common descendant)
 					currentLinkCopy := currentLink.localCopy()
 					// new id because it is not the same link as before (we clone or change)
-					currentLinkCopy.id = uuid.NewString()
+					currentLinkCopy.id = NewId()
 					newCopy := newLinkValue(currentLinkCopy)
 					// register old id -> new clone
 					mappedLinkValues[currentId] = newCopy

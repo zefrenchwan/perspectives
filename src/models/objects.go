@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
@@ -89,7 +88,7 @@ func NewObject(traits []string) *Object {
 
 	// then, build the object
 	result := new(Object)
-	result.id = uuid.NewString()
+	result.id = NewId()
 	result.traits = objectTraits
 	result.attributes = make(map[string]Attribute)
 	result.lifetime = structures.NewFullPeriod()
@@ -340,7 +339,7 @@ func (o *Object) GetValue(attribute string, reduceToObjectLifetime bool) (map[st
 func (o *Object) Describe() ObjectDescription {
 	if o == nil {
 		return ObjectDescription{
-			Id: uuid.NewString(),
+			Id: NewId(),
 		}
 	}
 
@@ -356,7 +355,7 @@ func (o *Object) Describe() ObjectDescription {
 	}
 
 	return ObjectDescription{
-		Id:         uuid.NewString(),
+		Id:         NewId(),
 		IdObject:   o.id,
 		Traits:     structures.SliceReduce(traits),
 		Attributes: attributes,
