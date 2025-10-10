@@ -336,6 +336,29 @@ func TestFindVariablesInLink(t *testing.T) {
 	}
 }
 
+func TestAllEntitiesInLink(t *testing.T) {
+	joe := models.NewObject([]string{"Human"})
+	jack := models.NewObject([]string{"Human"})
+	william := models.NewObject([]string{"Human"})
+	averell := models.NewObject([]string{"Human"})
+	likes, _ := models.NewSimpleLink("likes", joe, jack)
+	knows, _ := models.NewSimpleLink("knows", william, likes)
+	aware, _ := models.NewSimpleLink("is aware that", averell, knows)
+	// final link is about deduplication test
+	finalLink, _ := models.NewSimpleLink("knows", joe, aware)
+
+	expected := []models.ModelEntity{joe, jack, william, averell, likes, knows, aware, finalLink}
+
+	if values := finalLink.AllEntitiesInLink(); len(values) != 8 {
+		t.Log(values)
+		t.Log("missing values")
+		t.Fail()
+	} else if !structures.SlicesEqualsAsSetsFunc(values, expected, models.SameModelEntity) {
+		t.Log("failed to find all values")
+		t.Fail()
+	}
+}
+
 func TestMappingNoChange(t *testing.T) {
 	william := models.NewObject([]string{"Human"})
 	pizza := models.NewObject([]string{"Food"})

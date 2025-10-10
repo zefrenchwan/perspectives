@@ -435,6 +435,16 @@ func (l *Link) AllVariablesLeafs() []Variable {
 	return result
 }
 
+// AllEntitiesInLink returns ALL the entities in the link as a whole.
+// For instance: if link is Knows(Paul, Hates(Jack, Laura))
+// Then result would be Knows, Hates, Paul, Jack, Laura (order does not matter).
+// Result contains at least l so is not empty.
+// Order does not matter but elements are deduplicated.
+func (l *Link) AllEntitiesInLink() []ModelEntity {
+	// basically, we accept them all
+	return l.findAllMatchingCondition(func(me ModelEntity) bool { return true })
+}
+
 // LocalLinkValueMapper defines a mapping from a value to another.
 // Accepted transformations are:
 // IF value is anything but a link, THEN its image is also anything but a link
