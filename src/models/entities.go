@@ -3,7 +3,6 @@ package models
 import (
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
@@ -32,6 +31,7 @@ const EntityTypeGroup EntityType = 4
 const EntityTypeVariable EntityType = 5
 
 // ModelEntity is the general definition of an entity in the model we use.
+// An entity is the objects of a model (other parts are structures and constraints)
 // It decorates:
 // links as pointers because we may modify them
 // Objects as pointers because we may modify them too
@@ -39,6 +39,8 @@ const EntityTypeVariable EntityType = 5
 // Traits as immutable objects
 // Variables as immutable objects
 type ModelEntity interface {
+	// A model entity is an element
+	ModelElement
 	// GetType returns the type of the entity (trait ? link ? object ? )
 	GetType() EntityType
 }
@@ -148,17 +150,4 @@ func SameModelEntity(a, b ModelEntity) bool {
 	default:
 		return false
 	}
-}
-
-// IdentifiableEntity defines an entity that has an id.
-// An id should be globally unique : no link should have the same id as an object.
-// An entity has an id if any observer may distinguish it from another.
-type IdentifiableEntity interface {
-	Id() string // Id returns the id of that entity.
-}
-
-// NewId builds a new unique id.
-// Two different calls should return two different values.
-func NewId() string {
-	return uuid.NewString()
 }
