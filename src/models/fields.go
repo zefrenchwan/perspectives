@@ -5,6 +5,4 @@ package models
 type Field interface {
 	// A field has an id
 	IdentifiableElement
-	// Apply an operation right now
-	Apply(Operation) (bool, error)
 }

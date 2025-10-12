@@ -138,3 +138,30 @@ func TestParameterSelect(t *testing.T) {
 	}
 
 }
+
+func TestParametersUnique(t *testing.T) {
+	leila := models.NewObject([]string{"Human"})
+	maria := models.NewObject([]string{"Human"})
+
+	p := models.NewNamedParameter("x", leila)
+	if res, matching := p.Unique(); !matching {
+		t.Fail()
+	} else if res != leila {
+		t.Fail()
+	}
+
+	p.Append(maria)
+	if res, matching := p.Unique(); matching {
+		t.Fail()
+	} else if res != nil {
+		t.Fail()
+	}
+
+	p = models.NewParameter(maria)
+	if res, matching := p.Unique(); !matching {
+		t.Fail()
+	} else if res != maria {
+		t.Fail()
+	}
+
+}

@@ -31,6 +31,9 @@ type Parameters interface {
 	PositionalParameters() []ModelElement
 	// NamedParameters returns the named parameters as a map
 	NamedParameters() map[string]ModelElement
+	// Unique picks first element, if parameters contains EITHER one positional value, OR one single named value.
+	// It returns nil, false if there are too many elements or if parameters is empty
+	Unique() (ModelElement, bool)
 }
 
 // genericParameters defines a basic implementation
@@ -173,6 +176,30 @@ func (a *genericParameters) NamedParameters() map[string]ModelElement {
 	}
 
 	return result
+}
+
+// Unique picks the only value if any, or nil false
+func (a *genericParameters) Unique() (ModelElement, bool) {
+	if a == nil {
+		return nil, false
+	}
+
+	if len(a.positionals) == 1 {
+		if len(a.named) == 0 {
+			return a.positionals[0], true
+		} else {
+			return nil, false
+		}
+	} else if len(a.positionals) == 0 {
+		if len(a.named) == 1 {
+			for _, value := range a.named {
+				return value, true
+			}
+		}
+	}
+
+	return nil, false
+
 }
 
 // NewParameter returns a new parameter for a single element
