@@ -22,8 +22,9 @@ func TestParameterCreation(t *testing.T) {
 }
 
 func TestParametersGet(t *testing.T) {
-	tanguy := models.NewObject([]string{"Human"})
-	alan := models.NewObject([]string{"Human"})
+	var tanguy, alan models.ModelElement
+	tanguy = models.NewObject([]string{"Human"})
+	alan = models.NewObject([]string{"Human"})
 
 	p := models.NewParameter(tanguy)
 	p.Append(alan)
