@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/zefrenchwan/perspectives.git/structures"
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 // Variable defines a variable that may be replaced by almost any other value.
@@ -42,7 +42,7 @@ func (lv Variable) GetType() EntityType {
 // NewVariableForObject returns a new variable for that object
 func NewVariableForObject(name string, traits []string) Variable {
 	var matches []Trait
-	for _, trait := range structures.SliceReduce(traits) {
+	for _, trait := range commons.SliceReduce(traits) {
 		matches = append(matches, NewTrait(trait))
 	}
 
@@ -56,7 +56,7 @@ func NewVariableForObject(name string, traits []string) Variable {
 // NewVariableForGroup returns the variable for a group of objects matching traits
 func NewVariableForGroup(name string, traits []string) Variable {
 	var matches []Trait
-	for _, trait := range structures.SliceReduce(traits) {
+	for _, trait := range commons.SliceReduce(traits) {
 		matches = append(matches, NewTrait(trait))
 	}
 
@@ -79,7 +79,7 @@ func NewVariableForTrait(name string) Variable {
 // NewVariableForSpecificTraits returns a variable for trait that may take only specific values
 func NewVariableForSpecificTraits(name string, traits []string) Variable {
 	var matches []Trait
-	for _, trait := range structures.SliceReduce(traits) {
+	for _, trait := range commons.SliceReduce(traits) {
 		matches = append(matches, NewTrait(trait))
 	}
 
@@ -106,7 +106,7 @@ func (lv Variable) MatchesTraits(traits []Trait) bool {
 		return true
 	} else {
 		// prerequisites are set, and then should match
-		return structures.SliceCommonElementFunc(lv.validTraits, traits, func(a, b Trait) bool { return a.Equals(b) })
+		return commons.SliceCommonElementFunc(lv.validTraits, traits, func(a, b Trait) bool { return a.Equals(b) })
 	}
 }
 
@@ -114,9 +114,9 @@ func (lv Variable) MatchesTraits(traits []Trait) bool {
 func (lv Variable) Same(other Variable) bool {
 	if lv.name != other.name {
 		return false
-	} else if !structures.SlicesEqualsAsSetsFunc(lv.validTypes, other.validTypes, func(a, b EntityType) bool { return a == b }) {
+	} else if !commons.SlicesEqualsAsSetsFunc(lv.validTypes, other.validTypes, func(a, b EntityType) bool { return a == b }) {
 		return false
-	} else if !structures.SlicesEqualsAsSetsFunc(lv.validTraits, other.validTraits, func(a, b Trait) bool { return a.Equals(b) }) {
+	} else if !commons.SlicesEqualsAsSetsFunc(lv.validTraits, other.validTraits, func(a, b Trait) bool { return a.Equals(b) }) {
 		return false
 	} else {
 		return true
@@ -215,7 +215,7 @@ func (lv Variable) Matches(other ModelEntity) bool {
 	} else if other.GetType() == EntityTypeVariable {
 		variable, _ := AsVariable(other)
 		// subsitution may happen, so ensure it makes sense
-		if !structures.SlicesEqualsAsSetsFunc(variable.validTypes, lv.validTypes, func(a, b EntityType) bool { return a == b }) {
+		if !commons.SlicesEqualsAsSetsFunc(variable.validTypes, lv.validTypes, func(a, b EntityType) bool { return a == b }) {
 			return false
 		}
 		// and now test traits are the same
@@ -237,7 +237,7 @@ func (lv Variable) Matches(other ModelEntity) bool {
 			}
 
 			object, _ := AsObject(entity)
-			commonPoint := structures.SliceCommonElementFunc(expectedTraits, object.traits, func(a, b Trait) bool { return a.Equals(b) })
+			commonPoint := commons.SliceCommonElementFunc(expectedTraits, object.traits, func(a, b Trait) bool { return a.Equals(b) })
 			if !commonPoint {
 				return false
 			}
@@ -248,7 +248,7 @@ func (lv Variable) Matches(other ModelEntity) bool {
 		object, _ := AsObject(other)
 		traits := object.traits
 		expectedTraits := lv.validTraits
-		commonPoint := structures.SliceCommonElementFunc(traits, expectedTraits, func(a, b Trait) bool { return a.Name == b.Name })
+		commonPoint := commons.SliceCommonElementFunc(traits, expectedTraits, func(a, b Trait) bool { return a.Name == b.Name })
 		return commonPoint
 	case EntityTypeTrait:
 		trait, _ := AsTrait(other)

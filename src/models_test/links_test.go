@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zefrenchwan/perspectives.git/commons"
 	"github.com/zefrenchwan/perspectives.git/models"
-	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
 func TestLinksCreation(t *testing.T) {
@@ -28,7 +28,7 @@ func TestLinksCreation(t *testing.T) {
 		t.Fail()
 	}
 
-	if l, err := models.NewLink("likes", map[string]any{models.RoleSubject: []*models.Object{john, mary}, models.RoleObject: cheese}, structures.NewFullPeriod()); err != nil {
+	if l, err := models.NewLink("likes", map[string]any{models.RoleSubject: []*models.Object{john, mary}, models.RoleObject: cheese}, commons.NewFullPeriod()); err != nil {
 		t.Log("failed to use group as operand")
 		t.Log(err)
 		t.Fail()
@@ -80,7 +80,7 @@ func TestLinksTimedCreation(t *testing.T) {
 	christopher := models.NewObject([]string{"Human"})
 	jacques := models.NewObject([]string{"Human"})
 	moment := time.Now().Truncate(time.Hour)
-	matchingPeriod := structures.NewPeriodSince(moment, true)
+	matchingPeriod := commons.NewPeriodSince(moment, true)
 	if knows, err := models.NewTimedSimpleLink("knows", matchingPeriod, christopher, jacques); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -136,13 +136,13 @@ func TestLinkImplementsTemporalFeatures(t *testing.T) {
 	food := models.NewTrait("food")
 	extends, _ := models.NewSimpleLink("is", chocolate, food)
 
-	if !structures.NewFullPeriod().Equals(extends.ActivePeriod()) {
+	if !commons.NewFullPeriod().Equals(extends.ActivePeriod()) {
 		t.Log("default period should be full")
 		t.Fail()
 	}
 
 	now := time.Now().Truncate(time.Second)
-	period := structures.NewPeriodSince(now, true)
+	period := commons.NewPeriodSince(now, true)
 	extends.SetActivity(period)
 
 	if !extends.ActivePeriod().Equals(period) {
@@ -373,7 +373,7 @@ func TestAllEntitiesInLink(t *testing.T) {
 		t.Log(values)
 		t.Log("missing values")
 		t.Fail()
-	} else if !structures.SlicesEqualsAsSetsFunc(values, expected, models.SameModelEntity) {
+	} else if !commons.SlicesEqualsAsSetsFunc(values, expected, models.SameModelEntity) {
 		t.Log("failed to find all values")
 		t.Fail()
 	}

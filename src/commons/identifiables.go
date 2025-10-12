@@ -1,4 +1,4 @@
-package models
+package commons
 
 import "github.com/google/uuid"
 

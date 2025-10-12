@@ -1,4 +1,4 @@
-package models
+package commons
 
 // Change is the most general definition of a state variation
 type Change interface {

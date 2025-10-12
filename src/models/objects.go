@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/structures"
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 // Attribute defines an attribute of an object.
@@ -15,15 +15,15 @@ type Attribute struct {
 	// Semantics of the attribute (for instance "email")
 	semantics []string
 	// Values over time for that attribute
-	values structures.Mapping[string]
+	values commons.Mapping[string]
 }
 
 // newAttribute returns a new attribute with no value based on parameters
 func newAttribute(name string, semantics []string) Attribute {
 	return Attribute{
 		name:      name,
-		semantics: structures.SliceDeduplicate(semantics),
-		values:    make(structures.Mapping[string]),
+		semantics: commons.SliceDeduplicate(semantics),
+		values:    make(commons.Mapping[string]),
 	}
 }
 
@@ -41,7 +41,7 @@ type Object struct {
 	// attributes of the object, key is attribute name
 	attributes map[string]Attribute
 	// lifetime of the object, that is the period that object "lives"
-	lifetime structures.Period
+	lifetime commons.Period
 }
 
 // ObjectDescription describes the object
@@ -88,17 +88,17 @@ func NewObject(traits []string) *Object {
 
 	// then, build the object
 	result := new(Object)
-	result.id = NewId()
+	result.id = commons.NewId()
 	result.traits = objectTraits
 	result.attributes = make(map[string]Attribute)
-	result.lifetime = structures.NewFullPeriod()
+	result.lifetime = commons.NewFullPeriod()
 	return result
 }
 
 // NewObjectSince returns an object that implements traits, valid since creationTime
 func NewObjectSince(traits []string, creationTime time.Time) *Object {
 	base := NewObject(traits)
-	base.lifetime = structures.NewPeriodSince(creationTime, true)
+	base.lifetime = commons.NewPeriodSince(creationTime, true)
 	return base
 }
 
@@ -110,7 +110,7 @@ func NewObjectDuring(traits []string, startTime, endTime time.Time) (*Object, er
 	}
 
 	base := NewObject(traits)
-	base.lifetime = structures.NewFinitePeriod(startTime, endTime, true, true)
+	base.lifetime = commons.NewFinitePeriod(startTime, endTime, true, true)
 	return base, nil
 }
 
@@ -125,9 +125,9 @@ func (d ObjectDescription) BuildEmptyObjectFromDescription(newId string) *Object
 	result := new(Object)
 	result.id = newId
 	result.attributes = make(map[string]Attribute)
-	result.lifetime = structures.NewFullPeriod()
+	result.lifetime = commons.NewFullPeriod()
 
-	for _, trait := range structures.SliceDeduplicate(d.Traits) {
+	for _, trait := range commons.SliceDeduplicate(d.Traits) {
 		newTrait := NewTrait(trait)
 		result.traits = append(result.traits, newTrait)
 	}
@@ -145,7 +145,7 @@ func (d ObjectDescription) BuildEmptyObjectFromDescription(newId string) *Object
 // Attributes set from description or coming from values
 // Values set as constant values (no period for attributes)
 // Object's lifetime is lifetime
-func (d ObjectDescription) BuildObjectFromDescription(newId string, lifetime structures.Period, values map[string]string) *Object {
+func (d ObjectDescription) BuildObjectFromDescription(newId string, lifetime commons.Period, values map[string]string) *Object {
 	result := d.BuildEmptyObjectFromDescription(newId)
 	result.id = newId
 	result.lifetime = lifetime
@@ -163,7 +163,7 @@ func (o *Object) DeclaringTraits() []string {
 		result = append(result, trait.Name)
 	}
 
-	return structures.SliceReduce(result)
+	return commons.SliceReduce(result)
 }
 
 // GetType returns the type of the entity, that is EntityTypeObject
@@ -178,7 +178,7 @@ func (o *Object) AddSemanticForAttribute(attribute, meaning string) {
 		o.attributes[attribute] = Attribute{name: attribute, semantics: []string{meaning}}
 	} else {
 		newValues := append(attr.semantics, meaning)
-		attr.semantics = structures.SliceReduce(newValues)
+		attr.semantics = commons.SliceReduce(newValues)
 		o.attributes[attribute] = attr
 	}
 }
@@ -203,14 +203,14 @@ func (o *Object) Attributes() []string {
 		result = make([]string, 0)
 		return result
 	} else {
-		return structures.SliceReduce(result)
+		return commons.SliceReduce(result)
 	}
 }
 
 // setValueDuringPeriod changes that attribute to set value during period.
 // If object is nil or period is empty, no action.
 // Else value changes during that period no matter the object's lifetime
-func (o *Object) setValueDuringPeriod(attribute, value string, period structures.Period) {
+func (o *Object) setValueDuringPeriod(attribute, value string, period commons.Period) {
 	if o == nil {
 		return
 	} else if period.IsEmpty() {
@@ -218,9 +218,9 @@ func (o *Object) setValueDuringPeriod(attribute, value string, period structures
 	}
 
 	if attr, found := o.attributes[attribute]; !found {
-		o.attributes[attribute] = Attribute{name: attribute, values: structures.NewValueDuringPeriod(value, period)}
+		o.attributes[attribute] = Attribute{name: attribute, values: commons.NewValueDuringPeriod(value, period)}
 	} else if attr.values == nil {
-		attr.values = make(structures.Mapping[string])
+		attr.values = make(commons.Mapping[string])
 		attr.values.SetDuringPeriod(value, period)
 		o.attributes[attribute] = attr
 	} else {
@@ -235,7 +235,7 @@ func (o *Object) SetValue(attribute, value string) {
 		return
 	}
 
-	o.setValueDuringPeriod(attribute, value, structures.NewFullPeriod())
+	o.setValueDuringPeriod(attribute, value, commons.NewFullPeriod())
 }
 
 // SetValueSince sets the value for that attribute since startingTime
@@ -244,7 +244,7 @@ func (o *Object) SetValueSince(attribute, value string, startingTime time.Time, 
 		return
 	}
 
-	period := structures.NewPeriodSince(startingTime, includeStartingTime)
+	period := commons.NewPeriodSince(startingTime, includeStartingTime)
 	o.setValueDuringPeriod(attribute, value, period)
 }
 
@@ -254,7 +254,7 @@ func (o *Object) SetValueUntil(attribute, value string, endingTime time.Time, in
 		return
 	}
 
-	period := structures.NewPeriodUntil(endingTime, includeEndingTime)
+	period := commons.NewPeriodUntil(endingTime, includeEndingTime)
 	o.setValueDuringPeriod(attribute, value, period)
 }
 
@@ -264,7 +264,7 @@ func (o *Object) SetValueDuring(attribute, value string, startingTime, endingTim
 		return
 	}
 
-	period := structures.NewFinitePeriod(startingTime, endingTime, true, true)
+	period := commons.NewFinitePeriod(startingTime, endingTime, true, true)
 	o.setValueDuringPeriod(attribute, value, period)
 }
 
@@ -295,7 +295,7 @@ func (o *Object) GetAllValues(reduceToObjectLifetime bool) map[string][]string {
 		}
 
 		// we made the values, so set for that attribute
-		result[name] = structures.SliceDeduplicate(values)
+		result[name] = commons.SliceDeduplicate(values)
 	}
 
 	return result
@@ -306,13 +306,13 @@ func (o *Object) GetAllValues(reduceToObjectLifetime bool) map[string][]string {
 // Depending on reduceToObjectLifetime:
 // Either it is true and then validity is the intersection of the object lifetime and the attribute validity
 // Or we keep values and matching period as is
-func (o *Object) GetValue(attribute string, reduceToObjectLifetime bool) (map[string]structures.Period, bool) {
+func (o *Object) GetValue(attribute string, reduceToObjectLifetime bool) (map[string]commons.Period, bool) {
 	if o == nil {
 		return nil, false
 	}
 
 	// values are the values from the attribute.
-	var values map[string]structures.Period
+	var values map[string]commons.Period
 	if attr, found := o.attributes[attribute]; !found {
 		return nil, false
 	} else {
@@ -320,7 +320,7 @@ func (o *Object) GetValue(attribute string, reduceToObjectLifetime bool) (map[st
 	}
 
 	// result contains the intersection with the object's lifetime
-	result := make(map[string]structures.Period)
+	result := make(map[string]commons.Period)
 	for key, period := range values {
 		if reduceToObjectLifetime {
 			inter := period.Intersection(o.lifetime)
@@ -339,13 +339,13 @@ func (o *Object) GetValue(attribute string, reduceToObjectLifetime bool) (map[st
 func (o *Object) Describe() ObjectDescription {
 	if o == nil {
 		return ObjectDescription{
-			Id: NewId(),
+			Id: commons.NewId(),
 		}
 	}
 
 	attributes := make(map[string][]string)
 	for name, attr := range o.attributes {
-		semantics := structures.SliceDeduplicate(attr.semantics)
+		semantics := commons.SliceDeduplicate(attr.semantics)
 		attributes[name] = semantics
 	}
 
@@ -355,9 +355,9 @@ func (o *Object) Describe() ObjectDescription {
 	}
 
 	return ObjectDescription{
-		Id:         NewId(),
+		Id:         commons.NewId(),
 		IdObject:   o.id,
-		Traits:     structures.SliceReduce(traits),
+		Traits:     commons.SliceReduce(traits),
 		Attributes: attributes,
 	}
 }
@@ -373,12 +373,12 @@ func (o *Object) Equals(other *Object) bool {
 }
 
 // ActivePeriod returns the object's active period
-func (o *Object) ActivePeriod() structures.Period {
+func (o *Object) ActivePeriod() commons.Period {
 	return o.lifetime
 }
 
 // SetActivity forces the period for that object
-func (o *Object) SetActivity(period structures.Period) {
+func (o *Object) SetActivity(period commons.Period) {
 	if o != nil {
 		o.lifetime = period
 	}

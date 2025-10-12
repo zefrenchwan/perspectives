@@ -3,7 +3,7 @@ package models
 import (
 	"errors"
 
-	"github.com/zefrenchwan/perspectives.git/structures"
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 // EntityType defines the type of an entity to use.
@@ -40,7 +40,7 @@ const EntityTypeVariable EntityType = 5
 // Variables as immutable objects
 type ModelEntity interface {
 	// A model entity is an element
-	ModelElement
+	commons.ModelElement
 	// GetType returns the type of the entity (trait ? link ? object ? )
 	GetType() EntityType
 }
@@ -107,9 +107,9 @@ type TemporalEntity interface {
 	// We want a temporal entity to be an entity
 	ModelEntity
 	// ActivePeriod is the period the entity is active during
-	ActivePeriod() structures.Period
+	ActivePeriod() commons.Period
 	// SetActivity forces the period for that temporal entity
-	SetActivity(newPeriod structures.Period)
+	SetActivity(newPeriod commons.Period)
 }
 
 // SameModelEntity tests if two model entities are the same based on their own definition of same
@@ -134,7 +134,7 @@ func SameModelEntity(a, b ModelEntity) bool {
 	case EntityTypeGroup:
 		aGroup, _ := AsGroup(a)
 		bGroup, _ := AsGroup(b)
-		return structures.SlicesEqualsAsSetsFunc(aGroup, bGroup, SameModelEntity)
+		return commons.SlicesEqualsAsSetsFunc(aGroup, bGroup, SameModelEntity)
 	case EntityTypeObject:
 		aObject, _ := AsObject(a)
 		bObject, _ := AsObject(b)

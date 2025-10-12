@@ -3,6 +3,7 @@ package models_test
 import (
 	"testing"
 
+	"github.com/zefrenchwan/perspectives.git/commons"
 	"github.com/zefrenchwan/perspectives.git/models"
 )
 
@@ -10,9 +11,9 @@ func TestIdBasedCondition(t *testing.T) {
 	helene := models.NewObject([]string{"Human"})
 	id := helene.Id()
 	daniel := models.NewObject([]string{"Human"})
-	condition := models.IdBasedCondition{Id: id}
+	condition := commons.IdBasedCondition{Id: id}
 
-	p := models.NewNamedParameter("x", helene)
+	p := commons.NewNamedParameter("x", helene)
 	p.AppendAsVariable("y", daniel)
 
 	if condition.Matches(p) {
@@ -20,15 +21,22 @@ func TestIdBasedCondition(t *testing.T) {
 		t.Fail()
 	}
 
-	p = models.NewNamedParameter("y", daniel)
+	p = commons.NewNamedParameter("y", daniel)
 	if condition.Matches(p) {
 		t.Log("bad id matching")
 		t.Fail()
 	}
 
-	p = models.NewParameter(helene)
+	p = commons.NewParameter(helene)
 	if !condition.Matches(p) {
 		t.Log("id should match")
+		t.Fail()
+	}
+
+	// makes no sense, but prove that a non identifiable object would be rejected
+	variable := models.NewVariableForTrait(id)
+	p = commons.NewNamedParameter("x", variable)
+	if condition.Matches(p) {
 		t.Fail()
 	}
 

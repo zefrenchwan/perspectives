@@ -3,7 +3,7 @@ package models
 import (
 	"errors"
 
-	"github.com/zefrenchwan/perspectives.git/structures"
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 // objectsToEntities builds a slice of entities from a slice of objects
@@ -58,5 +58,5 @@ func newEntitiesGroup(elements []ModelEntity) (ModelEntity, error) {
 		return nil, errors.New("empty group not allowed")
 	}
 
-	return entitiesGroup(structures.SliceDeduplicateFunc(elements, SameModelEntity)), nil
+	return entitiesGroup(commons.SliceDeduplicateFunc(elements, SameModelEntity)), nil
 }

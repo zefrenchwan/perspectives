@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/zefrenchwan/perspectives.git/structures"
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 // linkValue is just a container for values in link.
@@ -29,15 +29,15 @@ func (v linkValue) contentType() EntityType {
 // newLinkValue builds a new node in a link based on a content
 func newLinkValue(content ModelEntity) linkValue {
 	return linkValue{
-		uniqueId: NewId(),
+		uniqueId: commons.NewId(),
 		content:  content,
 	}
 }
 
 // newLinkValueForEntities builds a link value as a group of entities
 func newLinkValueForEntities(values []ModelEntity) linkValue {
-	cleanValues := structures.SliceDeduplicateFunc(values, SameModelEntity)
-	return linkValue{NewId(), entitiesGroup(cleanValues)}
+	cleanValues := commons.SliceDeduplicateFunc(values, SameModelEntity)
+	return linkValue{commons.NewId(), entitiesGroup(cleanValues)}
 }
 
 // Link will link objects together (0 level links) or links and object (higher level links).
@@ -52,7 +52,7 @@ type Link struct {
 	// Usually, roles are "subject" or "object" or ...
 	operands map[string]linkValue
 	// Lifetime is the duration of the link
-	lifetime structures.Period
+	lifetime commons.Period
 }
 
 // localCopy builds a new link containing copies of its direct values (no recursive walkthrough)
@@ -103,9 +103,9 @@ const RoleQualifier = "qualifier"
 // 5. Variables representing previous mentioned types
 //
 // An error will raise if values do not match that constraint
-func NewLink(name string, values map[string]any, duration structures.Period) (*Link, error) {
+func NewLink(name string, values map[string]any, duration commons.Period) (*Link, error) {
 	link := new(Link)
-	link.id = NewId()
+	link.id = commons.NewId()
 	link.name = name
 	link.operands = make(map[string]linkValue)
 	link.lifetime = duration
@@ -145,12 +145,12 @@ func NewLink(name string, values map[string]any, duration structures.Period) (*L
 
 // NewSimpleLink is a shortcut to declare a link(subject, object) valid for the full time
 func NewSimpleLink(link string, subject, object any) (*Link, error) {
-	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, structures.NewFullPeriod())
+	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, commons.NewFullPeriod())
 }
 
 // NewTimedSimpleLink builds a link during a given period, with given subject and object.
 // For instance, John likes Tiramisu since 2020-01-01.
-func NewTimedSimpleLink(link string, duration structures.Period, subject, object any) (*Link, error) {
+func NewTimedSimpleLink(link string, duration commons.Period, subject, object any) (*Link, error) {
 	return NewLink(link, map[string]any{RoleSubject: subject, RoleObject: object}, duration)
 }
 
@@ -161,7 +161,7 @@ func NewTimedSimpleLink(link string, duration structures.Period, subject, object
 //
 // For instance, using a qualifier may be revelant for:
 // Mary (object) Thinks (link) that her husband (qualified object) is rude (qualifier) since (a given date)
-func NewQualifier(entity ModelEntity, adjective string, duration structures.Period) (*Link, error) {
+func NewQualifier(entity ModelEntity, adjective string, duration commons.Period) (*Link, error) {
 	// refuse nil as an entity to be qualified (makes no sense)
 	if entity == nil {
 		return nil, errors.New("invalid nil value for qualifier")
@@ -169,7 +169,7 @@ func NewQualifier(entity ModelEntity, adjective string, duration structures.Peri
 
 	// build the full link
 	link := new(Link)
-	link.id = NewId()
+	link.id = commons.NewId()
 	// name is the adjective
 	link.name = adjective
 	link.lifetime = duration
@@ -323,12 +323,12 @@ func (l *Link) Name() string {
 }
 
 // ActivePeriod returns the link's active period
-func (l *Link) ActivePeriod() structures.Period {
+func (l *Link) ActivePeriod() commons.Period {
 	return l.lifetime
 }
 
 // SetActivity forces the activity for that link (not recursive)
-func (l *Link) SetActivity(newPeriod structures.Period) {
+func (l *Link) SetActivity(newPeriod commons.Period) {
 	if l != nil {
 		l.lifetime = newPeriod
 	}
@@ -373,7 +373,7 @@ func (l *Link) findAllMatchingCondition(acceptance func(ModelEntity) bool) []Mod
 	}
 
 	// deduplicate and return
-	deduplicates := structures.SliceDeduplicateFunc(matches, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
+	deduplicates := commons.SliceDeduplicateFunc(matches, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
 	return deduplicates
 }
 
@@ -419,7 +419,7 @@ func (l *Link) AllObjectsLeafs() []*Object {
 		}
 	}
 
-	return structures.SliceDeduplicateFunc(matches, func(a, b *Object) bool { return a.Equals(b) })
+	return commons.SliceDeduplicateFunc(matches, func(a, b *Object) bool { return a.Equals(b) })
 }
 
 // AllVariablesLeafs returns the variables the link contains as a whole.
@@ -529,7 +529,7 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
 					// We make a new link copy because result is a fully independant link (no common descendant)
 					currentLinkCopy := currentLink.localCopy()
 					// new id because it is not the same link as before (we clone or change)
-					currentLinkCopy.id = NewId()
+					currentLinkCopy.id = commons.NewId()
 					newCopy := newLinkValue(currentLinkCopy)
 					// register old id -> new clone
 					mappedLinkValues[currentId] = newCopy
@@ -766,7 +766,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 
 					childGroup, _ := AsGroup(child.content)
 					otherChildGroup, _ := AsGroup(otherChild.content)
-					if !structures.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, SameModelEntity) {
+					if !commons.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, SameModelEntity) {
 						return nil, false
 					}
 				case EntityTypeTrait:
@@ -818,7 +818,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 	result := make(map[string]ModelEntity)
 	for name, values := range variablesSubstitution {
 		if len(values) != 0 {
-			singleElements := structures.SliceDeduplicateFunc(values, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
+			singleElements := commons.SliceDeduplicateFunc(values, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
 			size := len(singleElements)
 			if size >= 2 {
 				return nil, false

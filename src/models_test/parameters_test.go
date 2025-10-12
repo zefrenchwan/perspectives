@@ -4,12 +4,13 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/zefrenchwan/perspectives.git/commons"
 	"github.com/zefrenchwan/perspectives.git/models"
 )
 
 func TestParameterCreation(t *testing.T) {
 	durian := models.NewObject([]string{"Fruit"})
-	p := models.NewNamedParameter("x", durian)
+	p := commons.NewNamedParameter("x", durian)
 
 	if p.IsEmpty() {
 		t.Fail()
@@ -22,11 +23,11 @@ func TestParameterCreation(t *testing.T) {
 }
 
 func TestParametersGet(t *testing.T) {
-	var tanguy, alan models.ModelElement
+	var tanguy, alan commons.ModelElement
 	tanguy = models.NewObject([]string{"Human"})
 	alan = models.NewObject([]string{"Human"})
 
-	p := models.NewParameter(tanguy)
+	p := commons.NewParameter(tanguy)
 	p.Append(alan)
 
 	if p.Get(0) != tanguy {
@@ -47,7 +48,7 @@ func TestParametersGet(t *testing.T) {
 		t.Fail()
 	}
 
-	q := models.NewNamedParameter("x", tanguy)
+	q := commons.NewNamedParameter("x", tanguy)
 	q.AppendAsVariable("y", alan)
 
 	variables := q.Variables()
@@ -76,7 +77,7 @@ func TestParametersGet(t *testing.T) {
 		t.Fail()
 	}
 
-	r := models.NewParameter(tanguy)
+	r := commons.NewParameter(tanguy)
 	r.AppendAsVariable("x", alan)
 
 	if r.Get(0) != tanguy {
@@ -100,7 +101,7 @@ func TestParameterSelect(t *testing.T) {
 	camembert := models.NewObject([]string{"Cheese"})
 	brie := models.NewObject([]string{"Cheese"})
 
-	variable := models.NewNamedParameter("x", &brie)
+	variable := commons.NewNamedParameter("x", &brie)
 	variable.AppendAsVariable("y", &camembert)
 
 	// test empty
@@ -121,7 +122,7 @@ func TestParameterSelect(t *testing.T) {
 	}
 
 	// test select ints
-	other := models.NewParameter(&camembert)
+	other := commons.NewParameter(&camembert)
 	other.Append(&brie)
 
 	if !other.Select(nil).IsEmpty() {
@@ -143,7 +144,7 @@ func TestParametersUnique(t *testing.T) {
 	leila := models.NewObject([]string{"Human"})
 	maria := models.NewObject([]string{"Human"})
 
-	p := models.NewNamedParameter("x", leila)
+	p := commons.NewNamedParameter("x", leila)
 	if res, matching := p.Unique(); !matching {
 		t.Fail()
 	} else if res != leila {
@@ -157,7 +158,7 @@ func TestParametersUnique(t *testing.T) {
 		t.Fail()
 	}
 
-	p = models.NewParameter(maria)
+	p = commons.NewParameter(maria)
 	if res, matching := p.Unique(); !matching {
 		t.Fail()
 	} else if res != maria {

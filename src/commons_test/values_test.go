@@ -1,15 +1,15 @@
-package structures_test
+package commons_test
 
 import (
 	"maps"
 	"testing"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/structures"
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 func TestValueSet(t *testing.T) {
-	value := structures.NewValue(50)
+	value := commons.NewValue(50)
 	values := value.GetValues()
 	if len(values) != 1 || values[0] != 50 {
 		t.Log("Fail to read values")
@@ -47,12 +47,12 @@ func TestValueSet(t *testing.T) {
 }
 
 func TestValueGet(t *testing.T) {
-	value := structures.NewValue(50)
-	expected := map[int]structures.Period{
-		50: structures.NewFullPeriod(),
+	value := commons.NewValue(50)
+	expected := map[int]commons.Period{
+		50: commons.NewFullPeriod(),
 	}
 
-	if !maps.EqualFunc(expected, value.Get(), func(a, b structures.Period) bool { return a.Equals(b) }) {
+	if !maps.EqualFunc(expected, value.Get(), func(a, b commons.Period) bool { return a.Equals(b) }) {
 		t.Log("Failed to flatten content")
 		t.Fail()
 	}
@@ -62,14 +62,14 @@ func TestValueGet(t *testing.T) {
 	// value is now
 	// ]-oo, now] => 30
 	// ]now, +oo[ => 50
-	expected = map[int]structures.Period{
-		30: structures.NewPeriodUntil(now, true),
-		50: structures.NewPeriodSince(now, false),
+	expected = map[int]commons.Period{
+		30: commons.NewPeriodUntil(now, true),
+		50: commons.NewPeriodSince(now, false),
 	}
 
 	values := value.Get()
 
-	if !maps.EqualFunc(expected, values, func(a, b structures.Period) bool { return a.Equals(b) }) {
+	if !maps.EqualFunc(expected, values, func(a, b commons.Period) bool { return a.Equals(b) }) {
 		t.Log("Failed to flatten content with multiple values")
 		t.Log(values)
 		t.Log(expected)
@@ -79,9 +79,9 @@ func TestValueGet(t *testing.T) {
 
 func TestSerde(t *testing.T) {
 	now := time.Now().Truncate(time.Hour)
-	expected := structures.NewValueSince(44, now, true)
+	expected := commons.NewValueSince(44, now, true)
 	result := expected.BuildCompactMapOfValues()
-	if value, err := structures.LoadValuesFromCompactMap(result); err != nil {
+	if value, err := commons.LoadValuesFromCompactMap(result); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if len(value) != 1 {
@@ -104,8 +104,8 @@ func TestSerde(t *testing.T) {
 func TestValuesCut(t *testing.T) {
 	now := time.Now().Truncate(time.Hour)
 	after := now.AddDate(10, 0, 0)
-	reference := structures.NewPeriodUntil(now, true)
-	value := structures.NewValue("a")
+	reference := commons.NewPeriodUntil(now, true)
+	value := commons.NewValue("a")
 	result := value.Cut(reference).Get()
 
 	if len(result) != 1 {
@@ -115,8 +115,8 @@ func TestValuesCut(t *testing.T) {
 	}
 
 	// test empty result
-	reference = structures.NewPeriodSince(after, true)
-	value = structures.NewValueUntil("a", now, true)
+	reference = commons.NewPeriodSince(after, true)
+	value = commons.NewValueUntil("a", now, true)
 	result = value.Cut(reference).Get()
 
 	if len(result) != 0 {
@@ -127,7 +127,7 @@ func TestValuesCut(t *testing.T) {
 }
 
 func TestValuesSetDuringPeriod(t *testing.T) {
-	value := structures.NewValue("test")
+	value := commons.NewValue("test")
 	now := time.Now().Truncate(time.Hour)
 	after := now.AddDate(1, 0, 0)
 	before := now.AddDate(-1, 0, 0)

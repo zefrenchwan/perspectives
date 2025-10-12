@@ -1,20 +1,11 @@
-package models
+package fields
 
-// Operation is the most general definition of a way to change a state
-type Operation interface {
-}
-
-// Operations groups operations.
-// There is no specific order to execute each operation
-type Operations struct {
-	// Content are the operations to perform
-	Content []Operation
-}
+import "github.com/zefrenchwan/perspectives.git/models"
 
 // OperationToUpsertObjects uperts objets
 type OperationToUpsertObjects struct {
 	// Content is the set of objects to upsert
-	Content []Object
+	Content []models.Object
 }
 
 // OperationToUpsertLinks upserts links.
@@ -23,7 +14,7 @@ type OperationToUpsertObjects struct {
 // UpdateLeafs is just about UPDATING leafs.
 type OperationToUpsertLinks struct {
 	// Content defines the links to create or update
-	Content []Link
+	Content []models.Link
 	// UpdateLeafs true means updating leafs too
 	UpdateLeafs bool
 }

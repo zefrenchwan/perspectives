@@ -1,4 +1,4 @@
-package structures
+package commons
 
 import (
 	"errors"

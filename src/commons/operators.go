@@ -1,4 +1,4 @@
-package structures
+package commons
 
 // TemporalOperator defines binay operator working on a period compared to a reference period.
 // Operators do NOT commute in general.

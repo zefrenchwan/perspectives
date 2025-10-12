@@ -1,4 +1,4 @@
-package models
+package commons
 
 // Parameters define parameters of a condition or an action.
 // A condition does not depend on a single entity.

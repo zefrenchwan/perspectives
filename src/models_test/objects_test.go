@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zefrenchwan/perspectives.git/commons"
 	"github.com/zefrenchwan/perspectives.git/models"
-	"github.com/zefrenchwan/perspectives.git/structures"
 )
 
 func TestObjectTraits(t *testing.T) {
@@ -73,7 +73,7 @@ func TestObjectGetValueWithLifetime(t *testing.T) {
 	// values are then
 	// [before, now[ => Doe
 	// [now, +oo[ => Dodo
-	matching := structures.NewPeriodSince(after, true)
+	matching := commons.NewPeriodSince(after, true)
 
 	if values, found := o.GetValue("last name", true); !found {
 		t.Log("expected last name to be present")
@@ -99,13 +99,13 @@ func TestObjectGetValueWithLifetime(t *testing.T) {
 	} else if period, found := values["Dodo"]; !found {
 		t.Log("missing value")
 		t.Fail()
-	} else if !period.Equals(structures.NewPeriodSince(now, true)) {
+	} else if !period.Equals(commons.NewPeriodSince(now, true)) {
 		t.Log("bad period")
 		t.Fail()
 	} else if period, found := values["Doe"]; !found {
 		t.Log("missing value")
 		t.Fail()
-	} else if !period.Equals(structures.NewFinitePeriod(before, now, true, false)) {
+	} else if !period.Equals(commons.NewFinitePeriod(before, now, true, false)) {
 		t.Log(period.AsRawString())
 		t.Log("bad period")
 		t.Fail()
@@ -144,7 +144,7 @@ func TestObjectGetValue(t *testing.T) {
 	before := now.AddDate(-1, 0, 0)
 	object := models.NewObjectSince([]string{"Human"}, before)
 	object.SetValue("name", "John Doe")
-	period := structures.NewPeriodSince(before, true)
+	period := commons.NewPeriodSince(before, true)
 
 	if _, found := object.GetValue("non existing", true); found {
 		t.Log("found non existing attribute")
@@ -163,9 +163,9 @@ func TestObjectGetValue(t *testing.T) {
 
 func TestObjectTemporalFeatures(t *testing.T) {
 	mario := models.NewObject([]string{"Human"})
-	period := structures.NewPeriodSince(time.Now().AddDate(-30, 0, 0), true)
+	period := commons.NewPeriodSince(time.Now().AddDate(-30, 0, 0), true)
 
-	if !mario.ActivePeriod().Equals(structures.NewFullPeriod()) {
+	if !mario.ActivePeriod().Equals(commons.NewFullPeriod()) {
 		t.Log("default value for lifetime is full")
 		t.Fail()
 	}
@@ -240,7 +240,7 @@ func TestEmptyObjectBuildFromDescription(t *testing.T) {
 	if object.Id() != "other id" {
 		t.Log("wrong id")
 		t.Fail()
-	} else if !object.ActivePeriod().Equals(structures.NewFullPeriod()) {
+	} else if !object.ActivePeriod().Equals(commons.NewFullPeriod()) {
 		t.Log("should be full")
 		t.Fail()
 	}
@@ -286,7 +286,7 @@ func TestObjectBuildFromDescription(t *testing.T) {
 	description := base.Describe()
 	values := map[string]string{"test": "other value", "account": "dev@dev.com"}
 
-	period := structures.NewPeriodSince(time.Now().Truncate(time.Second), true)
+	period := commons.NewPeriodSince(time.Now().Truncate(time.Second), true)
 	object := description.BuildObjectFromDescription("id object", period, values)
 
 	if object.Id() != "id object" {

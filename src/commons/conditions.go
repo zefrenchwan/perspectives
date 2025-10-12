@@ -1,4 +1,4 @@
-package models
+package commons
 
 // Condition is the most abstract defintion of a condition to match
 type Condition interface {
