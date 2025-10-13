@@ -6,14 +6,6 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-type DummyIdBasedImplementation struct {
-	id string
-}
-
-func (d DummyIdBasedImplementation) Id() string {
-	return d.id
-}
-
 func TestIdBasedCondition(t *testing.T) {
 	accepting := DummyIdBasedImplementation{id: "id"}
 	refusing := DummyIdBasedImplementation{id: "refused"}
@@ -36,6 +28,21 @@ func TestIdBasedCondition(t *testing.T) {
 	p = commons.NewParameter(accepting)
 	if !condition.Matches(p) {
 		t.Log("id should match")
+		t.Fail()
+	}
+
+	// test not implementing
+	var empty DummyBasicModelElementImplementation
+	p = commons.NewParameter(empty)
+	if condition.Matches(p) {
+		t.Log("should refuse non id based")
+		t.Fail()
+	}
+
+	// test for nil
+	p = commons.NewParameter(nil)
+	if condition.Matches(p) {
+		t.Log("nil cannot match")
 		t.Fail()
 	}
 }
