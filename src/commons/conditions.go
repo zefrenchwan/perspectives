@@ -10,9 +10,9 @@ import (
 // A condition is said to be a conditional operator if it is a "not", "and" or "or".
 // Otherwise, it is a leaf in a logical expression.
 type Condition interface {
-	// Matches returns true if a condition accepts parameters.
+	// Matches returns true if a condition accepts content.
 	// It may return an error during its evaluation
-	Matches(Parameters) (bool, error)
+	Matches(Content) (bool, error)
 }
 
 // ConditionConstant keeps returning the same value
@@ -22,7 +22,7 @@ type ConditionConstant struct {
 }
 
 // Matches returns the constant value, no error
-func (c ConditionConstant) Matches(p Parameters) (bool, error) {
+func (c ConditionConstant) Matches(p Content) (bool, error) {
 	return c.value, nil
 }
 
@@ -56,7 +56,7 @@ type conditionalEvaluationNode struct {
 }
 
 // Matches decorates the inner condition
-func (en conditionalEvaluationNode) Matches(p Parameters) (bool, error) {
+func (en conditionalEvaluationNode) Matches(p Content) (bool, error) {
 	if p == nil || en.condition == nil {
 		return false, nil
 	}
@@ -88,11 +88,11 @@ func conditionOperatorEvaluate(condition Condition, operands []bool) (bool, bool
 	}
 }
 
-// conditionTreeEvaluate evaluates a logical tree starting at condition with those parameters.
+// conditionTreeEvaluate evaluates a logical tree starting at condition with those parameters (as content).
 // If condition or parameters is nil, then it returns false.
 // Implementation is based on an iterative walkthrough.
 // Reason is
-func conditionTreeEvaluate(condition Condition, parameters Parameters) (bool, error) {
+func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error) {
 	if condition == nil {
 		return false, nil
 	} else if parameters == nil {
@@ -288,7 +288,7 @@ type ConditionAnd struct {
 }
 
 // Matches returns true if there is at least one operand condition and all operands matches the parameters
-func (a ConditionAnd) Matches(p Parameters) (bool, error) {
+func (a ConditionAnd) Matches(p Content) (bool, error) {
 	return conditionTreeEvaluate(a, p)
 }
 
@@ -297,8 +297,8 @@ type ConditionOr struct {
 	operands []Condition
 }
 
-// Matches returns true if at least one condition in operands matches the parameters
-func (o ConditionOr) Matches(p Parameters) (bool, error) {
+// Matches returns true if at least one condition in operands matches the content
+func (o ConditionOr) Matches(p Content) (bool, error) {
 	return conditionTreeEvaluate(o, p)
 }
 
@@ -309,7 +309,7 @@ type ConditionNot struct {
 }
 
 // Matches returns false for no operand, and not (the result of operand applied to parameters) otherwise
-func (n ConditionNot) Matches(p Parameters) (bool, error) {
+func (n ConditionNot) Matches(p Content) (bool, error) {
 	return conditionTreeEvaluate(n, p)
 }
 
@@ -329,7 +329,7 @@ func NewConditionNot(condition Condition) Condition {
 }
 
 // IdBasedCondition is a condition to match a given id.
-// It matches if parameters has one unique identifiable and ids match between identifiable and Id.
+// It matches if content has one unique identifiable and ids match between identifiable and Id.
 // We use this struct with something in mind.
 // It makes no sense to perform a full scan to match an id.
 // A clever implementation would use a massive index and then find the matching element with a direct access.
@@ -339,7 +339,7 @@ type IdBasedCondition struct {
 }
 
 // Matches returns true for an unique identifiable object with that id, false otherwise
-func (i IdBasedCondition) Matches(p Parameters) (bool, error) {
+func (i IdBasedCondition) Matches(p Content) (bool, error) {
 	if p == nil {
 		return false, nil
 	} else if value, matches := p.Unique(); !matches {

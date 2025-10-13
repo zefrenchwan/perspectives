@@ -10,7 +10,7 @@ func TestConstantCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewParameter(DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if value, err := ctrue.Matches(p); err != nil {
 		t.Log(err)
@@ -31,7 +31,7 @@ func TestNotCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewParameter(DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if value, err := commons.NewConditionNot(ctrue).Matches(p); err != nil {
 		t.Log(err)
@@ -62,7 +62,7 @@ func TestOrCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewParameter(DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if value, err := commons.NewConditionOr([]commons.Condition{ctrue, cfalse}).Matches(p); err != nil {
 		t.Log(err)
@@ -100,7 +100,7 @@ func TestAndCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewParameter(DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if value, err := commons.NewConditionAnd([]commons.Condition{ctrue, cfalse}).Matches(p); err != nil {
 		t.Log(err)
@@ -146,7 +146,7 @@ func TestCompositeCondition(t *testing.T) {
 	// condition is true because all operands are true
 	condition := commons.NewConditionAnd([]commons.Condition{or, ctrue})
 
-	p := commons.NewParameter(DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 	if value, err := condition.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -161,7 +161,7 @@ func TestIdBasedCondition(t *testing.T) {
 	refusing := DummyIdBasedImplementation{id: "refused"}
 	condition := commons.IdBasedCondition{Id: "id"}
 
-	p := commons.NewNamedParameter("x", accepting)
+	p := commons.NewNamedContent("x", accepting)
 	p.AppendAsVariable("y", refusing)
 
 	if value, err := condition.Matches(p); err != nil {
@@ -172,7 +172,7 @@ func TestIdBasedCondition(t *testing.T) {
 		t.Fail()
 	}
 
-	p = commons.NewNamedParameter("y", refusing)
+	p = commons.NewNamedContent("y", refusing)
 	if value, err := condition.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -181,7 +181,7 @@ func TestIdBasedCondition(t *testing.T) {
 		t.Fail()
 	}
 
-	p = commons.NewParameter(accepting)
+	p = commons.NewContent(accepting)
 	if value, err := condition.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -192,7 +192,7 @@ func TestIdBasedCondition(t *testing.T) {
 
 	// test not implementing
 	var empty DummyComponentImplementation
-	p = commons.NewParameter(empty)
+	p = commons.NewContent(empty)
 	if value, err := condition.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -202,7 +202,7 @@ func TestIdBasedCondition(t *testing.T) {
 	}
 
 	// test for nil
-	p = commons.NewParameter(nil)
+	p = commons.NewContent(nil)
 	if value, err := condition.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()

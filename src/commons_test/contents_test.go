@@ -1,16 +1,15 @@
-package models_test
+package commons_test
 
 import (
 	"slices"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
-	"github.com/zefrenchwan/perspectives.git/models"
 )
 
 func TestParameterCreation(t *testing.T) {
-	durian := models.NewObject([]string{"Fruit"})
-	p := commons.NewNamedParameter("x", durian)
+	durian := DummyIdBasedImplementation{id: "durian"}
+	p := commons.NewNamedContent("x", durian)
 
 	if p.IsEmpty() {
 		t.Fail()
@@ -24,10 +23,10 @@ func TestParameterCreation(t *testing.T) {
 
 func TestParametersGet(t *testing.T) {
 	var tanguy, alan commons.ModelComponent
-	tanguy = models.NewObject([]string{"Human"})
-	alan = models.NewObject([]string{"Human"})
+	tanguy = DummyIdBasedImplementation{id: "tanguy"}
+	alan = DummyIdBasedImplementation{id: "alan"}
 
-	p := commons.NewParameter(tanguy)
+	p := commons.NewContent(tanguy)
 	p.Append(alan)
 
 	if p.Get(0) != tanguy {
@@ -38,17 +37,17 @@ func TestParametersGet(t *testing.T) {
 		t.Fail()
 	}
 
-	if value := p.PositionalParameters(); len(value) != 2 {
+	if value := p.PositionalContent(); len(value) != 2 {
 		t.Fail()
 	} else if !slices.Contains(value, tanguy) {
 		t.Fail()
 	} else if !slices.Contains(value, alan) {
 		t.Fail()
-	} else if named := p.NamedParameters(); len(named) != 0 {
+	} else if named := p.NamedContent(); len(named) != 0 {
 		t.Fail()
 	}
 
-	q := commons.NewNamedParameter("x", tanguy)
+	q := commons.NewNamedContent("x", tanguy)
 	q.AppendAsVariable("y", alan)
 
 	variables := q.Variables()
@@ -67,17 +66,17 @@ func TestParametersGet(t *testing.T) {
 		t.Fail()
 	}
 
-	if values := q.NamedParameters(); len(values) != 2 {
+	if values := q.NamedContent(); len(values) != 2 {
 		t.Fail()
 	} else if v := values["x"]; v != tanguy {
 		t.Fail()
 	} else if v := values["y"]; v != alan {
 		t.Fail()
-	} else if len(q.PositionalParameters()) != 0 {
+	} else if len(q.PositionalContent()) != 0 {
 		t.Fail()
 	}
 
-	r := commons.NewParameter(tanguy)
+	r := commons.NewContent(tanguy)
 	r.AppendAsVariable("x", alan)
 
 	if r.Get(0) != tanguy {
@@ -86,11 +85,11 @@ func TestParametersGet(t *testing.T) {
 		t.Fail()
 	} else if slices.Compare([]string{"x"}, r.Variables()) != 0 {
 		t.Fail()
-	} else if names := r.NamedParameters(); len(names) != 1 {
+	} else if names := r.NamedContent(); len(names) != 1 {
 		t.Fail()
 	} else if names["x"] != alan {
 		t.Fail()
-	} else if positionals := r.PositionalParameters(); len(positionals) != 1 {
+	} else if positionals := r.PositionalContent(); len(positionals) != 1 {
 		t.Fail()
 	} else if positionals[0] != tanguy {
 		t.Fail()
@@ -98,10 +97,10 @@ func TestParametersGet(t *testing.T) {
 }
 
 func TestParameterSelect(t *testing.T) {
-	camembert := models.NewObject([]string{"Cheese"})
-	brie := models.NewObject([]string{"Cheese"})
+	camembert := DummyIdBasedImplementation{id: "camembert"}
+	brie := DummyIdBasedImplementation{id: "brie"}
 
-	variable := commons.NewNamedParameter("x", &brie)
+	variable := commons.NewNamedContent("x", &brie)
 	variable.AppendAsVariable("y", &camembert)
 
 	// test empty
@@ -122,7 +121,7 @@ func TestParameterSelect(t *testing.T) {
 	}
 
 	// test select ints
-	other := commons.NewParameter(&camembert)
+	other := commons.NewContent(&camembert)
 	other.Append(&brie)
 
 	if !other.Select(nil).IsEmpty() {
@@ -141,10 +140,10 @@ func TestParameterSelect(t *testing.T) {
 }
 
 func TestParametersUnique(t *testing.T) {
-	leila := models.NewObject([]string{"Human"})
-	maria := models.NewObject([]string{"Human"})
+	leila := DummyIdBasedImplementation{id: "leila"}
+	maria := DummyIdBasedImplementation{id: "maria"}
 
-	p := commons.NewNamedParameter("x", leila)
+	p := commons.NewNamedContent("x", leila)
 	if res, matching := p.Unique(); !matching {
 		t.Fail()
 	} else if res != leila {
@@ -158,7 +157,7 @@ func TestParametersUnique(t *testing.T) {
 		t.Fail()
 	}
 
-	p = commons.NewParameter(maria)
+	p = commons.NewContent(maria)
 	if res, matching := p.Unique(); !matching {
 		t.Fail()
 	} else if res != maria {
