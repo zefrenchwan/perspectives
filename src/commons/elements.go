@@ -3,7 +3,7 @@ package commons
 import "github.com/google/uuid"
 
 // ModelElement is the most general element within a model
-type ModelElement interface{}
+type ModelElement any
 
 // IdentifiableElement defines anything that has an id.
 // An id should be globally unique : no link should have the same id as an object.
