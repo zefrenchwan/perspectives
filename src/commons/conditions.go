@@ -304,6 +304,7 @@ func (o ConditionOr) Matches(p Parameters) (bool, error) {
 
 // ConditionNot negates a condition
 type ConditionNot struct {
+	// operand is the condition to negate
 	operand Condition
 }
 
@@ -345,7 +346,7 @@ func (i IdBasedCondition) Matches(p Parameters) (bool, error) {
 		return false, nil
 	} else if value == nil {
 		return false, nil
-	} else if identifiable, ok := value.(IdentifiableElement); !ok {
+	} else if identifiable, ok := value.(Identifiable); !ok {
 		return false, nil
 	} else if identifiable.Id() == i.Id {
 		return true, nil

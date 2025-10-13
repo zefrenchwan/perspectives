@@ -129,7 +129,7 @@ func (lv Variable) Same(other Variable) bool {
 // objects or objects pointers,
 // traits,
 // links or links pointers
-func (lv Variable) MapAs(other any) (ModelEntity, error) {
+func (lv Variable) MapAs(other any) (Entity, error) {
 	expectedTypes := lv.validTypes
 
 	if v, ok := other.(Object); ok {
@@ -163,7 +163,7 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 
 		// test if each object within the group matches the trait condition
 		// If so, add it as an element to append
-		var elements []ModelEntity
+		var elements []Entity
 		for index, obj := range v {
 			if !lv.MatchesTraits(obj.traits) {
 				return nil, fmt.Errorf("value at index %d does not match traits condition", index)
@@ -209,7 +209,7 @@ func (lv Variable) MapAs(other any) (ModelEntity, error) {
 // for variable accepting objects or groups of objects, test if traits match
 // for variable accepting variables, same definition
 // for variable accepting traits, test if trait is acceptable
-func (lv Variable) Matches(other ModelEntity) bool {
+func (lv Variable) Matches(other Entity) bool {
 	if other == nil {
 		return true
 	} else if other.GetType() == EntityTypeVariable {

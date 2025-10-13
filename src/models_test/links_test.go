@@ -99,13 +99,13 @@ func TestLinksSame(t *testing.T) {
 	knows, _ := models.NewSimpleLink("knows", amanda, loves)
 
 	// test same structure, accept all comparison
-	if !likes.SameFunc(loves, func(me1, me2 models.ModelEntity) bool { return true }) {
+	if !likes.SameFunc(loves, func(me1, me2 models.Entity) bool { return true }) {
 		t.Log("same structures should match")
 		t.Fail()
 	}
 
 	// sufficient in here, risky elsewhere
-	idBasedEntityComparison := func(me1, me2 models.ModelEntity) bool {
+	idBasedEntityComparison := func(me1, me2 models.Entity) bool {
 		if me1.GetType() != me2.GetType() {
 			return false
 		} else if me1.GetType() == models.EntityTypeObject {
@@ -124,7 +124,7 @@ func TestLinksSame(t *testing.T) {
 	}
 
 	// test different structure, no matter the local comparator
-	if likes.SameFunc(knows, func(me1, me2 models.ModelEntity) bool { return true }) {
+	if likes.SameFunc(knows, func(me1, me2 models.Entity) bool { return true }) {
 		t.Log("different structures should never match")
 		t.Fail()
 	}
@@ -367,13 +367,13 @@ func TestAllEntitiesInLink(t *testing.T) {
 	// final link is about deduplication test
 	finalLink, _ := models.NewSimpleLink("knows", joe, aware)
 
-	expected := []models.ModelEntity{joe, jack, william, averell, likes, knows, aware, finalLink}
+	expected := []models.Entity{joe, jack, william, averell, likes, knows, aware, finalLink}
 
 	if values := finalLink.AllEntitiesInLink(); len(values) != 8 {
 		t.Log(values)
 		t.Log("missing values")
 		t.Fail()
-	} else if !commons.SlicesEqualsAsSetsFunc(values, expected, models.SameModelEntity) {
+	} else if !commons.SlicesEqualsAsSetsFunc(values, expected, models.SameEntity) {
 		t.Log("failed to find all values")
 		t.Fail()
 	}
@@ -388,7 +388,7 @@ func TestMappingNoChange(t *testing.T) {
 		t.Fail()
 	}
 
-	if same, err := eats.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) { return nil, false, nil }); err != nil {
+	if same, err := eats.Morphism(func(me models.Entity) (models.Entity, bool, error) { return nil, false, nil }); err != nil {
 		t.Log("failed to map")
 		t.Fail()
 	} else if l, err := models.AsLink(same); err != nil {
@@ -436,7 +436,7 @@ func TestMappingRoot(t *testing.T) {
 		t.Fail()
 	}
 
-	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+	mappping := func(m models.Entity) (models.Entity, bool, error) {
 		if m.GetType() == models.EntityTypeLink {
 			if result, err := models.NewSimpleLink("loves", jenna, lorie); err != nil {
 				return nil, false, err
@@ -494,7 +494,7 @@ func TestMappingLeaf(t *testing.T) {
 		t.Fail()
 	}
 
-	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+	mappping := func(m models.Entity) (models.Entity, bool, error) {
 		if m.GetType() == models.EntityTypeObject {
 			if o, err := models.AsObject(m); err != nil {
 				return nil, false, err
@@ -565,7 +565,7 @@ func TestMappingLongLink(t *testing.T) {
 		t.Fail()
 	}
 
-	mappping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+	mappping := func(m models.Entity) (models.Entity, bool, error) {
 		if m.GetType() == models.EntityTypeObject {
 			if o, err := models.AsObject(m); err != nil {
 				return nil, false, err
@@ -646,7 +646,7 @@ func TestMappingToVariables(t *testing.T) {
 		t.Fail()
 	}
 
-	mapping := func(m models.ModelEntity) (models.ModelEntity, bool, error) {
+	mapping := func(m models.Entity) (models.Entity, bool, error) {
 		if m.GetType() == models.EntityTypeVariable {
 			if variable, err := models.AsVariable(m); err != nil {
 				return nil, false, err
@@ -705,7 +705,7 @@ func TestMappingLinkToValue(t *testing.T) {
 	coffee := models.NewObject([]string{"drink"})
 
 	// replace middle with coffee
-	result, errResult := starter.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) {
+	result, errResult := starter.Morphism(func(me models.Entity) (models.Entity, bool, error) {
 		if me.GetType() == models.EntityTypeLink {
 			link, _ := models.AsLink(me)
 			if link.Id() == middle.Id() {
@@ -755,7 +755,7 @@ func TestMappingValueToLink(t *testing.T) {
 
 	// replace variable with loves.
 	// Paula Knows X => Paula Knows Lisa loves Gustave
-	replace, errReplace := knows.Morphism(func(me models.ModelEntity) (models.ModelEntity, bool, error) {
+	replace, errReplace := knows.Morphism(func(me models.Entity) (models.Entity, bool, error) {
 		if me.GetType() == models.EntityTypeVariable {
 			return loves, true, nil
 		}
@@ -813,7 +813,7 @@ func TestVariableMatchingGlobalVariable(t *testing.T) {
 	if mapping, accept := not.IsSpecializationOf(x); !accept {
 		t.Log("x accepts a link, not is a link so it should accept")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], not) {
+	} else if !models.SameEntity(mapping[x.Name()], not) {
 		t.Log("wrong mapping for x")
 		t.Fail()
 	} else if _, accept := not.IsSpecializationOf(y); accept {
@@ -835,10 +835,10 @@ func TestVariableMatchingLeaf(t *testing.T) {
 	} else if len(mapping) != 2 {
 		t.Log("bad variables in mapping")
 		t.Fail()
-	} else if value := mapping[x.Name()]; !models.SameModelEntity(value, pizza) {
+	} else if value := mapping[x.Name()]; !models.SameEntity(value, pizza) {
 		t.Log("bad allocation for x")
 		t.Fail()
-	} else if value := mapping[y.Name()]; !models.SameModelEntity(value, italian) {
+	} else if value := mapping[y.Name()]; !models.SameEntity(value, italian) {
 		t.Log("bad allocation for y")
 		t.Fail()
 	}
@@ -901,7 +901,7 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 	} else if len(mapping) != 1 {
 		t.Log("bad variable mapping for links with depth = 1")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], jane) {
+	} else if !models.SameEntity(mapping[x.Name()], jane) {
 		t.Log("bad mapping for x")
 		t.Fail()
 	}
@@ -912,10 +912,10 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 	} else if len(mapping) != 2 {
 		t.Log("bad variable mapping for links with depth = 2")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], jane) {
+	} else if !models.SameEntity(mapping[x.Name()], jane) {
 		t.Log("bad mapping for x")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[y.Name()], martha) {
+	} else if !models.SameEntity(mapping[y.Name()], martha) {
 		t.Log("bad mapping for y")
 		t.Fail()
 	}
@@ -926,13 +926,13 @@ func TestVariableMatchingLinkStructure(t *testing.T) {
 	} else if len(mapping) != 3 {
 		t.Log("bad variable mapping for links with depth = 3")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], jane) {
+	} else if !models.SameEntity(mapping[x.Name()], jane) {
 		t.Log("bad mapping for x")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[y.Name()], martha) {
+	} else if !models.SameEntity(mapping[y.Name()], martha) {
 		t.Log("bad mapping for y")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[z.Name()], jane) {
+	} else if !models.SameEntity(mapping[z.Name()], jane) {
 		t.Log("bad mapping for z")
 		t.Fail()
 	}
@@ -951,7 +951,7 @@ func TestVariableMatchingLinks(t *testing.T) {
 	if mapping, accept := knows.IsSpecializationOf(genericKnows); !accept {
 		t.Log("failed to match")
 		t.Fail()
-	} else if !models.SameModelEntity(mapping[x.Name()], hates) {
+	} else if !models.SameEntity(mapping[x.Name()], hates) {
 		t.Log("failed to map x")
 		t.Fail()
 	}
@@ -978,7 +978,7 @@ func TestFindAndReplaceVariables(t *testing.T) {
 	christophe := models.NewObject([]string{"Human"})
 	gaelle := models.NewObject([]string{"Human"})
 
-	instantiation := models.NewVariablesInstantiation(map[string]models.ModelEntity{"x": christophe, "y": gaelle})
+	instantiation := models.NewVariablesInstantiation(map[string]models.Entity{"x": christophe, "y": gaelle})
 
 	mapped, _ := knowsXY.Morphism(instantiation)
 	if mapped.GetType() != models.EntityTypeLink {

@@ -30,23 +30,24 @@ const EntityTypeGroup EntityType = 4
 // EntityTypeVariable is the type for variables
 const EntityTypeVariable EntityType = 5
 
-// ModelEntity is the general definition of an entity in the model we use.
-// An entity is the objects of a model (other parts are structures and constraints)
+// Entity groups all concepts of this implementation as objects of the general model.
+// An entity is the concrete implementation of objects component.
+// (Remember that other parts are structures and constraints).
 // It decorates:
 // links as pointers because we may modify them
 // Objects as pointers because we may modify them too
 // Group of entities
 // Traits as immutable objects
 // Variables as immutable objects
-type ModelEntity interface {
-	// A model entity is an element
-	commons.ModelElement
+type Entity interface {
+	// An entity is an element
+	commons.ModelObject
 	// GetType returns the type of the entity (trait ? link ? object ? )
 	GetType() EntityType
 }
 
 // AsTrait returns the model entiy as a trait if possible, or an error
-func AsTrait(e ModelEntity) (Trait, error) {
+func AsTrait(e Entity) (Trait, error) {
 	if e == nil {
 		return Trait{}, errors.New("nil value")
 	} else if result, ok := e.(Trait); !ok {
@@ -57,7 +58,7 @@ func AsTrait(e ModelEntity) (Trait, error) {
 }
 
 // AsLink returns the entity as a link, or raises an error if e was not a link
-func AsLink(e ModelEntity) (*Link, error) {
+func AsLink(e Entity) (*Link, error) {
 	if e == nil {
 		return nil, nil
 	} else if result, ok := e.(*Link); !ok {
@@ -68,7 +69,7 @@ func AsLink(e ModelEntity) (*Link, error) {
 }
 
 // AsObject returns the entity as an object, or raises an error if e was not an object
-func AsObject(e ModelEntity) (*Object, error) {
+func AsObject(e Entity) (*Object, error) {
 	if e == nil {
 		return nil, nil
 	} else if result, ok := e.(*Object); !ok {
@@ -79,7 +80,7 @@ func AsObject(e ModelEntity) (*Object, error) {
 }
 
 // AsVariable returns the entity as a variable, or raises an error if e was not a variable
-func AsVariable(e ModelEntity) (Variable, error) {
+func AsVariable(e Entity) (Variable, error) {
 	if e == nil {
 		return Variable{}, errors.New("nil value")
 	} else if result, ok := e.(Variable); !ok {
@@ -90,7 +91,7 @@ func AsVariable(e ModelEntity) (Variable, error) {
 }
 
 // AsGroup returns the entity as a group, or an error if e was not a group
-func AsGroup(e ModelEntity) ([]ModelEntity, error) {
+func AsGroup(e Entity) ([]Entity, error) {
 	if e == nil {
 		return nil, errors.New("nil value")
 	} else if result, ok := e.(entitiesGroup); !ok {
@@ -105,15 +106,15 @@ func AsGroup(e ModelEntity) ([]ModelEntity, error) {
 // For objects, it means the period the object is alive during.
 type TemporalEntity interface {
 	// We want a temporal entity to be an entity
-	ModelEntity
+	Entity
 	// ActivePeriod is the period the entity is active during
 	ActivePeriod() commons.Period
 	// SetActivity forces the period for that temporal entity
 	SetActivity(newPeriod commons.Period)
 }
 
-// SameModelEntity tests if two model entities are the same based on their own definition of same
-func SameModelEntity(a, b ModelEntity) bool {
+// SameEntity tests if two entities are the same based on their own definition of same
+func SameEntity(a, b Entity) bool {
 	if a == nil && b == nil {
 		return true
 	} else if a == nil || b == nil {
@@ -134,7 +135,7 @@ func SameModelEntity(a, b ModelEntity) bool {
 	case EntityTypeGroup:
 		aGroup, _ := AsGroup(a)
 		bGroup, _ := AsGroup(b)
-		return commons.SlicesEqualsAsSetsFunc(aGroup, bGroup, SameModelEntity)
+		return commons.SlicesEqualsAsSetsFunc(aGroup, bGroup, SameEntity)
 	case EntityTypeObject:
 		aObject, _ := AsObject(a)
 		bObject, _ := AsObject(b)

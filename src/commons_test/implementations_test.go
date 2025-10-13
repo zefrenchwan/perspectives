@@ -6,7 +6,7 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-type DummyBasicModelElementImplementation struct {
+type DummyComponentImplementation struct {
 }
 
 type DummyIdBasedImplementation struct {
@@ -21,7 +21,7 @@ func TestDummyIdBasedImplementation(t *testing.T) {
 	// create dummy value, but forces it to any
 	value := any(DummyIdBasedImplementation{id: "id"})
 	// confirms it implements IdentifiableElement
-	if v, ok := value.(commons.IdentifiableElement); !ok {
+	if v, ok := value.(commons.Identifiable); !ok {
 		t.Fail()
 	} else if v.Id() != "id" {
 		t.Fail()

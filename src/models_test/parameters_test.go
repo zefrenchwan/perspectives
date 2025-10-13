@@ -23,7 +23,7 @@ func TestParameterCreation(t *testing.T) {
 }
 
 func TestParametersGet(t *testing.T) {
-	var tanguy, alan commons.ModelElement
+	var tanguy, alan commons.ModelComponent
 	tanguy = models.NewObject([]string{"Human"})
 	alan = models.NewObject([]string{"Human"})
 

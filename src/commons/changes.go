@@ -18,3 +18,22 @@ type TriggeredChange struct {
 func (t TriggeredChange) Operation() Action {
 	return t.Response
 }
+
+// Run triggers the condition and, if it matches, execute the action on p
+func (t TriggeredChange) Run(p Parameters) error {
+	// no need to launch code if condition or action is nil.
+	// Otherwise,
+	// check trigger
+	// launch action accordingly
+	if condition := t.Trigger; condition == nil {
+		return nil
+	} else if response := t.Response; response == nil {
+		return nil
+	} else if triggered, err := condition.Matches(p); err != nil {
+		return err
+	} else if !triggered {
+		return nil
+	} else {
+		return response.Execute(p)
+	}
+}

@@ -18,7 +18,7 @@ type linkValue struct {
 	// uniqueId, assumed to be unique in the link
 	uniqueId string
 	// content is the actual value of the node in the link
-	content ModelEntity
+	content Entity
 }
 
 // contentType returns the type of the underlying content
@@ -27,7 +27,7 @@ func (v linkValue) contentType() EntityType {
 }
 
 // newLinkValue builds a new node in a link based on a content
-func newLinkValue(content ModelEntity) linkValue {
+func newLinkValue(content Entity) linkValue {
 	return linkValue{
 		uniqueId: commons.NewId(),
 		content:  content,
@@ -35,8 +35,8 @@ func newLinkValue(content ModelEntity) linkValue {
 }
 
 // newLinkValueForEntities builds a link value as a group of entities
-func newLinkValueForEntities(values []ModelEntity) linkValue {
-	cleanValues := commons.SliceDeduplicateFunc(values, SameModelEntity)
+func newLinkValueForEntities(values []Entity) linkValue {
+	cleanValues := commons.SliceDeduplicateFunc(values, SameEntity)
 	return linkValue{commons.NewId(), entitiesGroup(cleanValues)}
 }
 
@@ -123,7 +123,7 @@ func NewLink(name string, values map[string]any, duration commons.Period) (*Link
 		} else if g, ok := operand.([]*Link); ok {
 			mappedValues := linksToEntities(g)
 			link.operands[role] = newLinkValueForEntities(mappedValues)
-		} else if g, ok := operand.([]ModelEntity); ok {
+		} else if g, ok := operand.([]Entity); ok {
 			link.operands[role] = newLinkValueForEntities(g)
 		} else if o, ok := operand.(Object); ok {
 			link.operands[role] = newLinkValue(&o)
@@ -133,7 +133,7 @@ func NewLink(name string, values map[string]any, duration commons.Period) (*Link
 			link.operands[role] = newLinkValue(t)
 		} else if v, ok := operand.(Variable); ok {
 			link.operands[role] = newLinkValue(v)
-		} else if v, ok := operand.(ModelEntity); ok {
+		} else if v, ok := operand.(Entity); ok {
 			link.operands[role] = newLinkValue(v)
 		} else {
 			return nil, fmt.Errorf("unsupported type for role %s", role)
@@ -161,7 +161,7 @@ func NewTimedSimpleLink(link string, duration commons.Period, subject, object an
 //
 // For instance, using a qualifier may be revelant for:
 // Mary (object) Thinks (link) that her husband (qualified object) is rude (qualifier) since (a given date)
-func NewQualifier(entity ModelEntity, adjective string, duration commons.Period) (*Link, error) {
+func NewQualifier(entity Entity, adjective string, duration commons.Period) (*Link, error) {
 	// refuse nil as an entity to be qualified (makes no sense)
 	if entity == nil {
 		return nil, errors.New("invalid nil value for qualifier")
@@ -335,8 +335,8 @@ func (l *Link) SetActivity(newPeriod commons.Period) {
 }
 
 // findAllMatchingCondition goes through the full link and find elements matching condition
-func (l *Link) findAllMatchingCondition(acceptance func(ModelEntity) bool) []ModelEntity {
-	matches := make([]ModelEntity, 0)
+func (l *Link) findAllMatchingCondition(acceptance func(Entity) bool) []Entity {
+	matches := make([]Entity, 0)
 	linksAlreadyVisited := make(map[string]bool)
 
 	// elements contains the links to walkthrough
@@ -373,17 +373,17 @@ func (l *Link) findAllMatchingCondition(acceptance func(ModelEntity) bool) []Mod
 	}
 
 	// deduplicate and return
-	deduplicates := commons.SliceDeduplicateFunc(matches, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
+	deduplicates := commons.SliceDeduplicateFunc(matches, func(a, b Entity) bool { return SameEntity(a, b) })
 	return deduplicates
 }
 
 // Operands returns the operands of the link as a map of roles and linked entities
-func (l *Link) Operands() map[string]ModelEntity {
+func (l *Link) Operands() map[string]Entity {
 	if l == nil {
 		return nil
 	}
 
-	result := make(map[string]ModelEntity)
+	result := make(map[string]Entity)
 	for role, value := range l.operands {
 		result[role] = value.content
 	}
@@ -395,7 +395,7 @@ func (l *Link) Operands() map[string]ModelEntity {
 // It means that if l is a link of links of objects, descendants objects will appear.
 // Each object appears once per id
 func (l *Link) AllObjectsLeafs() []*Object {
-	acceptValueAsObject := func(v ModelEntity) bool {
+	acceptValueAsObject := func(v Entity) bool {
 		matchingTypes := []EntityType{EntityTypeGroup, EntityTypeObject}
 		return slices.Contains(matchingTypes, v.GetType())
 	}
@@ -425,7 +425,7 @@ func (l *Link) AllObjectsLeafs() []*Object {
 // AllVariablesLeafs returns the variables the link contains as a whole.
 // For instance, Knows(X, Loves(Y, Z)) would return X, Y and Z
 func (l *Link) AllVariablesLeafs() []Variable {
-	acceptVariables := func(e ModelEntity) bool {
+	acceptVariables := func(e Entity) bool {
 		return e != nil && e.GetType() == EntityTypeVariable
 	}
 
@@ -446,15 +446,15 @@ func (l *Link) AllVariablesLeafs() []Variable {
 // Then result would be Knows, Hates, Paul, Jack, Laura (order does not matter).
 // Result contains at least l so is not empty.
 // Order does not matter but elements are deduplicated.
-func (l *Link) AllEntitiesInLink() []ModelEntity {
+func (l *Link) AllEntitiesInLink() []Entity {
 	// basically, we accept them all
-	return l.findAllMatchingCondition(func(me ModelEntity) bool { return true })
+	return l.findAllMatchingCondition(func(me Entity) bool { return true })
 }
 
 // LocalLinkValueMapper defines a mapping from a value to another.
 // Accepted transformations are:
 // IF value is anything but a link, THEN its image is also anything but a link
-type LocalLinkValueMapper func(ModelEntity) (ModelEntity, bool, error)
+type LocalLinkValueMapper func(Entity) (Entity, bool, error)
 
 // NewVariablesInstantiation defines a link from variables to values.
 // It eases the definition of a LocalLinkValueMapper to map variables to values.
@@ -462,8 +462,8 @@ type LocalLinkValueMapper func(ModelEntity) (ModelEntity, bool, error)
 // given a link knows(X,Y) with variables X and Y, given two persons Lucian and Selene
 // When using "X" =>  Selene and "Y" => Lucian (that is, this specific function),
 // Then result should be Knows(Selene, Lucian)
-func NewVariablesInstantiation(values map[string]ModelEntity) LocalLinkValueMapper {
-	return func(e ModelEntity) (ModelEntity, bool, error) {
+func NewVariablesInstantiation(values map[string]Entity) LocalLinkValueMapper {
+	return func(e Entity) (Entity, bool, error) {
 		if e == nil {
 			return nil, false, nil
 		} else if e.GetType() != EntityTypeVariable {
@@ -479,12 +479,12 @@ func NewVariablesInstantiation(values map[string]ModelEntity) LocalLinkValueMapp
 }
 
 // localLinkCaller calls a mapper but ensures invariants are respected
-func localLinkValueCaller(value ModelEntity, mapper LocalLinkValueMapper) (ModelEntity, bool, error) {
+func localLinkValueCaller(value Entity, mapper LocalLinkValueMapper) (Entity, bool, error) {
 	return mapper(value)
 }
 
 // Morphism maps a link to another, node per node
-func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
+func (l *Link) Morphism(mapper LocalLinkValueMapper) (Entity, error) {
 	// mappedLinkValues contain all the mapped values, links and not links
 	mappedLinkValues := make(map[string]linkValue)
 	// WALKTHROUGH THE TREE TO CALCULATE MAPPING
@@ -604,7 +604,7 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (ModelEntity, error) {
 // In detail, it means same content (same nodes based on nodeComparator) and same structure (for each link, same roles and same size).
 // It is then possible to test if objects are the same based on id, or links based on names.
 // Note that nodeComparator provides a NECESSARY condition, but not a SUFFICIENT condition.
-func (l *Link) SameFunc(other *Link, nodeComparator func(ModelEntity, ModelEntity) bool) bool {
+func (l *Link) SameFunc(other *Link, nodeComparator func(Entity, Entity) bool) bool {
 	if l == nil && other == nil {
 		return true
 	} else if l == nil || other == nil {
@@ -675,7 +675,7 @@ func (l *Link) SameFunc(other *Link, nodeComparator func(ModelEntity, ModelEntit
 // * Another would be to use lifetime and name
 // * Or use larger verbs, such as Adore(John, Tiramisu) as a specialization of Loves(X, Tiramisu)
 // To let users decide what makes the most sense, linksSpecialization defines the way to compare links LOCALLY
-func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(value, reference *Link) bool) (map[string]ModelEntity, bool) {
+func (l *Link) IsSpecializationFunc(other Entity, linksSpecialization func(value, reference *Link) bool) (map[string]Entity, bool) {
 	if other == nil && l == nil {
 		return nil, true
 	} else if l == nil || other == nil {
@@ -690,7 +690,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 		name := variable.name
 		// Test if variable accepts the link
 		if variable.Matches(l) {
-			result := map[string]ModelEntity{name: l}
+			result := map[string]Entity{name: l}
 			return result, true
 		} else {
 			return nil, false
@@ -713,7 +713,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 
 	// variables substitution we registered
 	// (even for variable to variable mapping)
-	variablesSubstitution := make(map[string][]ModelEntity)
+	variablesSubstitution := make(map[string][]Entity)
 
 	// start the walkkthrough
 	for len(queue) != 0 {
@@ -766,7 +766,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 
 					childGroup, _ := AsGroup(child.content)
 					otherChildGroup, _ := AsGroup(otherChild.content)
-					if !commons.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, SameModelEntity) {
+					if !commons.SlicesEqualsAsSetsFunc(childGroup, otherChildGroup, SameEntity) {
 						return nil, false
 					}
 				case EntityTypeTrait:
@@ -815,10 +815,10 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 	// is(X, X) as other, mapped to is(France, Spain).
 	// X would be linked to France AND Spain and it is impossible.
 	// So, to accept the substituion, a variable should be linked to ONE value only
-	result := make(map[string]ModelEntity)
+	result := make(map[string]Entity)
 	for name, values := range variablesSubstitution {
 		if len(values) != 0 {
-			singleElements := commons.SliceDeduplicateFunc(values, func(a, b ModelEntity) bool { return SameModelEntity(a, b) })
+			singleElements := commons.SliceDeduplicateFunc(values, func(a, b Entity) bool { return SameEntity(a, b) })
 			size := len(singleElements)
 			if size >= 2 {
 				return nil, false
@@ -833,7 +833,7 @@ func (l *Link) IsSpecializationFunc(other ModelEntity, linksSpecialization func(
 
 // IsSpecializationOf returns true and a variables instantiation that matches from other to l, or false if there is none.
 // This function uses IsSpecializationFunc for name matching, no matter the period.
-func (l *Link) IsSpecializationOf(other ModelEntity) (map[string]ModelEntity, bool) {
+func (l *Link) IsSpecializationOf(other Entity) (map[string]Entity, bool) {
 	basicNamesComparison := func(a, b *Link) bool {
 		return a != nil && b != nil && a.name == b.name
 	}

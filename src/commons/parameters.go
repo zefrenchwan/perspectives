@@ -6,19 +6,19 @@ package commons
 // So, to regroup all cases into a general form, we use Parameters.
 type Parameters interface {
 	// AppendAsVariable adds a new parameter as a variable
-	AppendAsVariable(name string, value ModelElement)
+	AppendAsVariable(name string, value ModelComponent)
 	// Append adds an element at the end
-	Append(ModelElement)
+	Append(ModelComponent)
 	// Size returns the number of positional elements for that parameter.
 	// It means the number of values ONLY
 	Size() int
 	// Get returns the positional argument for a given index.
 	// If there is no value for that index, return nil
-	Get(int) ModelElement
+	Get(int) ModelComponent
 	// Variables returns the names of variables set
 	Variables() []string
 	// GetVariable returns the value for that variable, nil for no match
-	GetVariable(name string) ModelElement
+	GetVariable(name string) ModelComponent
 	// IsEmpty returns true if parameters are empty and should be neglected
 	IsEmpty() bool
 	// SelectVariables picks variables by name to make a new parameter.
@@ -28,12 +28,12 @@ type Parameters interface {
 	// Result contains only positional values, with selected indexes (if any)
 	Select([]int) Parameters
 	// PositionalParameters returns the positional parameters as a slice
-	PositionalParameters() []ModelElement
+	PositionalParameters() []ModelComponent
 	// NamedParameters returns the named parameters as a map
-	NamedParameters() map[string]ModelElement
+	NamedParameters() map[string]ModelComponent
 	// Unique picks first element, if parameters contains EITHER one positional value, OR one single named value.
 	// It returns nil, false if there are too many elements or if parameters is empty
-	Unique() (ModelElement, bool)
+	Unique() (ModelComponent, bool)
 }
 
 // genericParameters defines a basic implementation
@@ -41,9 +41,9 @@ type Parameters interface {
 // as a map for named elements
 type genericParameters struct {
 	// positionals contain the positional arguments
-	positionals []ModelElement
+	positionals []ModelComponent
 	// named contains named arguments
-	named map[string]ModelElement
+	named map[string]ModelComponent
 }
 
 // Size returns the number of values in that parameter
@@ -61,17 +61,17 @@ func (a *genericParameters) IsEmpty() bool {
 }
 
 // Append adds a positional parameter
-func (a *genericParameters) Append(element ModelElement) {
+func (a *genericParameters) Append(element ModelComponent) {
 	if a != nil {
 		a.positionals = append(a.positionals, element)
 	}
 }
 
 // AppendAsVariable adds a new named value as a variable
-func (a *genericParameters) AppendAsVariable(name string, value ModelElement) {
+func (a *genericParameters) AppendAsVariable(name string, value ModelComponent) {
 	if a != nil {
 		if a.named == nil {
-			a.named = make(map[string]ModelElement)
+			a.named = make(map[string]ModelComponent)
 		}
 
 		a.named[name] = value
@@ -79,7 +79,7 @@ func (a *genericParameters) AppendAsVariable(name string, value ModelElement) {
 }
 
 // Get returns the value at a given position, or nil if index does not match
-func (a *genericParameters) Get(index int) ModelElement {
+func (a *genericParameters) Get(index int) ModelComponent {
 	if a == nil || index < 0 || index >= len(a.positionals) {
 		return nil
 	}
@@ -102,7 +102,7 @@ func (a *genericParameters) Variables() []string {
 }
 
 // GetVariable returns the value (if any) for that name
-func (a *genericParameters) GetVariable(name string) ModelElement {
+func (a *genericParameters) GetVariable(name string) ModelComponent {
 	if a == nil {
 		return nil
 	}
@@ -121,7 +121,7 @@ func (a *genericParameters) SelectVariables(names []string) Parameters {
 		return result
 	}
 
-	result.named = make(map[string]ModelElement)
+	result.named = make(map[string]ModelComponent)
 	for _, name := range names {
 		if value, found := a.named[name]; found {
 			result.named[name] = value
@@ -153,8 +153,8 @@ func (a *genericParameters) Select(indexes []int) Parameters {
 }
 
 // PositionalParameters returns the positional parameters as a slice
-func (a *genericParameters) PositionalParameters() []ModelElement {
-	var result []ModelElement
+func (a *genericParameters) PositionalParameters() []ModelComponent {
+	var result []ModelComponent
 	if a == nil {
 		return result
 	}
@@ -165,12 +165,12 @@ func (a *genericParameters) PositionalParameters() []ModelElement {
 }
 
 // NamedParameters returns the named parameters as a map
-func (a *genericParameters) NamedParameters() map[string]ModelElement {
+func (a *genericParameters) NamedParameters() map[string]ModelComponent {
 	if a == nil {
 		return nil
 	}
 
-	result := make(map[string]ModelElement)
+	result := make(map[string]ModelComponent)
 	for name, value := range a.named {
 		result[name] = value
 	}
@@ -179,7 +179,7 @@ func (a *genericParameters) NamedParameters() map[string]ModelElement {
 }
 
 // Unique picks the only value if any, or nil false
-func (a *genericParameters) Unique() (ModelElement, bool) {
+func (a *genericParameters) Unique() (ModelComponent, bool) {
 	if a == nil {
 		return nil, false
 	}
@@ -203,16 +203,16 @@ func (a *genericParameters) Unique() (ModelElement, bool) {
 }
 
 // NewParameter returns a new parameter for a single element
-func NewParameter(element ModelElement) Parameters {
+func NewParameter(element ModelComponent) Parameters {
 	result := new(genericParameters)
 	result.positionals = append(result.positionals, element)
 	return result
 }
 
 // NewNamedParameter returns a new parameter for a single named element
-func NewNamedParameter(name string, element ModelElement) Parameters {
+func NewNamedParameter(name string, element ModelComponent) Parameters {
 	result := new(genericParameters)
-	result.named = make(map[string]ModelElement)
+	result.named = make(map[string]ModelComponent)
 	result.named[name] = element
 	return result
 }

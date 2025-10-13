@@ -7,7 +7,7 @@ import (
 	"github.com/zefrenchwan/perspectives.git/models"
 )
 
-func testIfEntityIsObjectWithId(e models.ModelEntity, objectId string) bool {
+func testIfEntityIsObjectWithId(e models.Entity, objectId string) bool {
 	if e == nil {
 		return false
 	} else if e.GetType() != models.EntityTypeObject {
@@ -61,10 +61,10 @@ func TestMapToGroup(t *testing.T) {
 	} else if group, err := models.AsGroup(g); err != nil {
 		t.Log(err)
 		t.Fail()
-	} else if !slices.ContainsFunc(group, func(e models.ModelEntity) bool { return testIfEntityIsObjectWithId(e, jane.Id()) }) {
+	} else if !slices.ContainsFunc(group, func(e models.Entity) bool { return testIfEntityIsObjectWithId(e, jane.Id()) }) {
 		t.Log("missing element")
 		t.Fail()
-	} else if !slices.ContainsFunc(group, func(e models.ModelEntity) bool { return testIfEntityIsObjectWithId(e, lara.Id()) }) {
+	} else if !slices.ContainsFunc(group, func(e models.Entity) bool { return testIfEntityIsObjectWithId(e, lara.Id()) }) {
 		t.Log("missing element")
 		t.Fail()
 	} else if len(group) != 2 {
