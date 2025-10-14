@@ -22,6 +22,7 @@ type Content interface {
 	// You may add different variables (not same name). Same variables name are IGNORED
 	// You may add positional elements with an index greater than current size, rest is IGNORED.
 	// For instance, if content is x => value and you add x => other, y => new, then new content is x => value, y => new.
+	// This function should be used when adding variables only once we know variables are disjoin from each content.
 	AddExtraContent(Content) (Content, bool)
 	// Size returns the number of positional elements for that content.
 	// It means the number of positional values, no matter the variable content

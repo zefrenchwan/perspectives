@@ -1,6 +1,7 @@
 package commons_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
@@ -38,27 +39,32 @@ func TestNotCondition(t *testing.T) {
 	p := commons.NewContent(DummyComponentImplementation{})
 
 	if not := commons.NewConditionNot(ctrue); !not.Signature().Accepts(p) {
+		t.Log("failed to accept signature")
 		t.Fail()
 	} else if value, err := not.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value {
+		t.Log("unexpected result: not true is false")
 		// not true is false
 		t.Fail()
 	}
 
 	if not := commons.NewConditionNot(cfalse); !not.Signature().Accepts(p) {
+		t.Log("failed to accept signature")
 		t.Fail()
 	} else if value, err := not.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !value {
+		t.Log("unexpected result: not false is true")
 		// not false is true
 		t.Fail()
 	}
 
 	// special case: nil
 	if not := commons.NewConditionNot(nil); !not.Signature().Accepts(p) {
+		t.Log("failed to accept nil")
 		t.Fail()
 	} else if value, err := not.Matches(p); err != nil {
 		t.Log(err)
@@ -168,6 +174,30 @@ func TestCompositeCondition(t *testing.T) {
 		t.Fail()
 	} else if !value {
 		t.Log("condition is true")
+		t.Fail()
+	}
+}
+
+func TestFormalParametersTree(t *testing.T) {
+	xCondition := commons.NewFilterById("x", "id")
+	yCondition := commons.NewFilterById("y", "id")
+	or := commons.NewConditionOr([]commons.Condition{xCondition, yCondition})
+
+	if variables := or.Signature().Variables(); len(variables) != 2 {
+		t.Fail()
+	} else if !slices.Contains(variables, "x") {
+		t.Fail()
+	} else if !slices.Contains(variables, "y") {
+		t.Fail()
+	}
+
+	content := commons.NewNamedContent("x", DummyComponentImplementation{})
+	if or.Signature().Accepts(content) {
+		t.Fail()
+	}
+
+	content.AppendAsVariable("y", DummyComponentImplementation{})
+	if !or.Signature().Accepts(content) {
 		t.Fail()
 	}
 }

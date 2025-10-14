@@ -12,7 +12,7 @@ import (
 type Condition interface {
 	// Signature returns the expected parameters
 	Signature() FormalParameters
-	// Matches returns true if a condition accepts content.
+	// Matches returns true if this condition accepts content.
 	// It may return an error during its evaluation
 	Matches(Content) (bool, error)
 }
@@ -77,39 +77,43 @@ func (en conditionalEvaluationNode) Signature(p Content) FormalParameters {
 }
 
 // conditionOperatorEvaluate evaluates a conditional operator on given operands.
-// If condition is not a conditional operator, then it returns false, false.
-// Note that if operands contain no value, we return false (result), true (was a conditional operator)
-func conditionOperatorEvaluate(condition Condition, operands []bool) (bool, bool) {
+// If condition is not a conditional operator, then it returns false.
+// Note that if operands contain no value, we return false
+func conditionOperatorEvaluate(condition Condition, operands []bool) bool {
 	if _, ok := condition.(ConditionOr); ok {
-		return slices.Contains(operands, true), true
+		return slices.Contains(operands, true)
 	} else if _, ok := condition.(ConditionAnd); ok {
 		if len(operands) == 0 {
-			return false, true
+			return false
 		}
 
-		return !slices.Contains(operands, false), true
+		return !slices.Contains(operands, false)
 	} else if _, ok := condition.(ConditionNot); ok {
 		if len(operands) != 1 {
-			return false, true
+			return false
 
 		}
 
-		return !operands[0], true
+		return !operands[0]
 	} else {
-		return false, false
+		return false
 	}
 }
 
-// conditionTreeEvaluate evaluates a logical tree starting at condition with those parameters (as content).
-// If condition or parameters is nil, then it returns false.
-// Implementation is based on an iterative walkthrough.
-// Reason is a recursive walkthrough would put pressure on the stack.
-// It would be easier, of course, but let us preserve the running environment.
-func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error) {
+// conditionTreeMapReduce is a tree map reduce with nodes as conditions.
+// It reads the tree from top to bottom, mapping each leaf using a mappe.
+// Then, it goes back and reduces each node using its childs values.
+// Parameters are the type of the result as T,
+// condition as the root, parameters as leafs parameters, mapper and reducer.
+func conditionTreeMapReduce[T any](condition Condition, parameters Content,
+	mapper func(condition Condition, parameters Content) (T, error),
+	reducer func(condition Condition, values []T) T,
+) (T, error) {
+	var empty T
 	if condition == nil {
-		return false, nil
+		return empty, nil
 	} else if parameters == nil {
-		return false, nil
+		return empty, nil
 	}
 
 	// structure links a condition to its id
@@ -122,7 +126,7 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 	childs := make(map[string][]string)
 	// mapping links resolved nodes with their values.
 	// A node is said to be resolved if we evaluated itself and all its descendants
-	mapping := make(map[string]bool)
+	mapping := make(map[string]T)
 	// rootId is the id of the root, and then mapping[rootId] is the result
 	rootId := NewId()
 
@@ -142,7 +146,7 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 		element := queue[0]
 		queue = queue[1:]
 		if element.condition == nil {
-			mapping[element.id] = false
+			mapping[element.id] = empty
 		}
 
 		// currentId of the element.
@@ -153,14 +157,13 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 		currentChilds, isComposed := conditionChilds(element.condition)
 		switch {
 		case !isComposed:
-			if value, err := element.Matches(parameters); err != nil {
-				return false, err
+			if value, err := mapper(element.condition, parameters); err != nil {
+				return empty, err
 			} else {
 				mapping[currentId] = value
 			}
 		case len(currentChilds) == 0:
-			result, _ := conditionOperatorEvaluate(element.condition, nil)
-			mapping[currentId] = result
+			mapping[currentId] = empty
 		case len(currentChilds) != 0:
 			// for each child, register child <-> current link and add it for later processing
 			for _, child := range currentChilds {
@@ -188,9 +191,9 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 	// So each outer loop sets one parent at least
 
 	// currents are currently explored nodes
-	currents := make(map[string]bool)
+	currents := make(map[string]T)
 	// nexts are the current elements to process (next run nodes are currents parents)
-	nexts := make(map[string]bool)
+	nexts := make(map[string]T)
 	// initially, they are leafs of the condition graph
 	maps.Copy(currents, mapping)
 
@@ -212,7 +215,7 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 			// childs[parent.id] contains the childs of the parent, that is the brothers and sisters (siblings)
 			// If all siblings are evaluated (or evaluable), then fill parent value
 			// values of the siblings
-			var values []bool
+			var values []T
 			// number of elements
 			counter := 0
 			// true if all siblings are nil (including current)
@@ -240,12 +243,11 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 			// EITHER all childs conditions of parent are nil => parent is evaluated to default parent behavior
 			// OR all values for siblings are known, and then we may evaluate the parent
 			if allNilConditions {
-				value, _ := conditionOperatorEvaluate(parent.condition, nil)
-				mapping[parent.id] = value
-				nexts[parent.id] = value
+				mapping[parent.id] = empty
+				nexts[parent.id] = empty
 			} else if counter == len(values) {
 				// we have everything to evaluate the parent
-				result, _ := conditionOperatorEvaluate(parent.condition, values)
+				result := reducer(parent.condition, values)
 				mapping[parent.id] = result
 				nexts[parent.id] = result
 			}
@@ -254,7 +256,9 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 		// we then explored all current nodes
 		if len(nexts) == 0 {
 			// should be impossible
-			return false, errors.New("no progression in walkthrough")
+			return empty, errors.New("no progression in walkthrough")
+		} else if result, found := nexts[rootId]; found {
+			return result, nil
 		}
 
 		// clear currents
@@ -272,51 +276,55 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 	}
 
 	if value, found := mapping[rootId]; !found {
-		return false, errors.New("algorithm did not end")
+		return empty, errors.New("algorithm did not end")
 	} else {
 		return value, nil
 	}
 }
 
-// conditionsTreeFormalParameters decorates a condition and define formal parameters based on that conditions tree.
-// If decoratedCondition is a simple leaf condition, we use the same signature.
-// But it condition is an operator, we go through that tree and look for each inner condition.
-type conditionsTreeFormalParameters struct {
-	decoratedCondition Condition
+// conditionLeafEvaluate evaluates a leaf, returns false for nil conten or no condition
+func conditionLeafEvaluate(condition Condition, content Content) (bool, error) {
+	if content == nil {
+		return false, nil
+	} else if condition == nil {
+		return false, nil
+	} else if _, isOperator := conditionChilds(condition); isOperator {
+		return false, nil
+	} else {
+		return condition.Matches(content)
+	}
 }
 
-// conditionTreeSignatureAccepts walks through the conditions tree and tests if all nodes would accept the content
-func conditionTreeSignatureAccepts(condition Condition, content Content) bool {
-	if condition == nil {
-		return true
-	}
+// conditionTreeEvaluate evaluates a logical tree starting at condition with those parameters (as content).
+// If condition or parameters is nil, then it returns false.
+// Implementation is based on an iterative walkthrough.
+// Reason is a recursive walkthrough would put pressure on the stack.
+// It would be easier, of course, but let us preserve the running environment.
+func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error) {
+	return conditionTreeMapReduce(condition, parameters, conditionLeafEvaluate, conditionOperatorEvaluate)
+}
 
-	// simple bfs to accept at each part
-	queue := []Condition{condition}
-
-	for len(queue) != 0 {
-		element := queue[0]
-		queue = queue[1:]
-
-		if childs, composed := conditionChilds(element); !composed {
-			if !element.Signature().Accepts(content) {
-				return false
-			}
-		} else if len(childs) != 0 {
-			for _, child := range childs {
-				if child != nil {
-					queue = append(queue, child)
-				}
-			}
+// conditionTreeCombineSignatures parses the conditions tree and get the parameters it accepts as a whole.
+// For instance, if a needs variable x and b needs variable y, then result should be expected variables x and y.
+// It returns the necessary formal parameters or an error.
+func conditionTreeCombineSignatures(condition Condition) FormalParameters {
+	conditionLeafSignature := func(condition Condition, content Content) (FormalParameters, error) {
+		if condition == nil {
+			return FormalParameters{}, nil
+		} else if _, isOperator := conditionChilds(condition); isOperator {
+			return FormalParameters{}, nil
+		} else {
+			return condition.Signature(), nil
 		}
 	}
 
-	return true
-}
+	conditionParametersReduce := func(condition Condition, values []FormalParameters) FormalParameters {
+		return parametersCombine(values)
+	}
 
-// Accepts just redirects to the tree parsing condition
-func (c conditionsTreeFormalParameters) Accepts(content Content) bool {
-	return conditionTreeSignatureAccepts(c.decoratedCondition, content)
+	dummyValue := NewContent(nil)
+	result, _ := conditionTreeMapReduce(condition, dummyValue, conditionLeafSignature, conditionParametersReduce)
+	return result
 }
 
 // cleanConditionsOperands returns the conditions with nil excluded.
@@ -348,7 +356,7 @@ func (a ConditionAnd) Matches(p Content) (bool, error) {
 
 // Signature returns the formal parameters inferred from its descendants
 func (a ConditionAnd) Signature() FormalParameters {
-	return conditionsTreeFormalParameters{decoratedCondition: a}
+	return conditionTreeCombineSignatures(a)
 }
 
 // ConditionOr is true if it has at least one operand and if any of them matches its parameters
@@ -363,7 +371,7 @@ func (o ConditionOr) Matches(p Content) (bool, error) {
 
 // Signature returns the formal parameters inferred from its descendants
 func (o ConditionOr) Signature() FormalParameters {
-	return conditionsTreeFormalParameters{decoratedCondition: o}
+	return conditionTreeCombineSignatures(o)
 }
 
 // ConditionNot negates a condition
@@ -379,7 +387,7 @@ func (n ConditionNot) Matches(p Content) (bool, error) {
 
 // Signature returns the formal parameters inferred from its descendants
 func (n ConditionNot) Signature() FormalParameters {
-	return conditionsTreeFormalParameters{decoratedCondition: n}
+	return conditionTreeCombineSignatures(n)
 }
 
 // NewConditionOr returns OR(conditions) as a condition

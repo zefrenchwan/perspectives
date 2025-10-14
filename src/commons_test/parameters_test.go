@@ -6,118 +6,80 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-func TestPermissiveParameters(t *testing.T) {
-	fp := commons.NewMostPermissiveFormalParameters()
+func TestFormalParametersAccept(t *testing.T) {
+	varOnly := commons.NewNamedFormalParameters([]string{"x", "y"})
+	positionalOnly := commons.NewPositionalFormalParameters(1)
+	yes := commons.NewMostPermissiveFormalParameters()
 
-	if !fp.Accepts(nil) {
+	if varOnly.Accepts(commons.NewNamedContent("x", DummyComponentImplementation{})) {
+		t.Fail()
+	} else if positionalOnly.Accepts(commons.NewNamedContent("x", DummyComponentImplementation{})) {
+		t.Fail()
+	} else if !yes.Accepts(nil) {
+		t.Fail()
+	} else if !yes.Accepts(commons.NewNamedContent("x", DummyComponentImplementation{})) {
 		t.Fail()
 	}
 
-	content := commons.NewNamedContent("x", DummyComponentImplementation{})
-	if !fp.Accepts(content) {
+	// one value waiting for one at least
+	content := commons.NewContent(DummyComponentImplementation{})
+	if !positionalOnly.Accepts(content) {
 		t.Fail()
 	}
 
+	// two values waiting for one at least
 	content.Append(DummyComponentImplementation{})
-	if !fp.Accepts(content) {
+	if !positionalOnly.Accepts(content) {
+		t.Fail()
+	}
+
+	// get necessary variables
+	content = commons.NewNamedContent("x", DummyComponentImplementation{})
+	content.AppendAsVariable("y", DummyComponentImplementation{})
+	if !varOnly.Accepts(content) {
+		t.Fail()
+	}
+
+	// add extra variable
+	content.AppendAsVariable("z", DummyComponentImplementation{})
+	if !varOnly.Accepts(content) {
 		t.Fail()
 	}
 }
 
-func TestVariableFormalParameters(t *testing.T) {
+func TestMaxParameters(t *testing.T) {
+	varOnly := commons.NewNamedFormalParameters([]string{"x", "y"})
+	positionalOnly := commons.NewPositionalFormalParameters(1)
+	maxParameters := varOnly.Max(positionalOnly)
 
-	fp := commons.NewVariablesFormalParameters(nil)
-	if !fp.Accepts(nil) {
+	content := commons.NewContent(DummyComponentImplementation{})
+	if maxParameters.Accepts(content) {
 		t.Fail()
 	}
 
-	dummy := commons.NewContent(DummyComponentImplementation{})
-	if !fp.Accepts(dummy) {
-		t.Fail()
-	}
-
-	fp = commons.NewVariablesFormalParameters([]string{"x", "y"})
-
-	if fp.Accepts(nil) {
-		t.Fail()
-	}
-
-	content := commons.NewNamedContent("x", DummyComponentImplementation{})
-	if fp.Accepts(content) {
+	content.AppendAsVariable("x", DummyComponentImplementation{})
+	if maxParameters.Accepts(content) {
 		t.Fail()
 	}
 
 	content.AppendAsVariable("y", DummyComponentImplementation{})
-	if !fp.Accepts(content) {
+	if !maxParameters.Accepts(content) {
 		t.Fail()
 	}
 
-	content.AppendAsVariable("z", DummyComponentImplementation{})
-	if !fp.Accepts(content) {
-		t.Fail()
-	}
-}
-
-func TestMinimalSizeFormalParameters(t *testing.T) {
-	fp := commons.NewPositionalFormalParameters(0)
-
-	if !fp.Accepts(nil) {
+	// retest with variables first
+	content = commons.NewNamedContent("x", DummyComponentImplementation{})
+	if maxParameters.Accepts(content) {
 		t.Fail()
 	}
 
-	dummy := commons.NewContent(DummyComponentImplementation{})
-	if !fp.Accepts(dummy) {
+	content.AppendAsVariable("y", DummyComponentImplementation{})
+	if maxParameters.Accepts(content) {
 		t.Fail()
 	}
 
-	fp = commons.NewPositionalFormalParameters(2)
-	// lower values count
-	if fp.Accepts(dummy) {
-		t.Fail()
-	}
-
-	// same size exactly
-	dummy.Append(DummyComponentImplementation{})
-	if !fp.Accepts(dummy) {
-		t.Fail()
-	}
-
-	// more values
-	dummy.Append(DummyComponentImplementation{})
-	if !fp.Accepts(dummy) {
-		t.Fail()
-	}
-
-}
-
-func TestUniqueFormalParameters(t *testing.T) {
-
-	fp := commons.NewUniqueFormalParameters()
-	if fp.Accepts(nil) {
-		t.Fail()
-	}
-
-	// test one named
-	dummy := commons.NewNamedContent("x", DummyComponentImplementation{})
-	if !fp.Accepts(dummy) {
-		t.Fail()
-	}
-
-	// test 2 > 1
-	dummy.Append(DummyComponentImplementation{})
-	if fp.Accepts(dummy) {
-		t.Fail()
-	}
-
-	// test one positional
-	dummy = commons.NewContent(DummyComponentImplementation{})
-	if !fp.Accepts(dummy) {
-		t.Fail()
-	}
-
-	// test 2 > 1
-	dummy.Append(DummyComponentImplementation{})
-	if fp.Accepts(dummy) {
+	content.Append(DummyComponentImplementation{})
+	if !maxParameters.Accepts(content) {
 		t.Fail()
 	}
 }
