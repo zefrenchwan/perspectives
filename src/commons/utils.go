@@ -3,7 +3,15 @@ package commons
 import (
 	"cmp"
 	"slices"
+
+	"github.com/google/uuid"
 )
+
+// NewId builds a new unique id.
+// Two different calls should return two different values.
+func NewId() string {
+	return uuid.NewString()
+}
 
 // SliceReduce returns a copy of original with no duplicate, sorted.
 // Due to the order, it applies only to cmp.Ordered
@@ -109,7 +117,8 @@ func MapsReverseFind[T comparable](mapping map[T][]T, value T) []T {
 	return result
 }
 
-// SlicesContainsAll returns true if other is included in base based on an equals function
+// SlicesContainsAll returns true if other is included in base based on an equals function.
+// In other words, it returns true if base contains other as a set based on equality.
 func SlicesContainsAllFunc[T any](base []T, other []T, equals func(a, b T) bool) bool {
 	if len(other) == 0 {
 		return true

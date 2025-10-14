@@ -12,14 +12,18 @@ func TestConstantCondition(t *testing.T) {
 
 	p := commons.NewContent(DummyComponentImplementation{})
 
-	if value, err := ctrue.Matches(p); err != nil {
+	if !ctrue.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := ctrue.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !value {
 		t.Fail()
 	}
 
-	if value, err := cfalse.Matches(p); err != nil {
+	if !cfalse.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := cfalse.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value {
@@ -33,7 +37,9 @@ func TestNotCondition(t *testing.T) {
 
 	p := commons.NewContent(DummyComponentImplementation{})
 
-	if value, err := commons.NewConditionNot(ctrue).Matches(p); err != nil {
+	if not := commons.NewConditionNot(ctrue); !not.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := not.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value {
@@ -41,7 +47,9 @@ func TestNotCondition(t *testing.T) {
 		t.Fail()
 	}
 
-	if value, err := commons.NewConditionNot(cfalse).Matches(p); err != nil {
+	if not := commons.NewConditionNot(cfalse); !not.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := not.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !value {
@@ -50,7 +58,9 @@ func TestNotCondition(t *testing.T) {
 	}
 
 	// special case: nil
-	if value, err := commons.NewConditionNot(nil).Matches(p); err != nil {
+	if not := commons.NewConditionNot(nil); !not.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := not.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value {
@@ -64,7 +74,9 @@ func TestOrCondition(t *testing.T) {
 
 	p := commons.NewContent(DummyComponentImplementation{})
 
-	if value, err := commons.NewConditionOr([]commons.Condition{ctrue, cfalse}).Matches(p); err != nil {
+	if or := commons.NewConditionOr([]commons.Condition{ctrue, cfalse}); !or.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := or.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if !value {
@@ -81,8 +93,10 @@ func TestOrCondition(t *testing.T) {
 		t.Fail()
 	}
 
-	// empty or nil should return false
-	if value, err := commons.NewConditionOr([]commons.Condition{}).Matches(p); err != nil {
+	// empty or nil should accept p but return false
+	if or := commons.NewConditionOr([]commons.Condition{}); !or.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := or.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value {
@@ -102,7 +116,9 @@ func TestAndCondition(t *testing.T) {
 
 	p := commons.NewContent(DummyComponentImplementation{})
 
-	if value, err := commons.NewConditionAnd([]commons.Condition{ctrue, cfalse}).Matches(p); err != nil {
+	if and := commons.NewConditionAnd([]commons.Condition{ctrue, cfalse}); !and.Signature().Accepts(p) {
+		t.Fail()
+	} else if value, err := and.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value {
@@ -152,62 +168,6 @@ func TestCompositeCondition(t *testing.T) {
 		t.Fail()
 	} else if !value {
 		t.Log("condition is true")
-		t.Fail()
-	}
-}
-
-func TestIdBasedCondition(t *testing.T) {
-	accepting := DummyIdBasedImplementation{id: "id"}
-	refusing := DummyIdBasedImplementation{id: "refused"}
-	condition := commons.IdBasedCondition{Id: "id"}
-
-	p := commons.NewNamedContent("x", accepting)
-	p.AppendAsVariable("y", refusing)
-
-	if value, err := condition.Matches(p); err != nil {
-		t.Log(err)
-		t.Fail()
-	} else if value {
-		t.Log("multiple values should not match")
-		t.Fail()
-	}
-
-	p = commons.NewNamedContent("y", refusing)
-	if value, err := condition.Matches(p); err != nil {
-		t.Log(err)
-		t.Fail()
-	} else if value {
-		t.Log("bad id matching")
-		t.Fail()
-	}
-
-	p = commons.NewContent(accepting)
-	if value, err := condition.Matches(p); err != nil {
-		t.Log(err)
-		t.Fail()
-	} else if !value {
-		t.Log("id should match")
-		t.Fail()
-	}
-
-	// test not implementing
-	var empty DummyComponentImplementation
-	p = commons.NewContent(empty)
-	if value, err := condition.Matches(p); err != nil {
-		t.Log(err)
-		t.Fail()
-	} else if value {
-		t.Log("should refuse non id based")
-		t.Fail()
-	}
-
-	// test for nil
-	p = commons.NewContent(nil)
-	if value, err := condition.Matches(p); err != nil {
-		t.Log(err)
-		t.Fail()
-	} else if value {
-		t.Log("nil cannot match")
 		t.Fail()
 	}
 }

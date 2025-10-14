@@ -55,6 +55,15 @@ type Link struct {
 	lifetime commons.Period
 }
 
+// LinkLocalDescription describes the structure of a link (locally).
+// It does not go through the full link, just direct values.
+type LinkLocalDescription struct {
+	Id     string                // Id of the description (not the link)
+	IdLink string                // IdLink is the id of the link
+	Name   string                // Name of the link (as defined in the link)
+	Roles  map[string]EntityType // Roles contains, for each role (by name), the type of the value
+}
+
 // localCopy builds a new link containing copies of its direct values (no recursive walkthrough)
 func (l *Link) localCopy() *Link {
 	if l == nil {
@@ -451,6 +460,24 @@ func (l *Link) AllEntitiesInLink() []Entity {
 	return l.findAllMatchingCondition(func(me Entity) bool { return true })
 }
 
+// Describe returns the local description of a link (not in depth).
+func (l *Link) Describe() LinkLocalDescription {
+	var result LinkLocalDescription
+	result.Id = commons.NewId()
+	if l == nil {
+		return result
+	}
+
+	result.IdLink = l.id
+	result.Name = l.name
+	result.Roles = make(map[string]EntityType)
+	for role, content := range l.operands {
+		result.Roles[role] = content.contentType()
+	}
+
+	return result
+}
+
 // LocalLinkValueMapper defines a mapping from a value to another.
 // Accepted transformations are:
 // IF value is anything but a link, THEN its image is also anything but a link
@@ -600,7 +627,7 @@ func (l *Link) Morphism(mapper LocalLinkValueMapper) (Entity, error) {
 	return mappedLinkValues[root.uniqueId].content, nil
 }
 
-// SameFunc returns true if links match (same structures).
+// SameFunc returns true if links match as a whole (same structures).
 // In detail, it means same content (same nodes based on nodeComparator) and same structure (for each link, same roles and same size).
 // It is then possible to test if objects are the same based on id, or links based on names.
 // Note that nodeComparator provides a NECESSARY condition, but not a SUFFICIENT condition.

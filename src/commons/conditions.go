@@ -10,6 +10,8 @@ import (
 // A condition is said to be a conditional operator if it is a "not", "and" or "or".
 // Otherwise, it is a leaf in a logical expression.
 type Condition interface {
+	// Signature returns the expected parameters
+	Signature() FormalParameters
 	// Matches returns true if a condition accepts content.
 	// It may return an error during its evaluation
 	Matches(Content) (bool, error)
@@ -24,6 +26,11 @@ type ConditionConstant struct {
 // Matches returns the constant value, no error
 func (c ConditionConstant) Matches(p Content) (bool, error) {
 	return c.value, nil
+}
+
+// Signature for constant parameters is to accept anything
+func (c ConditionConstant) Signature() FormalParameters {
+	return NewMostPermissiveFormalParameters()
 }
 
 // NewConditionConstant returns a constant condition with given value
@@ -55,13 +62,18 @@ type conditionalEvaluationNode struct {
 	condition Condition
 }
 
-// Matches decorates the inner condition
+// Matches decorates en inner condition
 func (en conditionalEvaluationNode) Matches(p Content) (bool, error) {
 	if p == nil || en.condition == nil {
 		return false, nil
 	}
 
 	return en.condition.Matches(p)
+}
+
+// Signature just decorates en inner condition
+func (en conditionalEvaluationNode) Signature(p Content) FormalParameters {
+	return en.condition.Signature()
 }
 
 // conditionOperatorEvaluate evaluates a conditional operator on given operands.
@@ -91,7 +103,8 @@ func conditionOperatorEvaluate(condition Condition, operands []bool) (bool, bool
 // conditionTreeEvaluate evaluates a logical tree starting at condition with those parameters (as content).
 // If condition or parameters is nil, then it returns false.
 // Implementation is based on an iterative walkthrough.
-// Reason is
+// Reason is a recursive walkthrough would put pressure on the stack.
+// It would be easier, of course, but let us preserve the running environment.
 func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error) {
 	if condition == nil {
 		return false, nil
@@ -265,6 +278,47 @@ func conditionTreeEvaluate(condition Condition, parameters Content) (bool, error
 	}
 }
 
+// conditionsTreeFormalParameters decorates a condition and define formal parameters based on that conditions tree.
+// If decoratedCondition is a simple leaf condition, we use the same signature.
+// But it condition is an operator, we go through that tree and look for each inner condition.
+type conditionsTreeFormalParameters struct {
+	decoratedCondition Condition
+}
+
+// conditionTreeSignatureAccepts walks through the conditions tree and tests if all nodes would accept the content
+func conditionTreeSignatureAccepts(condition Condition, content Content) bool {
+	if condition == nil {
+		return true
+	}
+
+	// simple bfs to accept at each part
+	queue := []Condition{condition}
+
+	for len(queue) != 0 {
+		element := queue[0]
+		queue = queue[1:]
+
+		if childs, composed := conditionChilds(element); !composed {
+			if !element.Signature().Accepts(content) {
+				return false
+			}
+		} else if len(childs) != 0 {
+			for _, child := range childs {
+				if child != nil {
+					queue = append(queue, child)
+				}
+			}
+		}
+	}
+
+	return true
+}
+
+// Accepts just redirects to the tree parsing condition
+func (c conditionsTreeFormalParameters) Accepts(content Content) bool {
+	return conditionTreeSignatureAccepts(c.decoratedCondition, content)
+}
+
 // cleanConditionsOperands returns the conditions with nil excluded.
 // If there is no element or conditions are only nil, return nil
 func cleanConditionsOperands(conditions []Condition) []Condition {
@@ -292,6 +346,11 @@ func (a ConditionAnd) Matches(p Content) (bool, error) {
 	return conditionTreeEvaluate(a, p)
 }
 
+// Signature returns the formal parameters inferred from its descendants
+func (a ConditionAnd) Signature() FormalParameters {
+	return conditionsTreeFormalParameters{decoratedCondition: a}
+}
+
 // ConditionOr is true if it has at least one operand and if any of them matches its parameters
 type ConditionOr struct {
 	operands []Condition
@@ -300,6 +359,11 @@ type ConditionOr struct {
 // Matches returns true if at least one condition in operands matches the content
 func (o ConditionOr) Matches(p Content) (bool, error) {
 	return conditionTreeEvaluate(o, p)
+}
+
+// Signature returns the formal parameters inferred from its descendants
+func (o ConditionOr) Signature() FormalParameters {
+	return conditionsTreeFormalParameters{decoratedCondition: o}
 }
 
 // ConditionNot negates a condition
@@ -311,6 +375,11 @@ type ConditionNot struct {
 // Matches returns false for no operand, and not (the result of operand applied to parameters) otherwise
 func (n ConditionNot) Matches(p Content) (bool, error) {
 	return conditionTreeEvaluate(n, p)
+}
+
+// Signature returns the formal parameters inferred from its descendants
+func (n ConditionNot) Signature() FormalParameters {
+	return conditionsTreeFormalParameters{decoratedCondition: n}
 }
 
 // NewConditionOr returns OR(conditions) as a condition
@@ -326,31 +395,4 @@ func NewConditionAnd(conditions []Condition) Condition {
 // NewConditionNot returns NOT(condition) as a condition
 func NewConditionNot(condition Condition) Condition {
 	return ConditionNot{operand: condition}
-}
-
-// IdBasedCondition is a condition to match a given id.
-// It matches if content has one unique identifiable and ids match between identifiable and Id.
-// We use this struct with something in mind.
-// It makes no sense to perform a full scan to match an id.
-// A clever implementation would use a massive index and then find the matching element with a direct access.
-type IdBasedCondition struct {
-	// Id to match
-	Id string
-}
-
-// Matches returns true for an unique identifiable object with that id, false otherwise
-func (i IdBasedCondition) Matches(p Content) (bool, error) {
-	if p == nil {
-		return false, nil
-	} else if value, matches := p.Unique(); !matches {
-		return false, nil
-	} else if value == nil {
-		return false, nil
-	} else if identifiable, ok := value.(Identifiable); !ok {
-		return false, nil
-	} else if identifiable.Id() == i.Id {
-		return true, nil
-	}
-
-	return false, nil
 }

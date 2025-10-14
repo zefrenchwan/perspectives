@@ -379,6 +379,41 @@ func TestAllEntitiesInLink(t *testing.T) {
 	}
 }
 
+func TestDescribe(t *testing.T) {
+	luc := models.NewObject([]string{"Human"})
+	variable := models.NewVariableForLink("x")
+	knows, _ := models.NewSimpleLink("knows", luc, variable)
+
+	// test empty (quite obvious)
+	var link *models.Link
+	empty := link.Describe()
+	if empty.IdLink != "" {
+		t.Fail()
+	} else if empty.Name != "" {
+		t.Fail()
+	} else if empty.Id == "" {
+		t.Fail()
+	} else if len(empty.Roles) != 0 {
+		t.Fail()
+	}
+
+	// test normal behavior
+	description := knows.Describe()
+	if description.Id == knows.Id() {
+		t.Fail()
+	} else if description.IdLink != knows.Id() {
+		t.Fail()
+	} else if description.Name != knows.Name() {
+		t.Fail()
+	} else if roles := description.Roles; len(roles) != 2 {
+		t.Fail()
+	} else if roles[models.RoleSubject] != models.EntityTypeObject {
+		t.Fail()
+	} else if roles[models.RoleObject] != models.EntityTypeVariable {
+		t.Fail()
+	}
+}
+
 func TestMappingNoChange(t *testing.T) {
 	william := models.NewObject([]string{"Human"})
 	pizza := models.NewObject([]string{"Food"})

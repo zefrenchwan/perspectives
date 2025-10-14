@@ -40,7 +40,7 @@ const EntityTypeVariable EntityType = 5
 // Traits as immutable objects
 // Variables as immutable objects
 type Entity interface {
-	// An entity is an element
+	// An entity is an object of the model
 	commons.ModelObject
 	// GetType returns the type of the entity (trait ? link ? object ? )
 	GetType() EntityType

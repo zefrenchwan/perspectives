@@ -7,7 +7,7 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-func TestParameterCreation(t *testing.T) {
+func TestContentCreation(t *testing.T) {
 	durian := DummyIdBasedImplementation{id: "durian"}
 	p := commons.NewNamedContent("x", durian)
 
@@ -21,7 +21,7 @@ func TestParameterCreation(t *testing.T) {
 	}
 }
 
-func TestParametersGet(t *testing.T) {
+func TestContentGet(t *testing.T) {
 	var tanguy, alan commons.ModelComponent
 	tanguy = DummyIdBasedImplementation{id: "tanguy"}
 	alan = DummyIdBasedImplementation{id: "alan"}
@@ -96,7 +96,114 @@ func TestParametersGet(t *testing.T) {
 	}
 }
 
-func TestParameterSelect(t *testing.T) {
+func TestAddExtraContent(t *testing.T) {
+	// test separated variables
+	base := commons.NewNamedContent("x", DummyIdBasedImplementation{id: "base"})
+	other := commons.NewNamedContent("y", DummyIdBasedImplementation{id: "other"})
+	if result, extra := base.AddExtraContent(other); !extra {
+		t.Log("should have added value")
+		t.Fail()
+	} else if len(result.PositionalContent()) != 0 {
+		t.Log("no more positional content")
+		t.Fail()
+	} else if values := base.NamedContent(); len(values) != 2 {
+		t.Fail()
+	} else if x := values["x"]; x == nil {
+		t.Fail()
+	} else if y := values["y"]; y == nil {
+		t.Fail()
+	}
+
+	// test common variables mean no change
+	base = commons.NewNamedContent("x", DummyIdBasedImplementation{id: "base"})
+	other = commons.NewNamedContent("x", DummyIdBasedImplementation{id: "other"})
+	if result, extra := base.AddExtraContent(other); extra {
+		t.Fail()
+	} else if len(result.PositionalContent()) != 0 {
+		t.Fail()
+	} else if variables := result.NamedContent(); len(variables) != 1 {
+		t.Fail()
+	} else if value, found := variables["x"]; !found || value == nil {
+		t.Fail()
+	} else if v, ok := value.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if v.Id() != "base" {
+		t.Fail()
+	}
+
+	// add extra positionals from scratch
+	base = commons.NewNamedContent("x", DummyIdBasedImplementation{id: "base"})
+	other = commons.NewContent(DummyIdBasedImplementation{id: "other"})
+	if result, extra := base.AddExtraContent(other); !extra {
+		t.Fail()
+	} else if positionals := result.PositionalContent(); len(positionals) != 1 {
+		t.Fail()
+	} else if p := positionals[0]; p == nil {
+		t.Fail()
+	} else if o, ok := p.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if o.Id() != "other" {
+		t.Fail()
+	} else if variables := result.NamedContent(); len(variables) != 1 {
+		t.Fail()
+	} else if value, found := variables["x"]; !found || value == nil {
+		t.Fail()
+	} else if v, ok := value.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if v.Id() != "base" {
+		t.Fail()
+	}
+
+	// add extra positionals from existing
+	base = commons.NewContent(DummyIdBasedImplementation{id: "base"})
+	other = commons.NewContent(DummyIdBasedImplementation{id: "other"})
+	other.Append(DummyIdBasedImplementation{id: "new"})
+
+	if result, extra := base.AddExtraContent(other); !extra {
+		t.Fail()
+	} else if positionals := result.PositionalContent(); len(positionals) != 2 {
+		t.Fail()
+	} else if p := positionals[0]; p == nil {
+		t.Fail()
+	} else if o, ok := p.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if o.Id() != "base" {
+		t.Log("existing value was erased")
+		t.Fail()
+	} else if p := positionals[1]; p == nil {
+		t.Fail()
+	} else if o, ok := p.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if o.Id() != "new" {
+		t.Fail()
+	}
+
+	// test larger positions should not change values
+	base = commons.NewContent(DummyIdBasedImplementation{id: "base"})
+	base.Append(DummyIdBasedImplementation{id: "other"})
+	other = commons.NewContent(DummyIdBasedImplementation{id: "none"})
+
+	if result, extra := base.AddExtraContent(other); extra {
+		t.Fail()
+	} else if positionals := result.PositionalContent(); len(positionals) != 2 {
+		t.Fail()
+	} else if p := positionals[0]; p == nil {
+		t.Fail()
+	} else if o, ok := p.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if o.Id() != "base" {
+		t.Fail()
+	} else if p := positionals[1]; p == nil {
+		t.Fail()
+	} else if o, ok := p.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if o.Id() != "other" {
+		t.Fail()
+	}
+
+}
+
+func TestContentSelect(t *testing.T) {
 	camembert := DummyIdBasedImplementation{id: "camembert"}
 	brie := DummyIdBasedImplementation{id: "brie"}
 
@@ -139,7 +246,7 @@ func TestParameterSelect(t *testing.T) {
 
 }
 
-func TestParametersUnique(t *testing.T) {
+func TestContentUnique(t *testing.T) {
 	leila := DummyIdBasedImplementation{id: "leila"}
 	maria := DummyIdBasedImplementation{id: "maria"}
 
