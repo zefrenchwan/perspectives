@@ -1,9 +1,5 @@
 package commons
 
-import (
-	"maps"
-)
-
 // Content defines any values grouped together.
 // Typically, it may be used as parameters to run conditions.
 // A condition does not depend on a single entity.
@@ -14,16 +10,6 @@ type Content interface {
 	AppendAsVariable(name string, value ModelComponent)
 	// Append adds an element at the end
 	Append(ModelComponent)
-	// AddExtraContent builds a new content as existing one plus new values.
-	// It does not affect its parameters (neither receiver, nor parameter).
-	// It returns the resulting content, and a boolean.
-	// This boolean is true if there was a change of state, and false otherwise.
-	// General contract is:
-	// You may add different variables (not same name). Same variables name are IGNORED
-	// You may add positional elements with an index greater than current size, rest is IGNORED.
-	// For instance, if content is x => value and you add x => other, y => new, then new content is x => value, y => new.
-	// This function should be used when adding variables only once we know variables are disjoin from each content.
-	AddExtraContent(Content) (Content, bool)
 	// Size returns the number of positional elements for that content.
 	// It means the number of positional values, no matter the variable content
 	Size() int
@@ -91,46 +77,6 @@ func (a *simpleContainer) AppendAsVariable(name string, value ModelComponent) {
 
 		a.named[name] = value
 	}
-}
-
-// AddExtraContent gets new values from other and returns the content of a with extra values from other
-func (a *simpleContainer) AddExtraContent(other Content) (Content, bool) {
-	if other == nil {
-		return nil, false
-	}
-
-	result := new(simpleContainer)
-	result.named = make(map[string]ModelComponent)
-	if len(a.named) != 0 {
-		maps.Copy(result.named, a.named)
-	}
-
-	newState := false
-	variables := other.Variables()
-	if len(variables) != 0 {
-		for _, variable := range variables {
-			if _, found := a.named[variable]; !found {
-				a.named[variable] = other.GetVariable(variable)
-				newState = true
-			}
-		}
-	}
-
-	if len(a.positionals) != 0 {
-		result.positionals = append(result.positionals, a.positionals...)
-	}
-
-	otherSize := other.Size()
-	currentSize := a.Size()
-	if otherSize > currentSize {
-		newState = true
-
-		for index := currentSize; index < otherSize; index++ {
-			result.positionals = append(result.positionals, other.Get(index))
-		}
-	}
-
-	return result, newState
 }
 
 // Get returns the value at a given position, or nil if index does not match

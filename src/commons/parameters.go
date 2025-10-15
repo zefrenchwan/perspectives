@@ -2,7 +2,6 @@ package commons
 
 // FormalParameters is the expected parameters definition of an action
 type FormalParameters struct {
-	minimalSize           int      // minimal TOTAL size (including variables)
 	minimalPositionalSize int      // minimal number of expected positional values
 	expectedVariables     []string // expected variables by name
 }
@@ -12,14 +11,12 @@ func NewNamedFormalParameters(names []string) FormalParameters {
 	variables := SliceDeduplicate(names)
 	return FormalParameters{
 		expectedVariables: variables,
-		minimalSize:       len(variables),
 	}
 }
 
 // NewPositionalFormalParameters constructs formal parameters expecting size positional elements
 func NewPositionalFormalParameters(size int) FormalParameters {
 	return FormalParameters{
-		minimalSize:           size,
 		minimalPositionalSize: size,
 	}
 }
@@ -41,20 +38,14 @@ func (fp FormalParameters) Variables() []string {
 // Failure to comply to any condition returns false
 func (fp FormalParameters) Accepts(c Content) bool {
 	size := 0
+	var variables []string
+
 	if c != nil {
 		size = c.Size()
-	}
-
-	totalSize := size
-	var variables []string
-	if c != nil {
 		variables = c.Variables()
-		totalSize = totalSize + len(variables)
 	}
 
-	if fp.minimalSize > totalSize {
-		return false
-	} else if fp.minimalPositionalSize > size {
+	if fp.minimalPositionalSize > size {
 		return false
 	} else if len(fp.expectedVariables) > len(variables) {
 		return false
@@ -67,9 +58,6 @@ func (fp FormalParameters) Accepts(c Content) bool {
 // expects max of sizes, max of positional sizes, all expected variables
 func (fp FormalParameters) Max(other FormalParameters) FormalParameters {
 	result := FormalParameters{}
-
-	// get max of minimal sizes
-	result.minimalSize = max(fp.minimalSize, other.minimalSize)
 
 	// get max of positional sizes
 	result.minimalPositionalSize = max(fp.minimalPositionalSize, other.minimalPositionalSize)

@@ -36,6 +36,11 @@ type ModelConstraint interface {
 }
 
 // ModelType returns the current type of c within that model.
+// Getting the type as a function attached to model component
+// such as ( type ModelComponent interface { GetType() int })
+// Would make an inheritance issue.
+// This method is a type predicate.
+// This way, we may complete it with other type management.
 func ModelType(c any) ModelComponentType {
 	if c == nil {
 		return ModelUnmanagedType
