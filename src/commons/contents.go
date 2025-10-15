@@ -13,6 +13,11 @@ type Content interface {
 	// Size returns the number of positional elements for that content.
 	// It means the number of positional values, no matter the variable content
 	Size() int
+	// Disjoin returns true if there is no common allocated place.
+	// That is, two contents are disjoin when:
+	// variables names a different from one another
+	// if one has positional values, the other does not
+	Disjoin(Content) bool
 	// Get returns the positional argument for a given index.
 	// If there is no value for that index, return nil
 	Get(int) ModelComponent
@@ -59,6 +64,23 @@ func (a *simpleContainer) Size() int {
 // IsEmpty is true for no element
 func (a *simpleContainer) IsEmpty() bool {
 	return a == nil || (len(a.positionals) == 0 && len(a.named) == 0)
+}
+
+// Disjoin returns true if
+// other and a have no variable in common
+// and if one has positional values, the other does not
+func (a *simpleContainer) Disjoin(other Content) bool {
+	if a == nil {
+		return true
+	} else if other == nil {
+		return true
+	}
+
+	if a.Size() != 0 && other.Size() != 0 {
+		return false
+	}
+
+	return !SliceCommonElement(a.Variables(), other.Variables())
 }
 
 // Append adds a positional value in that content

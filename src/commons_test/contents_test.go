@@ -165,3 +165,47 @@ func TestContentUnique(t *testing.T) {
 	}
 
 }
+
+func TestContentDisjoin(t *testing.T) {
+	var a, b commons.Content
+	a = commons.NewContent(DummyComponentImplementation{})
+	if !a.Disjoin(b) {
+		t.Fail()
+	}
+
+	b = commons.NewNamedContent("x", DummyComponentImplementation{})
+	if !a.Disjoin(b) {
+		t.Fail()
+	} else if !b.Disjoin(a) {
+		t.Fail()
+	}
+
+	a.AppendAsVariable("y", DummyComponentImplementation{})
+	if !a.Disjoin(b) {
+		t.Fail()
+	} else if !b.Disjoin(a) {
+		t.Fail()
+	}
+
+	b.Append(DummyComponentImplementation{})
+	if a.Disjoin(b) {
+		t.Fail()
+	} else if b.Disjoin(a) {
+		t.Fail()
+	}
+
+	a = commons.NewNamedContent("x", DummyComponentImplementation{})
+	b = commons.NewNamedContent("y", DummyComponentImplementation{})
+	if !a.Disjoin(b) {
+		t.Fail()
+	} else if !b.Disjoin(a) {
+		t.Fail()
+	}
+
+	a.AppendAsVariable("y", DummyComponentImplementation{})
+	if a.Disjoin(b) {
+		t.Fail()
+	} else if b.Disjoin(a) {
+		t.Fail()
+	}
+}
