@@ -14,8 +14,9 @@ func (f FilterById) Signature() FormalParameters {
 
 // Matches returns true if content is identifiable with that id
 func (f FilterById) Matches(c Content) (bool, error) {
-	value := c.GetVariable(f.expectedVariable)
-	if value == nil {
+	if value, found := c.GetByName(f.expectedVariable); !found {
+		return false, nil
+	} else if value == nil {
 		return false, nil
 	} else if idValue, ok := value.(Identifiable); !ok {
 		return false, nil

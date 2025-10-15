@@ -196,7 +196,7 @@ func TestFormalParametersTree(t *testing.T) {
 		t.Fail()
 	}
 
-	content.AppendAsVariable("y", DummyComponentImplementation{})
+	content.AppendAs("y", DummyComponentImplementation{})
 	if !or.Signature().Accepts(content) {
 		t.Fail()
 	}

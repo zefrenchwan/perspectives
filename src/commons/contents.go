@@ -2,37 +2,41 @@ package commons
 
 // Content defines any values grouped together.
 // Typically, it may be used as parameters to run conditions.
-// A condition does not depend on a single entity.
-// For instance, a join condition uses two entities.
+// A condition does not depend on a single entity:
+// for instance, a join condition uses two entities.
 // So, to regroup all cases into a general form, we use Content.
+// There are two types of values:
+// POSITIONAL values: no name, just values one after another
+// NAMED values: a map of names and values
 type Content interface {
-	// AppendAsVariable adds a new value as a variable
-	AppendAsVariable(name string, value ModelComponent)
+	// AppendAs adds a new value with a name
+	AppendAs(name string, value ModelComponent)
 	// Append adds an element at the end
 	Append(ModelComponent)
 	// Size returns the number of positional elements for that content.
-	// It means the number of positional values, no matter the variable content
+	// It means the number of positional values, no matter the named content
 	Size() int
 	// Disjoin returns true if there is no common allocated place.
 	// That is, two contents are disjoin when:
-	// variables names a different from one another
-	// if one has positional values, the other does not
+	// names a different from one another (no matter the value)
+	// AND if one has positional values, the other does not
 	Disjoin(Content) bool
 	// Get returns the positional argument for a given index.
-	// If there is no value for that index, return nil
-	Get(int) ModelComponent
-	// Variables returns the names of variables set
-	Variables() []string
-	// GetVariable returns the value for that variable, nil for no match
-	GetVariable(name string) ModelComponent
+	// If there is no value for that index, return nil, false
+	Get(int) (ModelComponent, bool)
+	// Names returns the names set for some values.
+	// For intance, if content is x => v1, y => v2, then result is x,y
+	Names() []string
+	// GetByName returns the value for that name, nil for no match
+	GetByName(name string) (ModelComponent, bool)
 	// IsEmpty returns true if content is empty and should be neglected
 	IsEmpty() bool
-	// SelectVariables picks variables by name to make a new content.
-	// Result contains no positional value, and variables if list if any
-	SelectVariables([]string) Content
-	// Select picks values at given indexes to make a new content.
+	// PickByNames picks values by name to make a new content.
+	// Result contains no positional value, and named values if list if any
+	PickByNames([]string) Content
+	// PickByIndexes picks values at given indexes to make a new content.
 	// Result contains only positional values, with selected indexes (if any)
-	Select([]int) Content
+	PickByIndexes([]int) Content
 	// PositionalContent returns the positional content as a slice
 	PositionalContent() []ModelComponent
 	// NamedContent returns the named content as a map
@@ -80,7 +84,7 @@ func (a *simpleContainer) Disjoin(other Content) bool {
 		return false
 	}
 
-	return !SliceCommonElement(a.Variables(), other.Variables())
+	return !SliceCommonElement(a.Names(), other.Names())
 }
 
 // Append adds a positional value in that content
@@ -90,8 +94,8 @@ func (a *simpleContainer) Append(element ModelComponent) {
 	}
 }
 
-// AppendAsVariable adds a new named value as a variable
-func (a *simpleContainer) AppendAsVariable(name string, value ModelComponent) {
+// AppendAs adds a new named value as a variable
+func (a *simpleContainer) AppendAs(name string, value ModelComponent) {
 	if a != nil {
 		if a.named == nil {
 			a.named = make(map[string]ModelComponent)
@@ -102,16 +106,16 @@ func (a *simpleContainer) AppendAsVariable(name string, value ModelComponent) {
 }
 
 // Get returns the value at a given position, or nil if index does not match
-func (a *simpleContainer) Get(index int) ModelComponent {
+func (a *simpleContainer) Get(index int) (ModelComponent, bool) {
 	if a == nil || index < 0 || index >= len(a.positionals) {
-		return nil
+		return nil, false
 	}
 
-	return a.positionals[index]
+	return a.positionals[index], true
 }
 
-// Variables returns the name of variables set for that content
-func (a *simpleContainer) Variables() []string {
+// Names returns the name of named values set for that content
+func (a *simpleContainer) Names() []string {
 	if a == nil {
 		return nil
 	}
@@ -124,17 +128,19 @@ func (a *simpleContainer) Variables() []string {
 	return result
 }
 
-// GetVariable returns the value (if any) for that name
-func (a *simpleContainer) GetVariable(name string) ModelComponent {
+// GetByName returns the value (if any) for that name
+func (a *simpleContainer) GetByName(name string) (ModelComponent, bool) {
 	if a == nil {
-		return nil
+		return nil, false
+	} else if value, found := a.named[name]; !found {
+		return nil, false
+	} else {
+		return value, true
 	}
-
-	return a.named[name]
 }
 
-// SelectVariables reduces this content to only matching variables
-func (a *simpleContainer) SelectVariables(names []string) Content {
+// PickByNames reduces this content to only matching named values by names
+func (a *simpleContainer) PickByNames(names []string) Content {
 	if a == nil {
 		return nil
 	}
@@ -154,8 +160,8 @@ func (a *simpleContainer) SelectVariables(names []string) Content {
 	return result
 }
 
-// Select reduces this content to only matching indexes
-func (a *simpleContainer) Select(indexes []int) Content {
+// PickByIndexes reduces this content to only matching indexes
+func (a *simpleContainer) PickByIndexes(indexes []int) Content {
 	if a == nil {
 		return nil
 	}

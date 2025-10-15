@@ -15,7 +15,7 @@ func TestContentCreation(t *testing.T) {
 		t.Fail()
 	}
 
-	empty := p.Select([]int{})
+	empty := p.PickByIndexes([]int{})
 	if !empty.IsEmpty() {
 		t.Fail()
 	}
@@ -29,11 +29,11 @@ func TestContentGet(t *testing.T) {
 	p := commons.NewContent(tanguy)
 	p.Append(alan)
 
-	if p.Get(0) != tanguy {
+	if value, found := p.Get(0); !found || value != tanguy {
 		t.Fail()
-	} else if p.Get(1) != alan {
+	} else if value, found := p.Get(1); !found || value != alan {
 		t.Fail()
-	} else if p.Get(-1) != nil {
+	} else if value, found := p.Get(-1); found || value != nil {
 		t.Fail()
 	}
 
@@ -48,21 +48,21 @@ func TestContentGet(t *testing.T) {
 	}
 
 	q := commons.NewNamedContent("x", tanguy)
-	q.AppendAsVariable("y", alan)
+	q.AppendAs("y", alan)
 
-	variables := q.Variables()
+	variables := q.Names()
 	slices.Sort(variables)
 	if slices.Compare(variables, []string{"x", "y"}) != 0 {
 		t.Fail()
 	}
 
-	if q.GetVariable("x") != tanguy {
+	if value, found := q.GetByName("x"); !found || value != tanguy {
 		t.Fail()
-	} else if q.GetVariable("y") != alan {
+	} else if value, found := q.GetByName("y"); !found || value != alan {
 		t.Fail()
-	} else if q.GetVariable("z") != nil {
+	} else if value, found := q.GetByName("z"); found || value != nil {
 		t.Fail()
-	} else if q.Get(0) != nil {
+	} else if value, found := q.Get(0); found || value != nil {
 		t.Fail()
 	}
 
@@ -77,13 +77,13 @@ func TestContentGet(t *testing.T) {
 	}
 
 	r := commons.NewContent(tanguy)
-	r.AppendAsVariable("x", alan)
+	r.AppendAs("x", alan)
 
-	if r.Get(0) != tanguy {
+	if value, found := r.Get(0); !found || value != tanguy {
 		t.Fail()
 	} else if r.Size() != 1 {
 		t.Fail()
-	} else if slices.Compare([]string{"x"}, r.Variables()) != 0 {
+	} else if slices.Compare([]string{"x"}, r.Names()) != 0 {
 		t.Fail()
 	} else if names := r.NamedContent(); len(names) != 1 {
 		t.Fail()
@@ -101,22 +101,22 @@ func TestContentSelect(t *testing.T) {
 	brie := DummyIdBasedImplementation{id: "brie"}
 
 	variable := commons.NewNamedContent("x", &brie)
-	variable.AppendAsVariable("y", &camembert)
+	variable.AppendAs("y", &camembert)
 
 	// test empty
-	result := variable.Select([]int{0, 1})
+	result := variable.PickByIndexes([]int{0, 1})
 	if !result.IsEmpty() {
 		t.Fail()
 	}
 
-	result = variable.SelectVariables([]string{"a", "b"})
+	result = variable.PickByNames([]string{"a", "b"})
 	if !result.IsEmpty() {
 		t.Fail()
 	}
 
 	// test select
-	result = variable.SelectVariables([]string{"x"})
-	if value := result.GetVariable("x"); value != &brie {
+	result = variable.PickByNames([]string{"x"})
+	if value, found := result.GetByName("x"); !found || value != &brie {
 		t.Fail()
 	}
 
@@ -124,16 +124,16 @@ func TestContentSelect(t *testing.T) {
 	other := commons.NewContent(&camembert)
 	other.Append(&brie)
 
-	if !other.Select(nil).IsEmpty() {
+	if !other.PickByIndexes(nil).IsEmpty() {
 		t.Fail()
-	} else if !other.Select([]int{-1, 2, 3, 4}).IsEmpty() {
+	} else if !other.PickByIndexes([]int{-1, 2, 3, 4}).IsEmpty() {
 		t.Fail()
 	}
 
-	reduced := other.Select([]int{0})
+	reduced := other.PickByIndexes([]int{0})
 	if reduced.Size() != 1 {
 		t.Fail()
-	} else if reduced.Get(0) != &camembert {
+	} else if value, found := reduced.Get(0); !found || value != &camembert {
 		t.Fail()
 	}
 
@@ -180,7 +180,7 @@ func TestContentDisjoin(t *testing.T) {
 		t.Fail()
 	}
 
-	a.AppendAsVariable("y", DummyComponentImplementation{})
+	a.AppendAs("y", DummyComponentImplementation{})
 	if !a.Disjoin(b) {
 		t.Fail()
 	} else if !b.Disjoin(a) {
@@ -202,7 +202,7 @@ func TestContentDisjoin(t *testing.T) {
 		t.Fail()
 	}
 
-	a.AppendAsVariable("y", DummyComponentImplementation{})
+	a.AppendAs("y", DummyComponentImplementation{})
 	if a.Disjoin(b) {
 		t.Fail()
 	} else if b.Disjoin(a) {

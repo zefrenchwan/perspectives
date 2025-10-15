@@ -42,7 +42,7 @@ func (fp FormalParameters) Accepts(c Content) bool {
 
 	if c != nil {
 		size = c.Size()
-		variables = c.Variables()
+		variables = c.Names()
 	}
 
 	if fp.minimalPositionalSize > size {

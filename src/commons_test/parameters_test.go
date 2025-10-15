@@ -35,13 +35,13 @@ func TestFormalParametersAccept(t *testing.T) {
 
 	// get necessary variables
 	content = commons.NewNamedContent("x", DummyComponentImplementation{})
-	content.AppendAsVariable("y", DummyComponentImplementation{})
+	content.AppendAs("y", DummyComponentImplementation{})
 	if !varOnly.Accepts(content) {
 		t.Fail()
 	}
 
 	// add extra variable
-	content.AppendAsVariable("z", DummyComponentImplementation{})
+	content.AppendAs("z", DummyComponentImplementation{})
 	if !varOnly.Accepts(content) {
 		t.Fail()
 	}
@@ -57,12 +57,12 @@ func TestMaxParameters(t *testing.T) {
 		t.Fail()
 	}
 
-	content.AppendAsVariable("x", DummyComponentImplementation{})
+	content.AppendAs("x", DummyComponentImplementation{})
 	if maxParameters.Accepts(content) {
 		t.Fail()
 	}
 
-	content.AppendAsVariable("y", DummyComponentImplementation{})
+	content.AppendAs("y", DummyComponentImplementation{})
 	if !maxParameters.Accepts(content) {
 		t.Fail()
 	}
@@ -73,7 +73,7 @@ func TestMaxParameters(t *testing.T) {
 		t.Fail()
 	}
 
-	content.AppendAsVariable("y", DummyComponentImplementation{})
+	content.AppendAs("y", DummyComponentImplementation{})
 	if maxParameters.Accepts(content) {
 		t.Fail()
 	}
