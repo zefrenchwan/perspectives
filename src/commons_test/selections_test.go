@@ -10,7 +10,7 @@ func TestFilterById(t *testing.T) {
 	condition := commons.NewFilterById("x", "id")
 
 	// test variables check
-	otherVariable := commons.NewNamedContent("y", DummyIdBasedImplementation{id: "id"})
+	otherVariable := commons.NewNamedContent[commons.Modelable]("y", DummyIdBasedImplementation{id: "id"})
 	if value, err := condition.Matches(otherVariable); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -19,9 +19,9 @@ func TestFilterById(t *testing.T) {
 	}
 
 	// test values condition
-	matching := commons.NewNamedContent("x", DummyIdBasedImplementation{id: "id"})
-	notMatching := commons.NewNamedContent("x", DummyIdBasedImplementation{id: "nope"})
-	notId := commons.NewNamedContent("x", DummyComponentImplementation{})
+	matching := commons.NewNamedContent[commons.Modelable]("x", DummyIdBasedImplementation{id: "id"})
+	notMatching := commons.NewNamedContent[commons.Modelable]("x", DummyIdBasedImplementation{id: "nope"})
+	notId := commons.NewNamedContent[commons.Modelable]("x", DummyComponentImplementation{})
 	if value, err := condition.Matches(notMatching); err != nil {
 		t.Log(err)
 		t.Fail()

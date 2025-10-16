@@ -8,11 +8,3 @@ type Ability interface {
 	// Signature returns the expected parameters
 	Signature() FormalParameters
 }
-
-// Action is the most general definition of a way to change a state
-type Action interface {
-	// An action is an ability to do something
-	Ability
-	// Execute an action over content
-	Execute(Content) error
-}

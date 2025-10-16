@@ -140,6 +140,7 @@ func TestContentSelect(t *testing.T) {
 }
 
 func TestContentUnique(t *testing.T) {
+	var empty DummyIdBasedImplementation
 	leila := DummyIdBasedImplementation{id: "leila"}
 	maria := DummyIdBasedImplementation{id: "maria"}
 
@@ -153,7 +154,7 @@ func TestContentUnique(t *testing.T) {
 	p.Append(maria)
 	if res, matching := p.Unique(); matching {
 		t.Fail()
-	} else if res != nil {
+	} else if res != empty {
 		t.Fail()
 	}
 
@@ -167,42 +168,42 @@ func TestContentUnique(t *testing.T) {
 }
 
 func TestContentDisjoin(t *testing.T) {
-	var a, b commons.Content
-	a = commons.NewContent(DummyComponentImplementation{})
+	var a, b commons.GenericContent[int]
+	a = commons.NewContent(0)
 	if !a.Disjoin(b) {
 		t.Fail()
 	}
 
-	b = commons.NewNamedContent("x", DummyComponentImplementation{})
-	if !a.Disjoin(b) {
-		t.Fail()
-	} else if !b.Disjoin(a) {
-		t.Fail()
-	}
-
-	a.AppendAs("y", DummyComponentImplementation{})
+	b = commons.NewNamedContent("x", 0)
 	if !a.Disjoin(b) {
 		t.Fail()
 	} else if !b.Disjoin(a) {
 		t.Fail()
 	}
 
-	b.Append(DummyComponentImplementation{})
+	a.AppendAs("y", 0)
+	if !a.Disjoin(b) {
+		t.Fail()
+	} else if !b.Disjoin(a) {
+		t.Fail()
+	}
+
+	b.Append(0)
 	if a.Disjoin(b) {
 		t.Fail()
 	} else if b.Disjoin(a) {
 		t.Fail()
 	}
 
-	a = commons.NewNamedContent("x", DummyComponentImplementation{})
-	b = commons.NewNamedContent("y", DummyComponentImplementation{})
+	a = commons.NewNamedContent("x", 0)
+	b = commons.NewNamedContent("y", 0)
 	if !a.Disjoin(b) {
 		t.Fail()
 	} else if !b.Disjoin(a) {
 		t.Fail()
 	}
 
-	a.AppendAs("y", DummyComponentImplementation{})
+	a.AppendAs("y", 0)
 	if a.Disjoin(b) {
 		t.Fail()
 	} else if b.Disjoin(a) {

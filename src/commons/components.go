@@ -20,7 +20,10 @@ const ModelStructureType ModelComponentType = 0x12
 // * objects : what we observe
 // * structures: what contains the objects
 // * constraints: what objects can and cannot do (and how it changes their structure)
-type ModelComponent any
+type ModelComponent interface {
+	// A component of a model is modelable
+	Modelable
+}
 
 // ModelConstraint defines a constraint (what components can and cannot do)
 type ModelConstraint interface {

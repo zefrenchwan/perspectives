@@ -11,9 +11,9 @@ func TestConstantCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent(DummyComponentImplementation{})
+	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
 
-	if !ctrue.Signature().Accepts(p) {
+	if !p.Matches(ctrue.Signature()) {
 		t.Fail()
 	} else if value, err := ctrue.Matches(p); err != nil {
 		t.Log(err)
@@ -22,7 +22,7 @@ func TestConstantCondition(t *testing.T) {
 		t.Fail()
 	}
 
-	if !cfalse.Signature().Accepts(p) {
+	if !p.Matches(cfalse.Signature()) {
 		t.Fail()
 	} else if value, err := cfalse.Matches(p); err != nil {
 		t.Log(err)
@@ -36,9 +36,9 @@ func TestNotCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent(DummyComponentImplementation{})
+	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
 
-	if not := commons.NewConditionNot(ctrue); !not.Signature().Accepts(p) {
+	if not := commons.NewConditionNot(ctrue); !p.Matches(not.Signature()) {
 		t.Log("failed to accept signature")
 		t.Fail()
 	} else if value, err := not.Matches(p); err != nil {
@@ -50,7 +50,7 @@ func TestNotCondition(t *testing.T) {
 		t.Fail()
 	}
 
-	if not := commons.NewConditionNot(cfalse); !not.Signature().Accepts(p) {
+	if not := commons.NewConditionNot(cfalse); !p.Matches(not.Signature()) {
 		t.Log("failed to accept signature")
 		t.Fail()
 	} else if value, err := not.Matches(p); err != nil {
@@ -63,7 +63,7 @@ func TestNotCondition(t *testing.T) {
 	}
 
 	// special case: nil
-	if not := commons.NewConditionNot(nil); !not.Signature().Accepts(p) {
+	if not := commons.NewConditionNot(nil); !p.Matches(not.Signature()) {
 		t.Log("failed to accept nil")
 		t.Fail()
 	} else if value, err := not.Matches(p); err != nil {
@@ -78,9 +78,9 @@ func TestOrCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent(DummyComponentImplementation{})
+	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
 
-	if or := commons.NewConditionOr([]commons.Condition{ctrue, cfalse}); !or.Signature().Accepts(p) {
+	if or := commons.NewConditionOr([]commons.Condition{ctrue, cfalse}); !p.Matches(or.Signature()) {
 		t.Fail()
 	} else if value, err := or.Matches(p); err != nil {
 		t.Log(err)
@@ -100,7 +100,7 @@ func TestOrCondition(t *testing.T) {
 	}
 
 	// empty or nil should accept p but return false
-	if or := commons.NewConditionOr([]commons.Condition{}); !or.Signature().Accepts(p) {
+	if or := commons.NewConditionOr([]commons.Condition{}); !p.Matches(or.Signature()) {
 		t.Fail()
 	} else if value, err := or.Matches(p); err != nil {
 		t.Log(err)
@@ -120,9 +120,9 @@ func TestAndCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent(DummyComponentImplementation{})
+	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
 
-	if and := commons.NewConditionAnd([]commons.Condition{ctrue, cfalse}); !and.Signature().Accepts(p) {
+	if and := commons.NewConditionAnd([]commons.Condition{ctrue, cfalse}); !p.Matches(and.Signature()) {
 		t.Fail()
 	} else if value, err := and.Matches(p); err != nil {
 		t.Log(err)
@@ -168,7 +168,7 @@ func TestCompositeCondition(t *testing.T) {
 	// condition is true because all operands are true
 	condition := commons.NewConditionAnd([]commons.Condition{or, ctrue})
 
-	p := commons.NewContent(DummyComponentImplementation{})
+	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
 	if value, err := condition.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -192,12 +192,12 @@ func TestFormalParametersTree(t *testing.T) {
 	}
 
 	content := commons.NewNamedContent("x", DummyComponentImplementation{})
-	if or.Signature().Accepts(content) {
+	if content.Matches(or.Signature()) {
 		t.Fail()
 	}
 
 	content.AppendAs("y", DummyComponentImplementation{})
-	if !or.Signature().Accepts(content) {
+	if !content.Matches(or.Signature()) {
 		t.Fail()
 	}
 }

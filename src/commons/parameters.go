@@ -33,27 +33,6 @@ func (fp FormalParameters) Variables() []string {
 	return result
 }
 
-// Accepts tests if content matches expected constraints:
-// Enough total values, enough positional values, and enough variables.
-// Failure to comply to any condition returns false
-func (fp FormalParameters) Accepts(c Content) bool {
-	size := 0
-	var variables []string
-
-	if c != nil {
-		size = c.Size()
-		variables = c.Names()
-	}
-
-	if fp.minimalPositionalSize > size {
-		return false
-	} else if len(fp.expectedVariables) > len(variables) {
-		return false
-	} else {
-		return SlicesContainsAllFunc(variables, fp.expectedVariables, func(a, b string) bool { return a == b })
-	}
-}
-
 // Max gets the union of conditions to accept content:
 // expects max of sizes, max of positional sizes, all expected variables
 func (fp FormalParameters) Max(other FormalParameters) FormalParameters {

@@ -11,38 +11,36 @@ func TestFormalParametersAccept(t *testing.T) {
 	positionalOnly := commons.NewPositionalFormalParameters(1)
 	yes := commons.NewMostPermissiveFormalParameters()
 
-	if varOnly.Accepts(commons.NewNamedContent("x", DummyComponentImplementation{})) {
+	if commons.NewNamedContent("x", DummyComponentImplementation{}).Matches(varOnly) {
 		t.Fail()
-	} else if positionalOnly.Accepts(commons.NewNamedContent("x", DummyComponentImplementation{})) {
+	} else if commons.NewNamedContent("x", DummyComponentImplementation{}).Matches(positionalOnly) {
 		t.Fail()
-	} else if !yes.Accepts(nil) {
-		t.Fail()
-	} else if !yes.Accepts(commons.NewNamedContent("x", DummyComponentImplementation{})) {
+	} else if !commons.NewNamedContent("x", DummyComponentImplementation{}).Matches(yes) {
 		t.Fail()
 	}
 
 	// one value waiting for one at least
 	content := commons.NewContent(DummyComponentImplementation{})
-	if !positionalOnly.Accepts(content) {
+	if !content.Matches(positionalOnly) {
 		t.Fail()
 	}
 
 	// two values waiting for one at least
 	content.Append(DummyComponentImplementation{})
-	if !positionalOnly.Accepts(content) {
+	if !content.Matches(positionalOnly) {
 		t.Fail()
 	}
 
 	// get necessary variables
 	content = commons.NewNamedContent("x", DummyComponentImplementation{})
 	content.AppendAs("y", DummyComponentImplementation{})
-	if !varOnly.Accepts(content) {
+	if !content.Matches(varOnly) {
 		t.Fail()
 	}
 
 	// add extra variable
 	content.AppendAs("z", DummyComponentImplementation{})
-	if !varOnly.Accepts(content) {
+	if !content.Matches(varOnly) {
 		t.Fail()
 	}
 }
@@ -53,33 +51,33 @@ func TestMaxParameters(t *testing.T) {
 	maxParameters := varOnly.Max(positionalOnly)
 
 	content := commons.NewContent(DummyComponentImplementation{})
-	if maxParameters.Accepts(content) {
+	if content.Matches(maxParameters) {
 		t.Fail()
 	}
 
 	content.AppendAs("x", DummyComponentImplementation{})
-	if maxParameters.Accepts(content) {
+	if content.Matches(maxParameters) {
 		t.Fail()
 	}
 
 	content.AppendAs("y", DummyComponentImplementation{})
-	if !maxParameters.Accepts(content) {
+	if !content.Matches(maxParameters) {
 		t.Fail()
 	}
 
 	// retest with variables first
 	content = commons.NewNamedContent("x", DummyComponentImplementation{})
-	if maxParameters.Accepts(content) {
+	if content.Matches(maxParameters) {
 		t.Fail()
 	}
 
 	content.AppendAs("y", DummyComponentImplementation{})
-	if maxParameters.Accepts(content) {
+	if content.Matches(maxParameters) {
 		t.Fail()
 	}
 
 	content.Append(DummyComponentImplementation{})
-	if !maxParameters.Accepts(content) {
+	if !content.Matches(maxParameters) {
 		t.Fail()
 	}
 }
