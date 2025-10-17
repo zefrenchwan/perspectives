@@ -8,14 +8,15 @@ import (
 
 func TestStateObject(t *testing.T) {
 	obj := commons.NewStateObject[int]()
+
 	if len(obj.Attributes()) != 0 {
 		t.Fail()
-	} else if _, found := obj.Get("test"); found {
+	} else if _, found := obj.GetValue("test"); found {
 		t.Fail()
 	}
 
-	obj.Set("key", 10)
-	if value, found := obj.Get("key"); !found {
+	obj.SetValue("key", 10)
+	if value, found := obj.GetValue("key"); !found {
 		t.Fail()
 	} else if value != 10 {
 		t.Fail()

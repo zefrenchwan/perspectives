@@ -4,22 +4,20 @@ import (
 	"errors"
 )
 
+// RoleSubject specifies the subject role
+const RoleSubject = "subject"
+
+// RoleObject specifies the object role
+const RoleObject = "object"
+
 // Linkable should be as simple as possible.
 // No need to include IsGroup or anything else.
 // Just ease code manipulation with:
 // simple type definition
 // and define predicate outside its definition.
-type Linkable any
-
-// IsLink returns true if linkable is a link.
-// Adding it as a linkable
-func IsLink(l Linkable) bool {
-	if l == nil {
-		return false
-	}
-
-	_, matches := l.(Link)
-	return matches
+type Linkable interface {
+	// We may link anything that appears in a model
+	Modelable
 }
 
 // Link is a constant relation over instances of linkables.
@@ -218,4 +216,9 @@ func NewLink(name string, values map[string]Linkable) (Link, error) {
 	}
 
 	return result, nil
+}
+
+// NewSimpleLink is just creating a link of given name with content equals to "subject" => subject, "object": object
+func NewSimpleLink(name string, subject Linkable, object Linkable) (Link, error) {
+	return NewLink(name, map[string]Linkable{RoleSubject: subject, RoleObject: object})
 }

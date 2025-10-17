@@ -47,7 +47,7 @@ func TestTemporalLink(t *testing.T) {
 	fullPeriod := commons.NewFullPeriod()
 	partPeriod := commons.NewPeriodSince(time.Now().Truncate(time.Hour), true)
 
-	if link, err := commons.NewLink("test", map[string]commons.Linkable{"role": 0}); err != nil {
+	if link, err := commons.NewLink("test", map[string]commons.Linkable{"role": DummyObject{}}); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if tlink := commons.NewTemporalLink(partPeriod, link); !tlink.ActivePeriod().Equals(partPeriod) {
@@ -59,7 +59,7 @@ func TestTemporalLink(t *testing.T) {
 		}
 	}
 
-	if link, err := commons.NewLink("test", map[string]commons.Linkable{"role": 0}); err != nil {
+	if link, err := commons.NewLink("test", map[string]commons.Linkable{"role": DummyIdBasedImplementation{id: "test"}}); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if tlink := commons.NewTemporalLink(partPeriod, link); !tlink.ActivePeriod().Equals(partPeriod) {
@@ -84,22 +84,22 @@ func TestTemporalLink(t *testing.T) {
 func TestLinkComposition(t *testing.T) {
 	marie := commons.NewStateObject[string]()
 	paul := commons.NewStateObject[string]()
-	marie.Set("first name", "Marie")
-	paul.Set("first name", "Paul")
+	marie.SetValue("first name", "Marie")
+	paul.SetValue("first name", "Paul")
 
 	link, errLink := commons.NewLink("loves", map[string]commons.Linkable{"subject": marie, "object": paul})
 	if errLink != nil {
 		t.Fail()
 	}
 
-	knows, errKnows := commons.NewLink("knows", map[string]commons.Linkable{"subject": marie, "object": link})
+	knows, errKnows := commons.NewSimpleLink("knows", marie, link)
 	if errKnows != nil {
 		t.Fail()
 	}
 
 	if opKnows := knows.Operands(); opKnows["subject"] != marie {
 		t.Fail()
-	} else if value := opKnows["object"]; !commons.IsLink(value) {
+	} else if value := opKnows["object"]; value.GetType() != commons.TypeLink {
 		t.Fail()
 	} else if l := value.(commons.Link); l == nil {
 		t.Fail()

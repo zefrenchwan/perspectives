@@ -2,6 +2,7 @@ package commons_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
@@ -69,6 +70,39 @@ func TestFilterByTypes(t *testing.T) {
 		t.Fail()
 	} else if value {
 		t.Log("bad type")
+		t.Fail()
+	}
+}
+
+func TestCompareActivePeriod(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	before := now.AddDate(-10, 0, 0)
+	activity := commons.NewPeriodUntil(before, true)
+
+	obj := commons.NewStateObject[string]()
+	tobj := commons.NewTimedStateObjectSince[string](now)
+	matching := commons.NewTimedStateObject[string]()
+
+	condition := commons.NewFilterActivePeriod("x", commons.TemporalCommonPoint, activity)
+
+	content := commons.NewNamedContent[commons.Modelable]("x", obj)
+	if matches, err := condition.Matches(content); err != nil {
+		t.Fail()
+	} else if matches {
+		t.Fail()
+	}
+
+	content = commons.NewNamedContent[commons.Modelable]("x", tobj)
+	if matches, err := condition.Matches(content); err != nil {
+		t.Fail()
+	} else if matches {
+		t.Fail()
+	}
+
+	content = commons.NewNamedContent[commons.Modelable]("x", matching)
+	if matches, err := condition.Matches(content); err != nil {
+		t.Fail()
+	} else if !matches {
 		t.Fail()
 	}
 }

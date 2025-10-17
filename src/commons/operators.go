@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+// LocalOperator defines an operation between an operand and its reference
+type LocalOperator[T any] interface {
+	// Accepts returns true if operator applied to operand and reference returns true
+	Accepts(operand, reference T) bool
+}
+
 // StringOperator is a binary operator to apply on a value compared to a reference.
 // Value is the first operand, Reference is the second operand.
 type StringOperator int

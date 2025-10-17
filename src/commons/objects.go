@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// StateValue is the definition of accepted types
-type StateValue interface{ string | int | float64 | bool }
-
 // StateObject is basically an object with a map of attributes and values
 type StateObject[T StateValue] struct {
 	// id of the object
@@ -16,13 +13,18 @@ type StateObject[T StateValue] struct {
 	values map[string]T
 }
 
+// GetType returns an object type
+func (s *StateObject[T]) GetType() ModelableType {
+	return TypeObject
+}
+
 // Id returns the id of the object
 func (s *StateObject[T]) Id() string {
 	return s.id
 }
 
-// Set changes an attribute value by name
-func (s *StateObject[T]) Set(name string, value T) {
+// SetValue changes an attribute value by name
+func (s *StateObject[T]) SetValue(name string, value T) {
 	if s.values == nil {
 		s.values = make(map[string]T)
 	}
@@ -30,8 +32,8 @@ func (s *StateObject[T]) Set(name string, value T) {
 	s.values[name] = value
 }
 
-// Get returns, if any, current value for that attribute
-func (s *StateObject[T]) Get(name string) (T, bool) {
+// GetValue returns, if any, current value for that attribute
+func (s *StateObject[T]) GetValue(name string) (T, bool) {
 	var empty T
 	if s == nil || s.values == nil {
 		return empty, false
@@ -112,6 +114,11 @@ func (t *TimedStateObject[T]) Id() string {
 	return t.id
 }
 
+// GetType returns an object type
+func (t *TimedStateObject[T]) GetType() ModelableType {
+	return TypeObject
+}
+
 // ActivePeriod returns the lifetime of that object
 func (t *TimedStateObject[T]) ActivePeriod() Period {
 	return t.lifetime
@@ -137,10 +144,10 @@ func (o *TimedStateObject[T]) Attributes() []string {
 	}
 }
 
-// setValueDuringPeriod changes that attribute to set value during period.
+// SetValueDuringPeriod changes that attribute to set value during period.
 // If object is nil or period is empty, no action.
 // Else value changes during that period no matter the object's lifetime
-func (o *TimedStateObject[T]) setValueDuringPeriod(attribute string, value T, period Period) {
+func (o *TimedStateObject[T]) SetValueDuringPeriod(attribute string, value T, period Period) {
 	if o == nil {
 		return
 	} else if period.IsEmpty() {
@@ -165,7 +172,7 @@ func (o *TimedStateObject[T]) SetValue(attribute string, value T) {
 		return
 	}
 
-	o.setValueDuringPeriod(attribute, value, NewFullPeriod())
+	o.SetValueDuringPeriod(attribute, value, NewFullPeriod())
 }
 
 // SetValueSince sets the value for that attribute since startingTime
@@ -175,7 +182,7 @@ func (o *TimedStateObject[T]) SetValueSince(attribute string, value T, startingT
 	}
 
 	period := NewPeriodSince(startingTime, includeStartingTime)
-	o.setValueDuringPeriod(attribute, value, period)
+	o.SetValueDuringPeriod(attribute, value, period)
 }
 
 // SetValueUntil sets the value for that attribute until endingTime
@@ -185,7 +192,7 @@ func (o *TimedStateObject[T]) SetValueUntil(attribute string, value T, endingTim
 	}
 
 	period := NewPeriodUntil(endingTime, includeEndingTime)
-	o.setValueDuringPeriod(attribute, value, period)
+	o.SetValueDuringPeriod(attribute, value, period)
 }
 
 // SetValueDuring sets value for that attribute during the interval [startingTime, endingTime] (both included)
@@ -195,7 +202,7 @@ func (o *TimedStateObject[T]) SetValueDuring(attribute string, value T, starting
 	}
 
 	period := NewFinitePeriod(startingTime, endingTime, true, true)
-	o.setValueDuringPeriod(attribute, value, period)
+	o.SetValueDuringPeriod(attribute, value, period)
 }
 
 // GetAllValues returns all the values for all attributes (including the ones with no value)
@@ -263,4 +270,14 @@ func (o *TimedStateObject[T]) GetValue(attribute string, reduceToObjectLifetime 
 	}
 
 	return result, true
+}
+
+// GetValues returns the values and their activity (during the object lifetime).
+// If no value was set for that attribute, return nil
+func (o *TimedStateObject[T]) GetValues(attribute string) map[T]Period {
+	if result, found := o.GetValue(attribute, true); found {
+		return result
+	} else {
+		return nil
+	}
 }

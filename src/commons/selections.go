@@ -41,6 +41,47 @@ func (s unarySelector[T]) Matches(c Content) (bool, error) {
 	}
 }
 
+// localOperatorSelector defines  a condition to deal with operators.
+// Algorithm is:
+// to pick variable from the content,
+// extract value from content (using extractor) if any,
+// compare value with reference using the operator
+type localOperatorSelector[T any] struct {
+	// variable defines which name to pick
+	variable string
+	// operator is the operator per se
+	operator LocalOperator[T]
+	// reference is the reference value to compare extracted value
+	reference T
+	// extractor picks the value from the modelable and returns the value if any.
+	// Result is the extracted value, true if extractor managed to extract the value, an error if any
+	extractor func(Modelable) (T, bool, error)
+}
+
+// Signature returns formal parameters accepting variable
+func (l localOperatorSelector[T]) Signature() FormalParameters {
+	return NewNamedFormalParameters([]string{l.variable})
+}
+
+// Matches returns true if operator applied to content matches reference
+func (l localOperatorSelector[T]) Matches(c Content) (bool, error) {
+	if l.extractor == nil {
+		return false, nil
+	} else if l.operator == nil {
+		return false, nil
+	} else if c == nil {
+		return false, nil
+	} else if value, found := c.GetByName(l.variable); !found {
+		return false, nil
+	} else if res, matches, err := l.extractor(value); err != nil {
+		return false, err
+	} else if !matches {
+		return false, nil
+	} else {
+		return l.operator.Accepts(res, l.reference), nil
+	}
+}
+
 // acceptsModelableByid returns true if modelable is identifiable with that id, false otherwise
 func acceptsModelableByid(source Modelable, reference string) (bool, error) {
 	if value, ok := source.(Identifiable); !ok {
@@ -78,5 +119,34 @@ func NewFilterByTypes(variable string, expectedTypes []ModelableType) Condition 
 	result.variable = variable
 	result.reference = SliceDeduplicate(expectedTypes)
 	result.acceptance = acceptModelableByTypes
+	return result
+}
+
+// activePeriodExtractor extracts the active period of m, if any.
+// It returns the active period (if any), true if m is temporal, an error if any
+func activePeriodExtractor(m Modelable) (Period, bool, error) {
+	var empty Period
+	if m == nil {
+		return empty, false, nil
+	} else if value, ok := m.(Temporal); !ok {
+		return empty, false, nil
+	} else if value == nil {
+		return empty, false, nil
+	} else {
+		return value.ActivePeriod(), true, nil
+	}
+}
+
+// NewFilterActivePeriod returns a new condition to read active period from variable and compare it to period.
+// Parameters are:
+// name of the variable to pick once a context is given,
+// the temporal operator,
+// period as the reference period
+func NewFilterActivePeriod(variable string, operator TemporalOperator, period Period) Condition {
+	var result localOperatorSelector[Period]
+	result.operator = operator
+	result.reference = period
+	result.variable = variable
+	result.extractor = activePeriodExtractor
 	return result
 }
