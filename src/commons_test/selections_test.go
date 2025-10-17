@@ -40,3 +40,35 @@ func TestFilterById(t *testing.T) {
 	}
 
 }
+
+func TestTypesMatches(t *testing.T) {
+	a := DummyComponentImplementation{}
+	content := commons.NewNamedContent[commons.Modelable]("x", a)
+
+	condition := commons.NewFilterByTypes("y", []commons.ModelableType{DummyTestingType})
+	if value, err := condition.Matches(content); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if value {
+		t.Log("bad variable")
+		t.Fail()
+	}
+
+	condition = commons.NewFilterByTypes("x", []commons.ModelableType{DummyTestingType})
+	if value, err := condition.Matches(content); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if !value {
+		t.Log("should match: same variable, good type")
+		t.Fail()
+	}
+
+	condition = commons.NewFilterByTypes("y", []commons.ModelableType{commons.TypeConstraint})
+	if value, err := condition.Matches(content); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if value {
+		t.Log("bad type")
+		t.Fail()
+	}
+}

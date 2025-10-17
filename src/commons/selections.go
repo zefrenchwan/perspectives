@@ -1,36 +1,82 @@
 package commons
 
-// FilterById defines a condition for a value to match a given id.
-type FilterById struct {
-	id               string           // id to match
-	expectedVariable string           // name of the variable to read
-	parameters       FormalParameters // parameters to accept that variable at least
+import "slices"
+
+// unarySelector is the defintion of an unary selection over a Modelable.
+// It reads a variable from content (by name), then performs a test over reference and a modelable.
+// For instance:
+// to test an id,
+// reference would be expected id,
+// acceptance reads a source and compares its id wih reference.
+type unarySelector[T any] struct {
+	// variable to read from content
+	variable string
+	// reference value for that condition.
+	// We accept the source based on that reference.
+	reference T
+	// acceptance is the match condition:
+	// we read a part of the source and compare with reference.
+	// It returns true or false if acceptance, an error if any.
+	// Returning true, nil means accepting the source.
+	acceptance func(source Modelable, reference T) (bool, error)
 }
 
-// Signature returns the expected formal parameters
-func (f FilterById) Signature() FormalParameters {
-	return f.parameters
+// Signature returns formal parameters for its variable
+func (s unarySelector[T]) Signature() FormalParameters {
+	return NewNamedFormalParameters([]string{s.variable})
 }
 
-// Matches returns true if content is identifiable with that id
-func (f FilterById) Matches(c Content) (bool, error) {
-	if value, found := c.GetByName(f.expectedVariable); !found {
+// Matches uses the acceptance function as the inner condition
+func (s unarySelector[T]) Matches(c Content) (bool, error) {
+	if value, found := c.GetByName(s.variable); !found {
 		return false, nil
 	} else if value == nil {
 		return false, nil
-	} else if idValue, ok := value.(Identifiable); !ok {
+	} else if s.acceptance == nil {
+		return false, nil
+	} else if res, err := s.acceptance(value, s.reference); err != nil {
+		return false, err
+	} else {
+		return res, nil
+	}
+}
+
+// acceptsModelableByid returns true if modelable is identifiable with that id, false otherwise
+func acceptsModelableByid(source Modelable, reference string) (bool, error) {
+	if value, ok := source.(Identifiable); !ok {
+		return false, nil
+	} else if value == nil {
 		return false, nil
 	} else {
-		return idValue.Id() == f.id, nil
+		return value.Id() == reference, nil
 	}
 }
 
 // NewFilterById returns a new condition for a variable to have a given id.
 // If variable = x and expected id is "id", then condition is x.id == "id".
 func NewFilterById(variable string, expectedId string) Condition {
-	return FilterById{
-		id:               expectedId,
-		expectedVariable: variable,
-		parameters:       NewNamedFormalParameters([]string{variable}),
+	var result unarySelector[string]
+	result.variable = variable
+	result.reference = expectedId
+	result.acceptance = acceptsModelableByid
+	return result
+}
+
+// acceptModelableByTypes accepts source if it is not nil and its type is in reference (as a set)
+func acceptModelableByTypes(source Modelable, reference []ModelableType) (bool, error) {
+	if source == nil || len(reference) == 0 {
+		return false, nil
+	} else {
+		currentType := source.GetType()
+		return slices.ContainsFunc(reference, func(a ModelableType) bool { return a == currentType }), nil
 	}
+}
+
+// NewFilterByTypes creates a new condition for a variable to have its type in expected types
+func NewFilterByTypes(variable string, expectedTypes []ModelableType) Condition {
+	var result unarySelector[[]ModelableType]
+	result.variable = variable
+	result.reference = SliceDeduplicate(expectedTypes)
+	result.acceptance = acceptModelableByTypes
+	return result
 }

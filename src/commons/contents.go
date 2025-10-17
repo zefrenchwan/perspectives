@@ -44,6 +44,15 @@ type GenericContent[T any] interface {
 	PickByIndexes([]int) GenericContent[T]
 	// PositionalContent returns the positional content as a slice
 	PositionalContent() []T
+	// MapPositionalsToNamed gets names in given order and gets positional parameters to make named content.
+	// For instance, if values are [a,b,c] and we want []{"x","y"}, then result is "x" => a, "y" => b.
+	// If there is not enough positional values, then return empty, false.
+	MapPositionalsToNamed(names []string) (GenericContent[T], bool)
+	// MapNamedToPositionals returns positional content in order of named values.
+	// If there is not enough positional values, it returns nil, false.
+	// For instance, if named values are "x" => a, "y" => b, and names is "y","x"
+	// then result should be (b,a)
+	MapNamedToPositionals(names []string) (GenericContent[T], bool)
 	// NamedContent returns the named content as a map
 	NamedContent() map[string]T
 	// Unique picks first element, if content contains EITHER one positional value, OR one single named value.
@@ -258,6 +267,55 @@ func (a *simpleContainer[T]) Unique() (T, bool) {
 
 	return empty, false
 
+}
+
+// MapPositionalsToNamed gets names in given order and gets positional parameters to make named content.
+func (a *simpleContainer[T]) MapPositionalsToNamed(names []string) (GenericContent[T], bool) {
+	result := new(simpleContainer[T])
+	result.named = make(map[string]T)
+
+	if a == nil {
+		return nil, false
+	} else if len(names) == 0 {
+		return result, true
+	} else if len(names) > a.Size() {
+		return nil, false
+	}
+
+	// sizes fit, so just copy.
+	// Because a.Size >= len(names) >= 1, then positionals is not nil
+	for index := 0; index < len(names); index++ {
+		name := names[index]
+		value := a.positionals[index]
+		result.named[name] = value
+	}
+
+	return result, true
+}
+
+// MapNamedToPositionals returns positional content in order of named values.
+func (a *simpleContainer[T]) MapNamedToPositionals(names []string) (GenericContent[T], bool) {
+	result := new(simpleContainer[T])
+	result.named = make(map[string]T)
+
+	if a == nil {
+		return nil, false
+	} else if len(names) == 0 {
+		return result, true
+	} else if len(names) > len(a.named) {
+		return nil, false
+	}
+
+	result.positionals = make([]T, 0)
+	for _, name := range names {
+		if value, found := a.named[name]; !found {
+			return nil, false
+		} else {
+			result.positionals = append(result.positionals, value)
+		}
+	}
+
+	return result, true
 }
 
 // NewContent returns a new content for a single element

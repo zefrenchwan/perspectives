@@ -81,3 +81,41 @@ func TestMaxParameters(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestContentMappers(t *testing.T) {
+	first := DummyComponentImplementation{}
+	second := DummyIdBasedImplementation{}
+
+	variables := commons.NewNamedContent[commons.Modelable]("x", first)
+	variables.AppendAs("y", second)
+
+	if _, ok := variables.MapNamedToPositionals([]string{"x", "y", "z"}); ok {
+		t.Fail()
+	} else if _, ok := variables.MapNamedToPositionals([]string{"a"}); ok {
+		t.Fail()
+	} else if _, ok := variables.MapPositionalsToNamed([]string{"x"}); ok {
+		t.Fail()
+	} else if value, ok := variables.MapNamedToPositionals([]string{"y", "x"}); !ok {
+		t.Fail()
+	} else if content := value.PositionalContent(); len(content) != 2 {
+		t.Fail()
+	} else if content[0] != second {
+		t.Fail()
+	} else if content[1] != first {
+		t.Fail()
+	}
+
+	positionals := commons.NewContent[commons.Modelable](first)
+	positionals.Append(second)
+	if _, ok := positionals.MapPositionalsToNamed([]string{"x", "y", "z"}); ok {
+		t.Fail()
+	} else if value, ok := positionals.MapPositionalsToNamed([]string{"y", "x"}); !ok {
+		t.Fail()
+	} else if content := value.NamedContent(); len(content) != 2 {
+		t.Fail()
+	} else if content["x"] != second {
+		t.Fail()
+	} else if content["y"] != first {
+		t.Fail()
+	}
+}
