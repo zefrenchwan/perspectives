@@ -92,36 +92,42 @@ func (t *TemporalLink) Name() string {
 	var empty string
 	if t == nil {
 		return empty
+	} else if t.value == nil {
+		return empty
 	}
 
-	return t.Name()
+	return t.value.Name()
 }
 
 // Roles returns all the roles set for that link
 func (t *TemporalLink) Roles() []string {
 	if t == nil {
 		return nil
+	} else if t.value == nil {
+		return nil
 	}
 
-	return t.Roles()
+	return t.value.Roles()
 }
 
 // Operands returns the roles and related values for that link
 func (t *TemporalLink) Operands() map[string]Linkable {
 	if t == nil {
 		return nil
+	} else if t.value == nil {
+		return nil
 	}
 
-	return t.Operands()
+	return t.value.Operands()
 }
 
 // Get returns, if any, the element for that name.
 func (t *TemporalLink) Get(role string) (Linkable, bool) {
-	if t == nil {
+	if t == nil || t.value == nil {
 		return nil, false
 	}
 
-	return t.Get(role)
+	return t.value.Get(role)
 }
 
 // simpleLinkNode decorates a value to ensure that it has an unique id (even for similar values)

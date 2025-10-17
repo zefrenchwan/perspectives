@@ -58,6 +58,27 @@ func TestTemporalLink(t *testing.T) {
 			t.Fail()
 		}
 	}
+
+	if link, err := commons.NewLink("test", map[string]commons.Linkable{"role": 0}); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if tlink := commons.NewTemporalLink(partPeriod, link); !tlink.ActivePeriod().Equals(partPeriod) {
+		t.Fail()
+	} else if link.Name() != tlink.Name() {
+		t.Fail()
+	} else if tlink.Id() == link.Id() {
+		t.Fail()
+	} else if len(tlink.Operands()) != len(link.Operands()) {
+		t.Fail()
+	} else {
+		other := tlink.Operands()
+		for k, v := range link.Operands() {
+			if other[k] != v {
+				t.Fail()
+			}
+		}
+	}
+
 }
 
 func TestLinkComposition(t *testing.T) {
