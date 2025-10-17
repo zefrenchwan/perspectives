@@ -6,7 +6,7 @@ import (
 )
 
 // StateValue is the definition of accepted types
-type StateValue interface{ string | int | float64 }
+type StateValue interface{ string | int | float64 | bool }
 
 // StateObject is basically an object with a map of attributes and values
 type StateObject[T StateValue] struct {
@@ -66,7 +66,9 @@ func NewStateObject[T StateValue]() *StateObject[T] {
 
 // TimedStateObject defines an object with a state that changes over time.
 // State is defined as a map of key => values depending over time.
-// Keys are the attributes name, values depend on time
+// Keys are the attributes name, values depend on time.
+// The object itself may be active at a given time.
+// So a timed state object also implements TemporalObject.
 type TimedStateObject[T StateValue] struct {
 	// id of the object
 	id string

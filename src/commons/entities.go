@@ -1,7 +1,6 @@
 package commons
 
 import (
-	"errors"
 	"iter"
 	"slices"
 )
@@ -9,18 +8,15 @@ import (
 // ModelEntity is either an object, or a group of entities.
 // An entity does not exist per se, it is just a modeling option.
 // It implements composite: either it is a group of entities (non leaf), or an object (leaf).
+// Note that a previous implementation added isgroup, asgroup, etc.
+// This is not a good idea:
+// it adds more functions to implement whereas adding a separated predicate is sufficient.
 type ModelEntity interface {
 	// An entiy is an element of a model
 	Modelable
 	// We may link entities together.
 	// For instance, (Jean and Marie) went to this place.
 	Linkable
-	// IsGroup returns true if object is composite
-	IsGroup() bool
-	// AsGroup returns the object as a group, an error is is is not
-	AsGroup() (ModelGroup, error)
-	// AsObject returns the entity as an object
-	AsObject() (ModelObject, error)
 }
 
 // ModelGroup is a group of objects.
@@ -59,21 +55,6 @@ func (s simpleGroup) Content() []ModelEntity {
 	return result
 }
 
-// IsGroup returns true
-func (s simpleGroup) IsGroup() bool {
-	return true
-}
-
-// AsGroup returns the object as a group, an error is is is not
-func (s simpleGroup) AsGroup() (ModelGroup, error) {
-	return s, nil
-}
-
-// AsObject raises an error
-func (s simpleGroup) AsObject() (ModelObject, error) {
-	return nil, errors.New("expected object, got group")
-}
-
 // NewModelGroup builds a new group decorating values
 func NewModelGroup(values []ModelEntity) ModelGroup {
 	result := make(simpleGroup, len(values))
@@ -88,6 +69,16 @@ type ModelObject interface {
 	Identifiable
 	// An object is a component of a model
 	ModelComponent
+}
+
+// IsGroup returns true if object is composite
+func IsGroup(m ModelEntity) bool {
+	if m == nil {
+		return false
+	}
+
+	_, matches := m.(ModelGroup)
+	return matches
 }
 
 // TemporalObject is an object that is active during a given period.

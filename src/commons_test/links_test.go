@@ -34,9 +34,9 @@ func TestLinkUsage(t *testing.T) {
 
 	// test errors when create
 	noData := make(map[string]commons.Linkable)
-	if _, err := commons.NewLink[commons.Linkable]("", nil); err == nil {
+	if _, err := commons.NewLink("", nil); err == nil {
 		t.Fail()
-	} else if _, err := commons.NewLink[commons.Linkable]("a", nil); err == nil {
+	} else if _, err := commons.NewLink("a", nil); err == nil {
 		t.Fail()
 	} else if _, err := commons.NewLink("a", noData); err == nil {
 		t.Fail()
@@ -47,7 +47,7 @@ func TestTemporalLink(t *testing.T) {
 	fullPeriod := commons.NewFullPeriod()
 	partPeriod := commons.NewPeriodSince(time.Now().Truncate(time.Hour), true)
 
-	if link, err := commons.NewLink("test", map[string]int{"role": 0}); err != nil {
+	if link, err := commons.NewLink("test", map[string]commons.Linkable{"role": 0}); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if tlink := commons.NewTemporalLink(partPeriod, link); !tlink.ActivePeriod().Equals(partPeriod) {
@@ -57,5 +57,38 @@ func TestTemporalLink(t *testing.T) {
 		if !tlink.ActivePeriod().Equals(fullPeriod) {
 			t.Fail()
 		}
+	}
+}
+
+func TestLinkComposition(t *testing.T) {
+	marie := commons.NewStateObject[string]()
+	paul := commons.NewStateObject[string]()
+	marie.Set("first name", "Marie")
+	paul.Set("first name", "Paul")
+
+	link, errLink := commons.NewLink("loves", map[string]commons.Linkable{"subject": marie, "object": paul})
+	if errLink != nil {
+		t.Fail()
+	}
+
+	knows, errKnows := commons.NewLink("knows", map[string]commons.Linkable{"subject": marie, "object": link})
+	if errKnows != nil {
+		t.Fail()
+	}
+
+	if opKnows := knows.Operands(); opKnows["subject"] != marie {
+		t.Fail()
+	} else if value := opKnows["object"]; !commons.IsLink(value) {
+		t.Fail()
+	} else if l := value.(commons.Link); l == nil {
+		t.Fail()
+	} else if l.Name() != link.Name() {
+		t.Fail()
+	} else if l.Id() != link.Id() {
+		t.Fail()
+	} else if opLink := l.Operands(); opLink["subject"] != marie {
+		t.Fail()
+	} else if opLink["object"] != paul {
+		t.Fail()
 	}
 }

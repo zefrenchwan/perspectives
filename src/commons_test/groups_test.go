@@ -11,9 +11,7 @@ func TestGroupCreation(t *testing.T) {
 	basic := DummyObject{}
 	group := commons.NewModelGroup([]commons.ModelEntity{basic})
 
-	if !group.IsGroup() {
-		t.Fail()
-	} else if _, err := group.AsObject(); err == nil {
+	if !commons.IsGroup(group) {
 		t.Fail()
 	} else if group.GetType() != commons.TypeGroup {
 		t.Fail()

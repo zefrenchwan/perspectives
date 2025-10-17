@@ -2,14 +2,31 @@ package commons
 
 import (
 	"errors"
-	"maps"
 )
 
+// Linkable should be as simple as possible.
+// No need to include IsGroup or anything else.
+// Just ease code manipulation with:
+// simple type definition
+// and define predicate outside its definition.
 type Linkable any
+
+// IsLink returns true if linkable is a link.
+// Adding it as a linkable
+func IsLink(l Linkable) bool {
+	if l == nil {
+		return false
+	}
+
+	_, matches := l.(Link)
+	return matches
+}
 
 // Link is a constant relation over instances of linkables.
 // Link is also Linkable, so it may be used in links.
-type Link[T Linkable] interface {
+type Link interface {
+	// Links have an id, new each time we build one link
+	Identifiable
 	// Links are information about elements, they are then part of a model
 	Modelable
 	// links are composable due to this: a link is linkable
@@ -23,31 +40,39 @@ type Link[T Linkable] interface {
 	// Roles returns all the roles set for that link
 	Roles() []string
 	// Operands returns the roles and related values for that link
-	Operands() map[string]T
+	Operands() map[string]Linkable
 	// Get returns, if any, the elements for that name.
 	// First result is the values if any, second is true if value was found
-	Get(role string) (T, bool)
+	Get(role string) (Linkable, bool)
 }
 
 // TemporalLink decorates a link over a period.
 // It should implement both link and Temporal.
-type TemporalLink[T Linkable] struct {
+type TemporalLink struct {
+	// id: not the same as the underlying link
+	id string
 	// activity of the link
 	period Period
 	// value is link decoration
-	value Link[T]
+	value Link
 }
 
 // NewTemporalLink decorates a link true for given duration
-func NewTemporalLink[T Linkable](duration Period, value Link[T]) *TemporalLink[T] {
-	result := new(TemporalLink[T])
+func NewTemporalLink(duration Period, value Link) *TemporalLink {
+	result := new(TemporalLink)
+	result.id = NewId()
 	result.period = duration
 	result.value = value
 	return result
 }
 
+// Id() returns the id of the temporal link, not the same as underlying
+func (t *TemporalLink) Id() string {
+	return t.id
+}
+
 // ActivePeriod is the duration which the link is true
-func (t *TemporalLink[T]) ActivePeriod() Period {
+func (t *TemporalLink) ActivePeriod() Period {
 	if t == nil {
 		return NewEmptyPeriod()
 	}
@@ -56,14 +81,14 @@ func (t *TemporalLink[T]) ActivePeriod() Period {
 }
 
 // SetActivePeriod forces active period
-func (t *TemporalLink[T]) SetActivePeriod(period Period) {
+func (t *TemporalLink) SetActivePeriod(period Period) {
 	if t != nil {
 		t.period = period
 	}
 }
 
 // Name returns the name of the link.
-func (t *TemporalLink[T]) Name() string {
+func (t *TemporalLink) Name() string {
 	var empty string
 	if t == nil {
 		return empty
@@ -73,7 +98,7 @@ func (t *TemporalLink[T]) Name() string {
 }
 
 // Roles returns all the roles set for that link
-func (t *TemporalLink[T]) Roles() []string {
+func (t *TemporalLink) Roles() []string {
 	if t == nil {
 		return nil
 	}
@@ -81,17 +106,8 @@ func (t *TemporalLink[T]) Roles() []string {
 	return t.Roles()
 }
 
-// Size returns the number of elements per role.
-func (t *TemporalLink[T]) Size(role string) int {
-	if t == nil {
-		return 0
-	}
-
-	return t.Size(role)
-}
-
 // Operands returns the roles and related values for that link
-func (t *TemporalLink[T]) Operands() map[string]T {
+func (t *TemporalLink) Operands() map[string]Linkable {
 	if t == nil {
 		return nil
 	}
@@ -100,48 +116,53 @@ func (t *TemporalLink[T]) Operands() map[string]T {
 }
 
 // Get returns, if any, the element for that name.
-func (t *TemporalLink[T]) Get(role string) (T, bool) {
-	var empty T
+func (t *TemporalLink) Get(role string) (Linkable, bool) {
 	if t == nil {
-		return empty, false
+		return nil, false
 	}
 
 	return t.Get(role)
 }
 
-// First returns the first value, if any, for that role
-func (t *TemporalLink[T]) First(role string) (T, bool) {
-	var empty T
-	if t == nil {
-		return empty, false
-	}
-
-	return t.First(role)
+// simpleLinkNode decorates a value to ensure that it has an unique id (even for similar values)
+type simpleLinkNode struct {
+	// id should be unique
+	id string
+	// node is the decorated value
+	node Linkable
 }
 
 // simpleLink implements links as its canonical implementation
-type simpleLink[T Linkable] struct {
-	name   string
-	values map[string]T
+type simpleLink struct {
+	// id of the link
+	id string
+	// name of the link
+	name string
+	// values map roles to decorated linkable values
+	values map[string]simpleLinkNode
+}
+
+func (s simpleLink) Id() string {
+	return s.id
 }
 
 // IsEmpty tests if link is empty (no name or no value)
-func (s simpleLink[T]) IsEmpty() bool {
+func (s simpleLink) IsEmpty() bool {
 	return len(s.values) == 0 || s.name == ""
 }
 
 // GetType acts the fact that a link is a model link
-func (s simpleLink[T]) GetType() ModelableType {
+func (s simpleLink) GetType() ModelableType {
 	return TypeLink
 }
 
 // Name returns the name of the link.
-func (s simpleLink[T]) Name() string {
+func (s simpleLink) Name() string {
 	return s.name
 }
 
 // Roles returns all the roles set for that link
-func (s simpleLink[T]) Roles() []string {
+func (s simpleLink) Roles() []string {
 	var result []string
 	for role := range s.values {
 		result = append(result, role)
@@ -152,26 +173,28 @@ func (s simpleLink[T]) Roles() []string {
 
 // Operands returns the roles and related values for that link.
 // To avoid side effects, we return a copy (not direct access to values)
-func (s simpleLink[T]) Operands() map[string]T {
-	result := make(map[string]T)
-	maps.Copy(result, s.values)
+func (s simpleLink) Operands() map[string]Linkable {
+	result := make(map[string]Linkable)
+	for role, container := range s.values {
+		result[role] = container.node
+	}
+
 	return result
 }
 
 // Get returns, if any, the elements for that name.
-func (s simpleLink[T]) Get(role string) (T, bool) {
-	var empty T
+func (s simpleLink) Get(role string) (Linkable, bool) {
 	if result, found := s.values[role]; found {
-		return result, true
+		return result.node, true
 	}
 
-	return empty, false
+	return nil, false
 }
 
 // NewLink builds a new link, or raises an error if link would be malformed.
 // A valid link is not empty: non empty name and at least one value.
 // Of course, a "creative" user may create a link with " " name, but it is discouraged
-func NewLink[T Linkable](name string, values map[string]T) (Link[T], error) {
+func NewLink(name string, values map[string]Linkable) (Link, error) {
 	var empty string
 	if len(values) == 0 {
 		return nil, errors.New("no value for roles")
@@ -179,10 +202,14 @@ func NewLink[T Linkable](name string, values map[string]T) (Link[T], error) {
 		return nil, errors.New("no name for link")
 	}
 
-	var result simpleLink[T]
+	var result simpleLink
+	result.id = NewId()
 	result.name = name
-	result.values = make(map[string]T)
-	maps.Copy(result.values, values)
+	result.values = make(map[string]simpleLinkNode)
+	for role, value := range values {
+		decorated := simpleLinkNode{id: NewId(), node: value}
+		result.values[role] = decorated
+	}
 
 	return result, nil
 }
