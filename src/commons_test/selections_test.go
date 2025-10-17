@@ -41,7 +41,7 @@ func TestFilterById(t *testing.T) {
 
 }
 
-func TestTypesMatches(t *testing.T) {
+func TestFilterByTypes(t *testing.T) {
 	a := DummyComponentImplementation{}
 	content := commons.NewNamedContent[commons.Modelable]("x", a)
 
