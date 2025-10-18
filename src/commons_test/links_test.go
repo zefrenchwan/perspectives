@@ -82,10 +82,12 @@ func TestTemporalLink(t *testing.T) {
 }
 
 func TestLinkComposition(t *testing.T) {
-	marie := commons.NewStateObject[string]()
-	paul := commons.NewStateObject[string]()
-	marie.SetValue("first name", "Marie")
-	paul.SetValue("first name", "Paul")
+	marie := DummyObject{id: "marie"}
+	paul := DummyObject{id: "paul"}
+
+	if marie == paul {
+		t.Fail()
+	}
 
 	link, errLink := commons.NewLink("loves", map[string]commons.Linkable{"subject": marie, "object": paul})
 	if errLink != nil {

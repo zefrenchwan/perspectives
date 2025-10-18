@@ -79,9 +79,9 @@ func TestCompareActivePeriod(t *testing.T) {
 	before := now.AddDate(-10, 0, 0)
 	activity := commons.NewPeriodUntil(before, true)
 
-	obj := commons.NewStateObject[string]()
-	tobj := commons.NewTimedStateObjectSince[string](now)
-	matching := commons.NewTimedStateObject[string]()
+	obj := commons.NewModelStateObject[string]()
+	nonMatching := commons.NewTemporalModelStateObject[string](commons.NewPeriodSince(now, true))
+	matching := commons.NewTemporalModelStateObject[string](commons.NewFullPeriod())
 
 	condition := commons.NewFilterActivePeriod("x", commons.TemporalCommonPoint, activity)
 
@@ -92,10 +92,11 @@ func TestCompareActivePeriod(t *testing.T) {
 		t.Fail()
 	}
 
-	content = commons.NewNamedContent[commons.Modelable]("x", tobj)
+	content = commons.NewNamedContent[commons.Modelable]("x", nonMatching)
 	if matches, err := condition.Matches(content); err != nil {
 		t.Fail()
 	} else if matches {
+		t.Log("content starts now, expected ends before")
 		t.Fail()
 	}
 
@@ -103,6 +104,7 @@ func TestCompareActivePeriod(t *testing.T) {
 	if matches, err := condition.Matches(content); err != nil {
 		t.Fail()
 	} else if !matches {
+		t.Log("full period in content matches activity")
 		t.Fail()
 	}
 }

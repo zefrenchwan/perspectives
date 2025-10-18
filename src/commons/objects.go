@@ -1,332 +1,146 @@
 package commons
 
 import (
-	"errors"
-	"maps"
 	"time"
 )
 
-// StateObject is basically an object with a map of attributes and values
-type StateObject[T StateValue] struct {
-	// id of the object
-	id string
-	// values is a map with keys as attributes, and related values
-	values map[string]T
+// StateObject is an object with a state.
+// This object may change over time, but it has no lifetime.
+// Typical use case would be a particule to simulate.
+type StateObject[T StateValue] interface {
+	// StateObject is a model object
+	ModelObject
+	// By definition, we may read the state
+	StateReader[T]
+	// Handler returns a state handler to modify the object.
+	// An object may modify its state (for example, we may move an arm).
+	// But a handler is a tool to modity an object with a direct access to its state.
+	// For instance, a system is subject to gravity no matter what.
+	Handler() StateHandler[T]
 }
 
-// GetType returns an object type
-func (s *StateObject[T]) GetType() ModelableType {
+// TemporalStateObject is an object with a lifetime and historicized state.
+// Its state is then a TemporalStateHandler and it has an active period.
+type TemporalStateObject[T StateValue] interface {
+	// Temporal object is an object with an active period
+	TemporalObject
+	// TemporalStateReader to get a state with historicized content
+	TemporalStateReader[T]
+	// Handler returns an object to be able to change the state of the object
+	Handler() TemporalStateHandler[T]
+}
+
+// ModelStateObject implements StateObject by decorating a state.
+type ModelStateObject[T StateValue] struct {
+	// id of the object
+	id string
+	// State is a shared (pointer) implementation of a state
+	State *StateRepresentation[T]
+}
+
+// Id returns the object id
+func (m ModelStateObject[T]) Id() string {
+	return m.id
+}
+
+// GetType returns TypeObject for sure
+func (m ModelStateObject[T]) GetType() ModelableType {
+	return TypeObject
+}
+
+// Attributes returns set attributes
+func (m ModelStateObject[T]) Attributes() []string {
+	return m.State.Attributes()
+}
+
+// GetValue returns the value for a given attribute if any
+func (m ModelStateObject[T]) GetValue(attribute string) (T, bool) {
+	return m.State.GetValue(attribute)
+}
+
+// Read returns the state description
+func (m ModelStateObject[T]) Read() StateDescription[T] {
+	return m.State
+}
+
+// SetValue sets the value for that attribute
+func (m ModelStateObject[T]) SetValue(name string, value T) {
+	m.State.SetValue(name, value)
+}
+
+// Handler returns a state handler to modify the state
+func (m ModelStateObject[T]) Handler() StateHandler[T] {
+	return m
+}
+
+// NewModelStateObject returns a new empty ModelStateObject
+func NewModelStateObject[T StateValue]() ModelStateObject[T] {
+	return ModelStateObject[T]{State: NewStateRepresentation[T]()}
+}
+
+// TemporalModelStateObject is a model object to deal with historicized state
+type TemporalModelStateObject[T StateValue] struct {
+	// id of the object
+	id string
+	// State is the shared historiziced state
+	State *TimedStateRepresentation[T]
+}
+
+// ActivePeriod gets the active period of the object
+func (m TemporalModelStateObject[T]) ActivePeriod() Period {
+	return m.State.ActivePeriod()
+}
+
+// SetActivePeriod sets active period of the object
+func (m TemporalModelStateObject[T]) SetActivePeriod(period Period) {
+	m.State.SetActivePeriod(period)
+}
+
+// GetType returns TypeObject because this component is an object
+func (m TemporalModelStateObject[T]) GetType() ModelableType {
 	return TypeObject
 }
 
 // Id returns the id of the object
-func (s *StateObject[T]) Id() string {
-	return s.id
+func (m TemporalModelStateObject[T]) Id() string {
+	return m.id
 }
 
-// SetValue changes an attribute value by name
-func (s *StateObject[T]) SetValue(name string, value T) {
-	if s.values == nil {
-		s.values = make(map[string]T)
-	}
-
-	s.values[name] = value
+// GetValue returns the historicized content for an attribute
+func (m TemporalModelStateObject[T]) GetValue(name string) (map[T]Period, bool) {
+	return m.State.GetValue(name, true)
 }
 
-// GetValue returns, if any, current value for that attribute
-func (s *StateObject[T]) GetValue(name string) (T, bool) {
-	var empty T
-	if s == nil || s.values == nil {
-		return empty, false
-	} else if value, found := s.values[name]; !found {
-		return empty, false
-	} else {
-		return value, true
-	}
+// Read returns the historicized state for that object.
+func (m TemporalModelStateObject[T]) Read() TemporalStateDescription[T] {
+	return m.State
 }
 
-// Attributes returns the available attributes
-func (s *StateObject[T]) Attributes() []string {
-	if s == nil {
-		return nil
-	}
-
-	var result []string
-	for name := range s.values {
-		result = append(result, name)
-	}
-
+// ReadAtTime builds the state at a given moment
+func (m TemporalModelStateObject[T]) ReadAtTime(moment time.Time) StateDescription[T] {
+	result := m.State.Snapshot(moment)
 	return result
 }
 
-// Read returns current status
-func (s *StateObject[T]) Read() StateDescription[T] {
-	if s == nil {
-		return nil
-	}
-
-	var result constantState[T]
-	result.id = s.id
-	result.hasId = true
-	result.values = make(map[string]T)
-	maps.Copy(result.values, s.values)
-	return result
+// SetValueDuringPeriod changes value for a given attribute during a given period
+func (m TemporalModelStateObject[T]) SetValueDuringPeriod(name string, value T, period Period) {
+	m.State.SetValueDuringPeriod(name, value, period)
 }
 
-// NewStateObject makes a new empty state object
-func NewStateObject[T StateValue]() *StateObject[T] {
-	result := new(StateObject[T])
+// Handler returns an handler to modify historicized state
+func (m TemporalModelStateObject[T]) Handler() TemporalStateHandler[T] {
+	return m
+}
+
+// SetValue changes the value for that attribute
+func (m TemporalModelStateObject[T]) SetValue(name string, value T) {
+	m.State.SetValue(name, value)
+}
+
+// NewTemporalModelStateObject returns a new empty TemporalModelStateObject
+func NewTemporalModelStateObject[T StateValue](lifetime Period) TemporalModelStateObject[T] {
+	var result TemporalModelStateObject[T]
 	result.id = NewId()
-	result.values = make(map[string]T)
+	result.State = NewTimedStateRepresentation[T](lifetime)
 	return result
-}
-
-// TimedStateObject defines an object with a state that changes over time.
-// State is defined as a map of key => values depending over time.
-// Keys are the attributes name, values depend on time.
-// The object itself may be active at a given time.
-// So a timed state object also implements TemporalObject.
-type TimedStateObject[T StateValue] struct {
-	// id of the object
-	id string
-	// lifetime of the object, that is its the activation period
-	lifetime Period
-	// attributes represent the state of the object as a time varying map
-	attributes map[string]TimeDependentValues[T]
-}
-
-// NewTimedStateObject returns a forever lasting object with no attribute
-func NewTimedStateObject[T StateValue]() *TimedStateObject[T] {
-	result := new(TimedStateObject[T])
-	result.id = NewId()
-	result.lifetime = NewFullPeriod()
-	result.attributes = make(map[string]TimeDependentValues[T])
-	return result
-}
-
-// NewTimedStateObjectSince returns a object with a varying state, valid since creationTime
-func NewTimedStateObjectSince[T StateValue](creationTime time.Time) *TimedStateObject[T] {
-	base := NewTimedStateObject[T]()
-	base.lifetime = NewPeriodSince(creationTime, true)
-	return base
-}
-
-// NewTimedStateObjectDuring returns an object with a varying state, valid during a period.
-// It may raise an error if endTime is before startTime
-func NewTimedStateObjectDuring[T StateValue](traits []string, startTime, endTime time.Time) (*TimedStateObject[T], error) {
-	if endTime.Before(startTime) {
-		return nil, errors.New("cannot make an object with an end date before its start date")
-	}
-
-	base := NewTimedStateObject[T]()
-	base.lifetime = NewFinitePeriod(startTime, endTime, true, true)
-	return base, nil
-}
-
-// Id returns an unique id for that object.
-// It is constant for that object, and globally unique.
-func (t *TimedStateObject[T]) Id() string {
-	return t.id
-}
-
-// GetType returns an object type
-func (t *TimedStateObject[T]) GetType() ModelableType {
-	return TypeObject
-}
-
-// ActivePeriod returns the lifetime of that object
-func (t *TimedStateObject[T]) ActivePeriod() Period {
-	return t.lifetime
-}
-
-// SetActivePeriod forces the object lifetime
-func (t *TimedStateObject[T]) SetActivePeriod(p Period) {
-	t.lifetime = p
-}
-
-// Attributes return the attributes of the object
-func (o *TimedStateObject[T]) Attributes() []string {
-	var result []string
-	for name := range o.attributes {
-		result = append(result, name)
-	}
-
-	if len(result) == 0 {
-		result = make([]string, 0)
-		return result
-	} else {
-		return SliceReduce(result)
-	}
-}
-
-// SetValueDuringPeriod changes that attribute to set value during period.
-// If object is nil or period is empty, no action.
-// Else value changes during that period no matter the object's lifetime
-func (o *TimedStateObject[T]) SetValueDuringPeriod(attribute string, value T, period Period) {
-	if o == nil {
-		return
-	} else if period.IsEmpty() {
-		return
-	}
-
-	if o.attributes == nil {
-		o.attributes = make(map[string]TimeDependentValues[T])
-	}
-
-	if attr, found := o.attributes[attribute]; !found {
-		o.attributes[attribute] = NewValueDuringPeriod(value, period)
-	} else {
-		attr.SetDuringPeriod(value, period)
-		o.attributes[attribute] = attr
-	}
-}
-
-// SetValue sets a value for that attribute
-func (o *TimedStateObject[T]) SetValue(attribute string, value T) {
-	if o == nil {
-		return
-	}
-
-	o.SetValueDuringPeriod(attribute, value, NewFullPeriod())
-}
-
-// SetValueSince sets the value for that attribute since startingTime
-func (o *TimedStateObject[T]) SetValueSince(attribute string, value T, startingTime time.Time, includeStartingTime bool) {
-	if o == nil {
-		return
-	}
-
-	period := NewPeriodSince(startingTime, includeStartingTime)
-	o.SetValueDuringPeriod(attribute, value, period)
-}
-
-// SetValueUntil sets the value for that attribute until endingTime
-func (o *TimedStateObject[T]) SetValueUntil(attribute string, value T, endingTime time.Time, includeEndingTime bool) {
-	if o == nil {
-		return
-	}
-
-	period := NewPeriodUntil(endingTime, includeEndingTime)
-	o.SetValueDuringPeriod(attribute, value, period)
-}
-
-// SetValueDuring sets value for that attribute during the interval [startingTime, endingTime] (both included)
-func (o *TimedStateObject[T]) SetValueDuring(attribute string, value T, startingTime, endingTime time.Time) {
-	if o == nil {
-		return
-	}
-
-	period := NewFinitePeriod(startingTime, endingTime, true, true)
-	o.SetValueDuringPeriod(attribute, value, period)
-}
-
-// GetAllValues returns all the values for all attributes (including the ones with no value)
-// Two options:
-// Either reduceToObjectLifetime is true and we get values only during object lifetime
-// Or reduceToObjectLifetime is false and we get all values
-func (o *TimedStateObject[T]) GetAllValues(reduceToObjectLifetime bool) map[string][]T {
-	if o == nil {
-		return nil
-	}
-
-	result := make(map[string][]T)
-
-	// for each attribute
-	for name, attr := range o.attributes {
-		// values contain all the possible values
-		var values []T
-		// for each value and then period for that value
-		for value, period := range attr.Get() {
-			if reduceToObjectLifetime {
-				if !period.IsEmpty() && !period.Intersection(o.lifetime).IsEmpty() {
-					values = append(values, value)
-				}
-			} else {
-				values = append(values, value)
-			}
-		}
-
-		// we made the values, so set for that attribute
-		result[name] = SliceDeduplicate(values)
-	}
-
-	return result
-}
-
-// GetValue returns the value for an attribute (by name) if any.
-// Result (if any) is then the mapping value -> validity, true or nil, false for no match.
-// Depending on reduceToObjectLifetime:
-// Either it is true and then validity is the intersection of the object lifetime and the attribute validity
-// Or we keep values and matching period as is
-func (o *TimedStateObject[T]) GetValue(attribute string, reduceToObjectLifetime bool) (map[T]Period, bool) {
-	if o == nil {
-		return nil, false
-	}
-
-	// values are the values from the attribute.
-	var values map[T]Period
-	if attr, found := o.attributes[attribute]; !found {
-		return nil, false
-	} else {
-		values = attr.Get()
-	}
-
-	// result contains the intersection with the object's lifetime
-	result := make(map[T]Period)
-	for key, period := range values {
-		if reduceToObjectLifetime {
-			inter := period.Intersection(o.lifetime)
-			if !inter.IsEmpty() {
-				result[key] = inter
-			}
-		} else {
-			result[key] = period
-		}
-	}
-
-	return result, true
-}
-
-// GetValues returns the values and their activity (during the object lifetime).
-// If no value was set for that attribute, return nil
-func (o *TimedStateObject[T]) GetValues(attribute string) map[T]Period {
-	if result, found := o.GetValue(attribute, true); found {
-		return result
-	} else {
-		return nil
-	}
-}
-
-// readState is inner method to read content
-func (o *TimedStateObject[T]) readState() temporalStateContainer[T] {
-	result := make(map[string]map[T]Period)
-	for attr := range o.attributes {
-		if content, found := o.GetValue(attr, true); found && content != nil {
-			result[attr] = content
-		}
-	}
-
-	return temporalStateContainer[T]{
-		id: o.id, hasId: true,
-		period: o.lifetime, hasPeriod: true,
-		values: result,
-	}
-}
-
-// Read() returns current state, state is time dependent
-func (o *TimedStateObject[T]) Read() TemporalStateDescription[T] {
-	if o == nil {
-		return nil
-	}
-
-	return o.readState()
-}
-
-// ReadAtTime() returns state at that time as a constant content
-func (o *TimedStateObject[T]) ReadAtTime(moment time.Time) StateDescription[T] {
-	if o == nil {
-		return nil
-	}
-
-	return o.readState().snapshot(moment)
 }

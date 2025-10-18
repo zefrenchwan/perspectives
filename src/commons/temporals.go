@@ -7,10 +7,17 @@ import (
 	"time"
 )
 
-// Temporal is a component with a lifetime (active period)
-type Temporal interface {
-	// ActivePeriod returns the period the compound is active during
+// TemporalReader allows to read activity.
+// Each element that implements it has a lifetime (active period)
+type TemporalReader interface {
+	// ActivePeriod returns the period the element is active during
 	ActivePeriod() Period
+}
+
+// TemporalHandler allows full control over activity
+type TemporalHandler interface {
+	// To handler periods, it is necessary to read it
+	TemporalReader
 	// SetActivePeriod forces activity for compound
 	SetActivePeriod(period Period)
 }

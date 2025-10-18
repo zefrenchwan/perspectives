@@ -5,6 +5,7 @@ import "time"
 // describeState asks for a value to describe its current state
 // It reads value in the content and, if possible, reads its current state.
 type describeState[T StateValue] struct {
+	// variable is the name of the variable to read from content
 	variable string
 }
 
@@ -55,6 +56,7 @@ func (s describeState[T]) Describe(c Content) StateDescription[T] {
 
 // describeTemporalState reads a value by variable and asks for its temporal state
 type describeTemporalState[T StateValue] struct {
+	// variable is the name of the variable to read from content
 	variable string
 }
 

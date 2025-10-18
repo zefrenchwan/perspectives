@@ -86,58 +86,6 @@ func IsGroup(m ModelEntity) bool {
 type TemporalObject interface {
 	// A temporal object is an object
 	ModelObject
-	// By definition, a temporal object is a Temporal
-	Temporal
-}
-
-// objectTemporalDecorator adds a period as a lifetime to an object
-type objectTemporalDecorator struct {
-	// period of activity for that object
-	period Period
-	// value is the decorated object
-	value ModelObject
-}
-
-// ActivePeriod returns the object activity
-func (o *objectTemporalDecorator) ActivePeriod() Period {
-	// will panic for nil and that is OK
-	return o.period
-}
-
-// SetActivePeriod changes period for that object
-func (o *objectTemporalDecorator) SetActivePeriod(p Period) {
-	if o != nil {
-		o.period = p
-	}
-}
-
-// Id returns empty for nil, the object id otherwise
-func (o *objectTemporalDecorator) Id() string {
-	if o == nil {
-		return ""
-	} else {
-		return o.Id()
-	}
-}
-
-// GetType returns TypeObject if o is not nil, otherwise it is unmanaged.
-// Temporal object with no period makes no sense, so prefer unmanaged
-func (o *objectTemporalDecorator) GetType() ModelableType {
-	if o == nil {
-		return TypeUnmanaged
-	}
-
-	return o.GetType()
-}
-
-// NewTemporalObject returns an object active during that period
-func NewTemporalObject(period Period, object ModelObject) TemporalObject {
-	if object == nil {
-		return nil
-	}
-
-	result := new(objectTemporalDecorator)
-	result.period = period
-	result.value = object
-	return result
+	// By definition, an object has a lifetime we may read
+	TemporalReader
 }

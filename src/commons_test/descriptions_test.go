@@ -14,7 +14,7 @@ func TestDescribeStateFromStateObject(t *testing.T) {
 		t.Fail()
 	}
 
-	obj := commons.NewStateObject[string]()
+	obj := commons.NewModelStateObject[string]()
 	obj.SetValue("attr", "test")
 
 	content := commons.NewNamedContent[commons.Modelable]("y", obj)
@@ -27,7 +27,8 @@ func TestDescribeStateFromStateObject(t *testing.T) {
 	if status := desc.Describe(content); status == nil {
 		t.Log("no variable selection")
 		t.Fail()
-	} else if i, found := status.Id(); !found || i != obj.Id() {
+	} else if i := status.Id(); i == obj.Id() {
+		t.Log("id of the description is NOT the id of the object")
 		t.Fail()
 	} else if status.Values()["attr"] != "test" {
 		t.Fail()
@@ -37,14 +38,15 @@ func TestDescribeStateFromStateObject(t *testing.T) {
 
 func TestDescribeStateFromTemporalObject(t *testing.T) {
 	desc := commons.NewRequestDescription[string]("x")
-	obj := commons.NewTimedStateObject[string]()
+	obj := commons.NewTemporalModelStateObject[string](commons.NewFullPeriod())
 	obj.SetValue("attr", "test")
 
 	content := commons.NewNamedContent[commons.Modelable]("x", obj)
 	if status := desc.Describe(content); status == nil {
 		t.Log("no variable selection")
 		t.Fail()
-	} else if i, found := status.Id(); !found || i != obj.Id() {
+	} else if i := status.Id(); i == obj.Id() {
+		t.Log("id of the description is NOT the id of the object")
 		t.Fail()
 	} else if status.Values()["attr"] != "test" {
 		t.Fail()
@@ -64,18 +66,17 @@ func TestDescribeStateFromNonReadable(t *testing.T) {
 
 func TestTemporalDescribeFromTemporalObject(t *testing.T) {
 	desc := commons.NewRequestTemporalDescription[string]("x")
-	obj := commons.NewTimedStateObject[string]()
+	obj := commons.NewTemporalModelStateObject[string](commons.NewFullPeriod())
 	obj.SetValue("attr", "test")
 
 	content := commons.NewNamedContent[commons.Modelable]("x", obj)
 	if status := desc.Describe(content); status == nil {
 		t.Log("no variable selection")
 		t.Fail()
-	} else if i, found := status.Id(); !found || i != obj.Id() {
+	} else if i := status.Id(); i == obj.Id() {
+		t.Log("status id is not object id")
 		t.Fail()
-	} else if p, found := status.ActivePeriod(); !found {
-		t.Fail()
-	} else if !p.Equals(obj.ActivePeriod()) {
+	} else if p := status.ActivePeriod(); !p.Equals(obj.ActivePeriod()) {
 		t.Fail()
 	} else if values := status.Values(); len(values) != 1 {
 		t.Fail()
