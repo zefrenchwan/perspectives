@@ -2,6 +2,7 @@ package commons
 
 import (
 	"errors"
+	"maps"
 	"time"
 )
 
@@ -55,6 +56,20 @@ func (s *StateObject[T]) Attributes() []string {
 		result = append(result, name)
 	}
 
+	return result
+}
+
+// Read returns current status
+func (s *StateObject[T]) Read() StateDescription[T] {
+	if s == nil {
+		return nil
+	}
+
+	var result constantState[T]
+	result.id = s.id
+	result.hasId = true
+	result.values = make(map[string]T)
+	maps.Copy(result.values, s.values)
 	return result
 }
 
@@ -280,4 +295,38 @@ func (o *TimedStateObject[T]) GetValues(attribute string) map[T]Period {
 	} else {
 		return nil
 	}
+}
+
+// readState is inner method to read content
+func (o *TimedStateObject[T]) readState() temporalStateContainer[T] {
+	result := make(map[string]map[T]Period)
+	for attr := range o.attributes {
+		if content, found := o.GetValue(attr, true); found && content != nil {
+			result[attr] = content
+		}
+	}
+
+	return temporalStateContainer[T]{
+		id: o.id, hasId: true,
+		period: o.lifetime, hasPeriod: true,
+		values: result,
+	}
+}
+
+// Read() returns current state, state is time dependent
+func (o *TimedStateObject[T]) Read() TemporalStateDescription[T] {
+	if o == nil {
+		return nil
+	}
+
+	return o.readState()
+}
+
+// ReadAtTime() returns state at that time as a constant content
+func (o *TimedStateObject[T]) ReadAtTime(moment time.Time) StateDescription[T] {
+	if o == nil {
+		return nil
+	}
+
+	return o.readState().snapshot(moment)
 }

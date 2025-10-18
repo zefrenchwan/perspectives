@@ -134,3 +134,57 @@ func TestObjectTemporalFeatures(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestObjectRead(t *testing.T) {
+	before := time.Now().AddDate(-1, 0, 0).Truncate(time.Hour)
+	after := before.AddDate(10, 0, 0)
+	obj := commons.NewTimedStateObject[int]()
+	obj.SetValueSince("age", 10, before, true)
+	obj.SetValueSince("age", 100, after, true)
+
+	if status := obj.ReadAtTime(time.Now()); status == nil {
+		t.Fail()
+	} else if i, found := status.Id(); !found {
+		t.Fail()
+	} else if i != obj.Id() {
+		t.Fail()
+	} else if values := status.Values(); len(values) != 1 {
+		t.Fail()
+	} else if values["age"] != 10 {
+		t.Fail()
+	}
+
+	if status := obj.ReadAtTime(after); status == nil {
+		t.Fail()
+	} else if i, found := status.Id(); !found {
+		t.Fail()
+	} else if i != obj.Id() {
+		t.Fail()
+	} else if values := status.Values(); len(values) != 1 {
+		t.Fail()
+	} else if values["age"] != 100 {
+		t.Fail()
+	}
+
+	expectedPeriod10 := commons.NewFinitePeriod(before, after, true, false)
+	expectedPeriod100 := commons.NewPeriodSince(after, true)
+	if status := obj.Read(); status == nil {
+		t.Fail()
+	} else if i, found := status.Id(); !found {
+		t.Fail()
+	} else if i != obj.Id() {
+		t.Fail()
+	} else if p, found := status.ActivePeriod(); !found {
+		t.Fail()
+	} else if !p.Equals(obj.ActivePeriod()) {
+		t.Fail()
+	} else if values := status.Values(); len(values) != 1 {
+		t.Fail()
+	} else if age := values["age"]; len(age) != 2 {
+		t.Fail()
+	} else if !age[10].Equals(expectedPeriod10) {
+		t.Fail()
+	} else if !age[100].Equals(expectedPeriod100) {
+		t.Fail()
+	}
+}

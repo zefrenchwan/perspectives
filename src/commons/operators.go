@@ -13,19 +13,19 @@ type LocalOperator[T any] interface {
 
 // StringOperator is a binary operator to apply on a value compared to a reference.
 // Value is the first operand, Reference is the second operand.
-type StringOperator int
+type StringOperator uint8
 
 // StringEquals tests if value equals reference
-const StringEquals StringOperator = 1
+const StringEquals StringOperator = 0x1
 
 // StringEqualsIgnoreCase tests if value equals reference no matter the case
-const StringEqualsIgnoreCase StringOperator = 2
+const StringEqualsIgnoreCase StringOperator = 0x2
 
 // StringContains tests if REFERENCE contains value
-const StringContains StringOperator = 3
+const StringContains StringOperator = 0x3
 
 // StringMatchesRegexp tests if value matches reference as a regexp
-const StringMatchesRegexp StringOperator = 4
+const StringMatchesRegexp StringOperator = 0x4
 
 // Accepts returns true if operator applied to (base, reference) returns true
 func (o StringOperator) Accepts(base, reference string) bool {
@@ -52,22 +52,22 @@ func (o StringOperator) Accepts(base, reference string) bool {
 // TemporalOperator defines binay operator working on a period compared to a reference period.
 // Operators do NOT commute in general.
 // It means that first operand HAS TO BE the current period to test whereas second operand is the REFERENCE period.
-type TemporalOperator int
+type TemporalOperator uint8
 
 // TemporalEquals tests if current equals reference
-const TemporalEquals TemporalOperator = 1
+const TemporalEquals TemporalOperator = 0x1
 
 // TemporalCommonPoint tests if current and reference have at least a common point
-const TemporalCommonPoint TemporalOperator = 2
+const TemporalCommonPoint TemporalOperator = 0x2
 
 // TemporalAlwaysAccept always accepts no matter current period
-const TemporalAlwaysAccept TemporalOperator = 3
+const TemporalAlwaysAccept TemporalOperator = 0x3
 
 // TemporalAlwaysRefuse always refuses no matter current period
-const TemporalAlwaysRefuse TemporalOperator = 4
+const TemporalAlwaysRefuse TemporalOperator = 0x4
 
 // TemporalReferenceContains tests if current is included in reference
-const TemporalReferenceContains TemporalOperator = 5
+const TemporalReferenceContains TemporalOperator = 0x5
 
 // Accepts executes the operator on current and reference (in that order)
 func (t TemporalOperator) Accepts(current Period, reference Period) bool {
