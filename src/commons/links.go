@@ -62,6 +62,11 @@ func (t *TemporalLink) Id() string {
 	return t.id
 }
 
+// GetType flags temporal link as a link
+func (t *TemporalLink) GetType() ModelableType {
+	return TypeLink
+}
+
 // ActivePeriod is the duration which the link is true
 func (t *TemporalLink) ActivePeriod() Period {
 	if t == nil {

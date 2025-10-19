@@ -1,6 +1,9 @@
 package commons
 
-import "maps"
+import (
+	"maps"
+	"time"
+)
 
 // SetStateAction changes a state by forcing value to an attribute
 type SetStateAction[T StateValue] struct {
@@ -55,4 +58,43 @@ func NewSetStateActionFrom[T StateValue](variable string, changes map[string]T) 
 	}
 
 	return result
+}
+
+// EndLifetimeAction forces the active period to end at a given moment.
+// Let beginning be the actual start of current period and moment > beginning.
+// Then resulting period would be (beginning, now[.
+// If beginning > now, then period would be empty.
+type EndLifetimeAction struct {
+	// variable is the name of expected variable
+	variable string
+	// moment is the end of active period.
+	moment time.Time
+}
+
+// Signature returns the expected variable
+func (e EndLifetimeAction) Signature() FormalParameters {
+	return NewNamedFormalParameters([]string{e.variable})
+}
+
+// Execute runs the action by setting value for that attribute
+func (e EndLifetimeAction) Execute(c Content) error {
+	if c == nil {
+		return nil
+	} else if value, found := c.GetByName(e.variable); !found {
+		return nil
+	} else if value == nil {
+		return nil
+	} else if h, ok := value.(TemporalHandler); !ok {
+		return nil
+	} else if h == nil {
+		return nil
+	} else {
+		h.SetActivePeriod(h.ActivePeriod().Remove(NewPeriodSince(e.moment, true)))
+		return nil
+	}
+}
+
+// NewEndLifetimeAction builds an action to end activity at given moment
+func NewEndLifetimeAction(variable string, moment time.Time) EndLifetimeAction {
+	return EndLifetimeAction{variable: variable, moment: moment}
 }

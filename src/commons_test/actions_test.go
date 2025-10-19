@@ -3,6 +3,7 @@ package commons_test
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
@@ -54,6 +55,54 @@ func TestSetStateAction(t *testing.T) {
 	} else if v, found := object.GetValue("status"); !found {
 		t.Fail()
 	} else if v != 170 {
+		t.Fail()
+	}
+}
+
+func TestEndPeriodAction(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	action := commons.NewEndLifetimeAction("x", now)
+
+	// test on temporal links
+	if link, err := commons.NewLink("test", map[string]commons.Linkable{"role": DummyObject{}}); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else {
+		tlink := commons.NewTemporalLink(commons.NewFullPeriod(), link)
+		values := commons.NewNamedContent[commons.Modelable]("x", tlink)
+		if err := action.Execute(values); err != nil {
+			t.Fail()
+		} else if active := tlink.ActivePeriod(); !active.Equals(commons.NewPeriodUntil(now, false)) {
+			t.Fail()
+		}
+	}
+
+	// test on object
+	obj := commons.NewTemporalModelStateObject[int](commons.NewFullPeriod())
+	values := commons.NewNamedContent[commons.Modelable]("x", obj)
+
+	if variables := action.Signature().Variables(); len(variables) != 1 {
+		t.Fail()
+	} else if variables[0] != "x" {
+		t.Fail()
+	} else if err := action.Execute(values); err != nil {
+		t.Fail()
+	} else if active := obj.ActivePeriod(); !active.Equals(commons.NewPeriodUntil(now, false)) {
+		t.Fail()
+	}
+
+	obj = commons.NewTemporalModelStateObject[int](commons.NewPeriodSince(now.AddDate(1, 0, 0), false))
+	values = commons.NewNamedContent[commons.Modelable]("x", obj)
+	if err := action.Execute(values); err != nil {
+		t.Fail()
+	} else if active := obj.ActivePeriod(); !active.IsEmpty() {
+		t.Fail()
+	}
+
+	// test when non applicable
+	other := DummyIdBasedImplementation{id: "id"}
+	values = commons.NewNamedContent[commons.Modelable]("x", other)
+	if err := action.Execute(values); err != nil {
 		t.Fail()
 	}
 }
