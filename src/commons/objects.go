@@ -5,7 +5,6 @@ import (
 )
 
 // ModelObject is the component that runs in the structure.
-// An entiy defines an objet or a group, but the actual component is an object.
 type ModelObject interface {
 	// Linkable to put in links
 	Linkable

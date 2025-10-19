@@ -1,5 +1,7 @@
 package commons
 
+import "maps"
+
 // GenericContent defines any values grouped together.
 // Typically, it may be used as parameters to run conditions.
 // A condition does not depend on a single entity:
@@ -330,5 +332,16 @@ func NewNamedContent[T any](name string, element T) GenericContent[T] {
 	result := new(simpleContainer[T])
 	result.named = make(map[string]T)
 	result.named[name] = element
+	return result
+}
+
+// NewNamedContentFromMap reads a map as named content
+func NewNamedContentFromMap[T any](values map[string]T) GenericContent[T] {
+	result := new(simpleContainer[T])
+	result.named = make(map[string]T)
+	if values != nil {
+		maps.Copy(result.named, values)
+	}
+
 	return result
 }

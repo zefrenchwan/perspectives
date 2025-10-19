@@ -9,9 +9,3 @@ type ModelComponent interface {
 	// A component of a model is modelable
 	Modelable
 }
-
-// ModelConstraint defines a constraint (what components can and cannot do)
-type ModelConstraint interface {
-	// a constraint is a component of a model
-	ModelComponent
-}

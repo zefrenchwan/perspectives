@@ -19,6 +19,19 @@ func TestContentCreation(t *testing.T) {
 	if !empty.IsEmpty() {
 		t.Fail()
 	}
+
+	values := map[string]commons.Modelable{"a": DummyObject{id: "a"}, "b": DummyObject{id: "b"}}
+	c := commons.NewNamedContentFromMap(values)
+	result := c.NamedContent()
+	if len(result) != len(values) {
+		t.Fail()
+	} else {
+		for k, v := range values {
+			if other := result[k]; other != v {
+				t.Fail()
+			}
+		}
+	}
 }
 
 func TestContentGet(t *testing.T) {
