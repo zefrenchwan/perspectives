@@ -22,14 +22,11 @@ const TypeStructure ModelableType = 2
 // TypeConstraint defines constraints
 const TypeConstraint ModelableType = 3
 
-// TypeGroup defines groups of entities
-const TypeGroup ModelableType = 4
-
 // TypeObject defines objects
-const TypeObject ModelableType = 5
+const TypeObject ModelableType = 4
 
 // TypeLink defines links
-const TypeLink ModelableType = 6
+const TypeLink ModelableType = 5
 
 // Modelable is anything that appears in a model
 type Modelable interface {

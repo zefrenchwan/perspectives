@@ -4,6 +4,26 @@ import (
 	"time"
 )
 
+// ModelObject is the component that runs in the structure.
+// An entiy defines an objet or a group, but the actual component is an object.
+type ModelObject interface {
+	// Linkable to put in links
+	Linkable
+	// An object is well defined
+	Identifiable
+	// An object is a component of a model
+	ModelComponent
+}
+
+// TemporalObject is an object that is active during a given period.
+// For instance, humans are active during their lifetime.
+type TemporalObject interface {
+	// A temporal object is an object
+	ModelObject
+	// By definition, an object has a lifetime we may read
+	Temporal
+}
+
 // StateObject is an object with a state.
 // This object may change over time, but it has no lifetime.
 // Typical use case would be a particule to simulate.

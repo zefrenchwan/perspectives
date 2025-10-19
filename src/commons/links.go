@@ -11,14 +11,7 @@ const RoleSubject = "subject"
 const RoleObject = "object"
 
 // Linkable should be as simple as possible.
-// No need to include IsGroup or anything else.
-// Just ease code manipulation with:
-// simple type definition
-// and define predicate outside its definition.
-type Linkable interface {
-	// We may link anything that appears in a model
-	Modelable
-}
+type Linkable interface{}
 
 // Link is a constant relation over instances of linkables.
 // Link is also Linkable, so it may be used in links.
@@ -146,6 +139,7 @@ type simpleLink struct {
 	values map[string]simpleLinkNode
 }
 
+// Id returns the link unique id
 func (s simpleLink) Id() string {
 	return s.id
 }

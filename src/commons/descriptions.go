@@ -36,7 +36,7 @@ func (s describeState[T]) Describe(c Content) StateDescription[T] {
 
 	// two options:
 	// either it is a state reader and we read the state
-	// or it is a temporal reader and we read state now
+	// or it is a temporal state reader and we read state now
 	if r, ok := value.(StateReader[T]); ok {
 		if r == nil {
 			return nil

@@ -101,7 +101,7 @@ func TestLinkComposition(t *testing.T) {
 
 	if opKnows := knows.Operands(); opKnows["subject"] != marie {
 		t.Fail()
-	} else if value := opKnows["object"]; value.GetType() != commons.TypeLink {
+	} else if value := opKnows["object"]; value == nil {
 		t.Fail()
 	} else if l := value.(commons.Link); l == nil {
 		t.Fail()

@@ -1,7 +1,6 @@
 package commons_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
@@ -36,20 +35,8 @@ func (d DummyObject) Id() string {
 	return d.id
 }
 
-func (d DummyObject) AsGroup() (commons.ModelGroup, error) {
-	return nil, errors.ErrUnsupported
-}
-
 func (d DummyObject) GetType() commons.ModelableType {
 	return commons.TypeObject
-}
-
-func (d DummyObject) AsObject() (commons.ModelObject, error) {
-	return d, nil
-}
-
-func (d DummyObject) IsGroup() bool {
-	return false
 }
 
 func TestDummyIdBasedImplementation(t *testing.T) {
@@ -59,6 +46,21 @@ func TestDummyIdBasedImplementation(t *testing.T) {
 	if v, ok := value.(commons.Identifiable); !ok {
 		t.Fail()
 	} else if v.Id() != "id" {
+		t.Fail()
+	}
+}
+
+func TestDummyObjectImplementation(t *testing.T) {
+	value := any(DummyObject{id: "test"})
+	if v, ok := value.(commons.Identifiable); !ok {
+		t.Fail()
+	} else if v.Id() != "test" {
+		t.Fail()
+	} else if v, ok := value.(commons.ModelObject); !ok {
+		t.Fail()
+	} else if v.GetType() != commons.TypeObject {
+		t.Fail()
+	} else if v.Id() != "test" {
 		t.Fail()
 	}
 }
