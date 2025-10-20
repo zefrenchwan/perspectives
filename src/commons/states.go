@@ -45,12 +45,13 @@ type StateHandler[T StateValue] interface {
 	SetValue(name string, value T)
 	// SetValues sets values for a group of attributes
 	SetValues(values map[string]T)
-	// Remove excludes an attribute.
+	// Remove excludes an attribute (if present).
 	// It returns true if name was found, false otherwise
 	Remove(name string) bool
 }
 
-// TemporalStateReader reads the temporal state of a temporal source
+// TemporalStateReader reads the temporal state of a temporal source.
+// Source may be itself for elements able to self describe
 type TemporalStateReader[T StateValue] interface {
 	// Read() returns current state, state is time dependent
 	Read() TemporalStateDescription[T]
@@ -72,7 +73,7 @@ type TemporalStateHandler[T StateValue] interface {
 	TemporalHandler
 	// SetValueDuringPeriod sets value for that attribute during a given period
 	SetValueDuringPeriod(name string, value T, period Period)
-	// Remove removes an attribute by name
+	// Remove removes an attribute by name (if any) and returns if it was present before removal
 	Remove(name string) bool
 }
 
@@ -120,9 +121,7 @@ func (s *StateRepresentation[T]) SetValues(values map[string]T) {
 		s.values = make(map[string]T)
 	}
 
-	for attr, value := range values {
-		s.values[attr] = value
-	}
+	maps.Copy(s.values, values)
 }
 
 // Remove excludes an attribute and returns true, or does nothing and return false if attribute was not set
