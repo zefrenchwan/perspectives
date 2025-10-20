@@ -43,6 +43,11 @@ type StateHandler[T StateValue] interface {
 	StateReader[T]
 	// SetValue sets value for that attribute
 	SetValue(name string, value T)
+	// SetValues sets values for a group of attributes
+	SetValues(values map[string]T)
+	// Remove excludes an attribute.
+	// It returns true if name was found, false otherwise
+	Remove(name string) bool
 }
 
 // TemporalStateReader reads the temporal state of a temporal source
@@ -57,6 +62,9 @@ type TemporalStateReader[T StateValue] interface {
 // It means the ability to list attributes,
 // for each attribute, be able to get values and related periods,
 // and change those values during a given period.
+// There is no SetValues(map[string]map[T]Period because periods may overlap and map does not guarantee order.
+// For instance, given an attribute a,
+// 10 => Full Period , 100 => [now, +oo[ would create two different states whether 10 or 100 is picked first
 type TemporalStateHandler[T StateValue] interface {
 	// TemporalStateReader is necessary to change state over time
 	TemporalStateReader[T]
@@ -64,6 +72,8 @@ type TemporalStateHandler[T StateValue] interface {
 	TemporalHandler
 	// SetValueDuringPeriod sets value for that attribute during a given period
 	SetValueDuringPeriod(name string, value T, period Period)
+	// Remove removes an attribute by name
+	Remove(name string) bool
 }
 
 // StateRepresentation is basically as state as a map of attributes and values
@@ -102,6 +112,32 @@ func (s *StateRepresentation[T]) SetValue(name string, value T) {
 	}
 
 	s.values[name] = value
+}
+
+// SetValues set values from values, does not affect other values
+func (s *StateRepresentation[T]) SetValues(values map[string]T) {
+	if s.values == nil {
+		s.values = make(map[string]T)
+	}
+
+	for attr, value := range values {
+		s.values[attr] = value
+	}
+}
+
+// Remove excludes an attribute and returns true, or does nothing and return false if attribute was not set
+func (s *StateRepresentation[T]) Remove(name string) bool {
+	if s == nil || s.values == nil {
+		return false
+	}
+
+	_, found := s.values[name]
+	if !found {
+		return false
+	} else {
+		delete(s.values, name)
+		return true
+	}
 }
 
 // GetValue returns, if any, current value for that attribute
@@ -192,6 +228,20 @@ func (t *TimedStateRepresentation[T]) Attributes() []string {
 	} else {
 		return SliceReduce(result)
 	}
+}
+
+// Remove removes an attribute by name and returns if the attribute was set already (no action if not)
+func (t *TimedStateRepresentation[T]) Remove(name string) bool {
+	if t == nil || t.attributes == nil {
+		return false
+	}
+
+	_, found := t.attributes[name]
+	if found {
+		delete(t.attributes, name)
+	}
+
+	return found
 }
 
 // SetValueDuringPeriod changes that attribute to set value during period.

@@ -47,6 +47,7 @@ func TestStateObject(t *testing.T) {
 		t.Fail()
 	}
 
+	// works because state is a pointer and then each copy changes values in state
 	other := obj
 	other.SetValue("cheat", 10000)
 	if v, f := obj.GetValue("cheat"); !f {
@@ -62,6 +63,28 @@ func TestStateObject(t *testing.T) {
 	} else if values["attr"] != 10 {
 		t.Fail()
 	}
+
+	// remove field
+	if found := obj.Remove("cheat"); !found {
+		t.Fail()
+	} else if _, found := obj.GetValue("cheat"); found {
+		t.Fail()
+	}
+
+	// test multiple values
+	object := commons.NewModelStateObject[int]()
+	newValues := map[string]int{"a": 10, "b": 100}
+	object.SetValues(newValues)
+	if v, f := object.GetValue("a"); !f {
+		t.Fail()
+	} else if v != 10 {
+		t.Fail()
+	} else if v, f := object.GetValue("b"); !f {
+		t.Fail()
+	} else if v != 100 {
+		t.Fail()
+	}
+
 }
 
 func TestTemporalStateObject(t *testing.T) {
@@ -74,8 +97,14 @@ func TestTemporalStateObject(t *testing.T) {
 	before := now.AddDate(-1, 0, 0)
 
 	period := commons.NewPeriodSince(now, true)
-	obj.SetValue("name", "mickael")
+	obj.SetValue("name", "paul")
 	obj.SetActivePeriod(period)
+
+	if !obj.Remove("name") {
+		t.Fail()
+	} else {
+		obj.SetValue("name", "mickael")
+	}
 
 	if _, found := obj.GetValue("nope"); found {
 		t.Fail()

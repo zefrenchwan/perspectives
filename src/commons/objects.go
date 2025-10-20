@@ -8,8 +8,6 @@ import (
 type ModelObject interface {
 	// Linkable to put in links
 	Linkable
-	// An object is well defined
-	Identifiable
 	// An object is a component of a model
 	ModelComponent
 }
@@ -74,6 +72,11 @@ func (m ModelStateObject[T]) Attributes() []string {
 
 // GetValue returns the value for a given attribute if any
 func (m ModelStateObject[T]) GetValue(attribute string) (T, bool) {
+	var empty T
+	if m.State == nil {
+		return empty, false
+	}
+
 	return m.State.GetValue(attribute)
 }
 
@@ -84,7 +87,25 @@ func (m ModelStateObject[T]) Read() StateDescription[T] {
 
 // SetValue sets the value for that attribute
 func (m ModelStateObject[T]) SetValue(name string, value T) {
-	m.State.SetValue(name, value)
+	if m.State != nil {
+		m.State.SetValue(name, value)
+	}
+}
+
+// SetValues sets the values as a map of attributes and values
+func (m ModelStateObject[T]) SetValues(values map[string]T) {
+	if len(values) != 0 && m.State != nil {
+		m.State.SetValues(values)
+	}
+}
+
+// Remove attribute by name (if any) and returns if attribute was present
+func (m ModelStateObject[T]) Remove(name string) bool {
+	if m.State != nil {
+		return m.State.Remove(name)
+	} else {
+		return false
+	}
 }
 
 // Handler returns a state handler to modify the state
@@ -154,6 +175,11 @@ func (m TemporalModelStateObject[T]) Handler() TemporalStateHandler[T] {
 // SetValue changes the value for that attribute
 func (m TemporalModelStateObject[T]) SetValue(name string, value T) {
 	m.State.SetValue(name, value)
+}
+
+// Remove removes an attribute by name and returns if the attribute was set already (no action if not)
+func (m TemporalModelStateObject[T]) Remove(name string) bool {
+	return m.State.Remove(name)
 }
 
 // NewTemporalModelStateObject returns a new empty TemporalModelStateObject
