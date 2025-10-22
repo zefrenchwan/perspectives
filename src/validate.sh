@@ -48,6 +48,6 @@ for module in  ${modulestest}; do
         echo -n "${red}    status: FAILURE${reset}"
         echo
         go test ./$testmodule/
-        exit -1
+        exit 1
     fi
 done 

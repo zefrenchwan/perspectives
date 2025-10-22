@@ -11,22 +11,33 @@ type Event interface {
 	Source() ModelComponent
 }
 
-// EventProcessor processes events by reacting to events.
+// IsEventComingFromStructure returns true if source of e is a structure
+func IsEventComingFromStructure(e Event) bool {
+	if e == nil {
+		return false
+	} else if e.Source() == nil {
+		return false
+	} else {
+		return e.Source().GetType() == TypeStructure
+	}
+}
+
+// EventProcessor processes events each time an event is received.
 type EventProcessor interface {
-	// Process the notified events, may emit some events or raise an error
-	Process(notified []Event) ([]Event, error)
+	// Process the notified event, may emit some events or raise an error
+	Process(notified Event) ([]Event, error)
 }
 
 // functionalEventProcessor is the tool to convert a function to an event processor
-type functionalEventProcessor func([]Event) ([]Event, error)
+type functionalEventProcessor func(Event) ([]Event, error)
 
 // Process just uses inner function to process events
-func (f functionalEventProcessor) Process(events []Event) ([]Event, error) {
-	return f(events)
+func (f functionalEventProcessor) Process(event Event) ([]Event, error) {
+	return f(event)
 }
 
 // NewEventProcessor builds a new event processor based on that function
-func NewEventProcessor(processFn func([]Event) ([]Event, error)) EventProcessor {
+func NewEventProcessor(processFn func(Event) ([]Event, error)) EventProcessor {
 	if processFn == nil {
 		return nil
 	}
@@ -37,8 +48,8 @@ func NewEventProcessor(processFn func([]Event) ([]Event, error)) EventProcessor 
 // EventObserver is notified once events are received and processed from the source it listens.
 // Although interface is permissive, the idea is to read events, no act on the source itself.
 type EventObserver interface {
-	// OnIncomingEvents is called as soon as events are received from source.
-	OnIncomingEvents([]Event)
+	// OnIncomingEvents is called as soon as an event is received from source.
+	OnIncomingEvent(Event)
 	// OnProcessingEvents is called as soon as events are processed by the source
 	OnProcessingEvents([]Event, error)
 }
@@ -49,77 +60,6 @@ type EventObservableProcessor interface {
 	EventProcessor
 	// AddObserver registers a new observer to be notified
 	AddObserver(EventObserver)
-}
-
-// ObjectEventObservableProcessor is an object able to deal with events : process and be observed
-type ObjectEventObservableProcessor interface {
-	// ObjectEventProcessor is a model object (then may be included in a structure)
-	ModelObject
-	// an object event processor is able to process events and deal with observers
-	EventObservableProcessor
-}
-
-// simpleEventObservableProcessor is an event processor that notified observers before and after execution
-type simpleObjectEventObservableProcessor struct {
-	// id returns the id of the processor
-	id string
-	// observers to notify (deduplicated)
-	observers []EventObserver
-	// decorated event processor
-	decorated EventProcessor
-}
-
-// Id returns the id of an object
-func (s *simpleObjectEventObservableProcessor) Id() string {
-	return s.id
-}
-
-// GetType returns the object type
-func (s *simpleObjectEventObservableProcessor) GetType() ModelableType {
-	return TypeObject
-}
-
-// AddObserver adds a new observer to notify
-func (s *simpleObjectEventObservableProcessor) AddObserver(observer EventObserver) {
-	if s == nil {
-		return
-	} else if observer != nil {
-		existing := s.observers
-		existing = append(existing, observer)
-		existing = SliceDeduplicate(existing)
-		s.observers = existing
-	}
-}
-
-// Process starts by notyfing observers, processes the events, and notifies with result.
-// Performance question was raised: one loop to notify once or notify first, do and then notifies for result.
-// Answer is: follow the most logical implementation and notify inputs before processing
-func (s *simpleObjectEventObservableProcessor) Process(events []Event) ([]Event, error) {
-	if s == nil {
-		return nil, nil
-	}
-
-	for _, observer := range s.observers {
-		observer.OnIncomingEvents(events)
-	}
-
-	result, errProcessing := s.decorated.Process(events)
-	for _, observer := range s.observers {
-		observer.OnProcessingEvents(result, errProcessing)
-	}
-
-	return result, errProcessing
-}
-
-// NewEventObservableProcessorFromProcessor decorates a processor to include observers mechanism
-func NewEventObservableProcessorFromProcessor(decorated EventProcessor) ObjectEventObservableProcessor {
-	if decorated == nil {
-		return nil
-	}
-
-	result := new(simpleObjectEventObservableProcessor)
-	result.decorated = decorated
-	return result
 }
 
 // EventTick notifies an event processor to run one step further
@@ -225,3 +165,50 @@ func (t timedEventStateChange[T]) Changes() map[string]T {
 func NewEventStateChanges[T StateValue](source ModelStructure, moment time.Time, values map[string]T) EventStateChanges[T] {
 	return timedEventStateChange[T]{id: NewId(), source: source, moment: moment, values: values}
 }
+
+// EventCreation defines an event to notify that content exists since processing time.
+// Some event processors may not pay attention to processing time
+type EventCreation[T Identifiable] interface {
+	// creating elements is an event
+	Event
+	// Content is the new content to create
+	Content() T
+	// CreationTime is processing time, the "birth date" of that content
+	CreationTime() time.Time
+}
+
+// simpleEventCreation implements an event creation by storing fields
+type simpleEventCreation[T Identifiable] struct {
+	id           string
+	source       ModelComponent
+	content      T
+	creationTime time.Time
+}
+
+// Id returns the event id
+func (s simpleEventCreation[T]) Id() string {
+	return s.id
+}
+
+// Source returns the component asking for the creation
+func (s simpleEventCreation[T]) Source() ModelComponent {
+	return s.source
+}
+
+// Content returns the content to create
+func (s simpleEventCreation[T]) Content() T {
+	return s.content
+}
+
+// CreationTime returns the time to consider as the content creation time
+func (s simpleEventCreation[T]) CreationTime() time.Time {
+	return s.creationTime
+}
+
+// NewEventCreation returns a new creation event from that source, to create content at creation time
+func NewEventCreation[T Identifiable](source ModelComponent, content T, creationTime time.Time) EventCreation[T] {
+	return simpleEventCreation[T]{id: NewId(), source: source, content: content, creationTime: creationTime}
+}
+
+// EventCreateLink is a link creation event
+type EventCreateLink = EventCreation[Link]

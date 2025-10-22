@@ -33,7 +33,7 @@ type TemporalStateDescription[T StateValue] interface {
 // For instance, some structures may describe themselves.
 // Some constraints with parameters may also describe themselves.
 type StateReader[T StateValue] interface {
-	// Values returns the values
+	// Read returns the current state of this element
 	Read() StateDescription[T]
 }
 
