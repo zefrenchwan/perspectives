@@ -39,6 +39,18 @@ func (d DummyObject) GetType() commons.ModelableType {
 	return commons.TypeObject
 }
 
+type DummyStructure struct {
+	id string
+}
+
+func (s DummyStructure) Id() string {
+	return s.id
+}
+
+func (s DummyStructure) GetType() commons.ModelableType {
+	return commons.TypeStructure
+}
+
 func TestDummyIdBasedImplementation(t *testing.T) {
 	// create dummy value, but forces it to any
 	value := any(DummyIdBasedImplementation{id: "id"})

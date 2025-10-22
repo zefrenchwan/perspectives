@@ -1,6 +1,6 @@
 #!/bin/sh
 go clean -testcache 
-modulestest="commons"
+modulestest=`find . -mindepth 1 -type d `
 
 # color definition
 red=`tput setaf 1`
@@ -12,13 +12,26 @@ cyan=`tput setaf 6`
 reset=`tput sgr0`
 
 # TEST EACH MODULE, fail as soon as one fails
-for module in  ${modulestest}; do 
+for module in  ${modulestest}; do
+    # test if it is a valid code container 
+    testmodule=$module"_test"
+    # test if _test file exists: if not, not a golang code directory
+    if [ ! -d $testmodule ] ; then
+        continue 
+    fi
+    # test if it contains go files
+    counter=`cat $module/*.go | wc -l`
+    if [ $counter = 0 ]; then 
+        continue
+    fi 
+
+    # assuming it is a go source directory
     # print module info
     echo -n "${reset}$module ${reset}"
     echo -n "${yellow}    code:${reset} "
     counter=`cat $module/*.go | wc -l`
     echo -n "${yellow}$counter${reset} "
-    testmodule=$module"_test"
+
     testcounter=`cat $testmodule/*.go | wc -l`
     echo -n "${yellow}    test: ${reset}"
     echo -n "${yellow}$testcounter ${reset}"
