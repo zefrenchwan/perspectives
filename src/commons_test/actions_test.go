@@ -15,13 +15,13 @@ func TestSetStateAction(t *testing.T) {
 
 	// bad type
 	other := DummyIdBasedImplementation{id: "sure"}
-	content := commons.NewNamedContent[commons.Modelable]("x", other)
+	content := commons.NewNamedContent("x", other)
 	if err := action.Execute(content); err != nil {
 		t.Fail()
 	}
 
 	// bad variable
-	content = commons.NewNamedContent[commons.Modelable]("x", object)
+	content = commons.NewNamedContent("x", object)
 	action = commons.NewSetStateAction("y", "other attr", 10)
 	if err := action.Execute(content); err != nil {
 		t.Fail()
@@ -32,7 +32,7 @@ func TestSetStateAction(t *testing.T) {
 	// matching single value
 	object = commons.NewModelStateObject[int]()
 	object.SetValue("price", 1000)
-	content = commons.NewNamedContent[commons.Modelable]("x", object)
+	content = commons.NewNamedContent("x", object)
 	action = commons.NewSetStateAction("x", "price", 10)
 	if err := action.Execute(content); err != nil {
 		t.Fail()
@@ -46,7 +46,7 @@ func TestSetStateAction(t *testing.T) {
 	object = commons.NewModelStateObject[int]()
 	object.SetValue("price", 1000)
 	action = commons.NewSetStateActionFrom("x", map[string]int{"price": 5, "status": 170})
-	content = commons.NewNamedContent[commons.Modelable]("x", object)
+	content = commons.NewNamedContent("x", object)
 	action.Execute(content)
 	if v, found := object.GetValue("price"); !found {
 		t.Fail()
@@ -69,7 +69,7 @@ func TestEndPeriodAction(t *testing.T) {
 		t.Fail()
 	} else {
 		tlink := commons.NewTemporalLink(commons.NewFullPeriod(), link)
-		values := commons.NewNamedContent[commons.Modelable]("x", tlink)
+		values := commons.NewNamedContent("x", tlink)
 		if err := action.Execute(values); err != nil {
 			t.Fail()
 		} else if active := tlink.ActivePeriod(); !active.Equals(commons.NewPeriodUntil(now, false)) {
@@ -79,7 +79,7 @@ func TestEndPeriodAction(t *testing.T) {
 
 	// test on object
 	obj := commons.NewTemporalModelStateObject[int](commons.NewFullPeriod())
-	values := commons.NewNamedContent[commons.Modelable]("x", obj)
+	values := commons.NewNamedContent("x", obj)
 
 	if variables := action.Signature().Variables(); len(variables) != 1 {
 		t.Fail()
@@ -92,7 +92,7 @@ func TestEndPeriodAction(t *testing.T) {
 	}
 
 	obj = commons.NewTemporalModelStateObject[int](commons.NewPeriodSince(now.AddDate(1, 0, 0), false))
-	values = commons.NewNamedContent[commons.Modelable]("x", obj)
+	values = commons.NewNamedContent("x", obj)
 	if err := action.Execute(values); err != nil {
 		t.Fail()
 	} else if active := obj.ActivePeriod(); !active.IsEmpty() {
@@ -101,7 +101,7 @@ func TestEndPeriodAction(t *testing.T) {
 
 	// test when non applicable
 	other := DummyIdBasedImplementation{id: "id"}
-	values = commons.NewNamedContent[commons.Modelable]("x", other)
+	values = commons.NewNamedContent("x", other)
 	if err := action.Execute(values); err != nil {
 		t.Fail()
 	}
@@ -110,7 +110,7 @@ func TestEndPeriodAction(t *testing.T) {
 func TestSequentialActions(t *testing.T) {
 	object := commons.NewModelStateObject[int]()
 	object.SetValue("status", 1000)
-	content := commons.NewNamedContent[commons.Modelable]("x", object)
+	content := commons.NewNamedContent("x", object)
 	content.AppendAs("y", object)
 	action := commons.NewSetStateAction("x", "price", 10)
 	other := commons.NewSetStateAction("y", "price", 100)

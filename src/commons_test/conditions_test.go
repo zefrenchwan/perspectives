@@ -11,7 +11,7 @@ func TestConstantCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if !p.Matches(ctrue.Signature()) {
 		t.Fail()
@@ -36,7 +36,7 @@ func TestNotCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if not := commons.NewConditionNot(ctrue); !p.Matches(not.Signature()) {
 		t.Log("failed to accept signature")
@@ -78,7 +78,7 @@ func TestOrCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if or := commons.NewConditionOr([]commons.Condition{ctrue, cfalse}); !p.Matches(or.Signature()) {
 		t.Fail()
@@ -120,7 +120,7 @@ func TestAndCondition(t *testing.T) {
 	ctrue := commons.NewConditionConstant(true)
 	cfalse := commons.NewConditionConstant(false)
 
-	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 
 	if and := commons.NewConditionAnd([]commons.Condition{ctrue, cfalse}); !p.Matches(and.Signature()) {
 		t.Fail()
@@ -168,7 +168,7 @@ func TestCompositeCondition(t *testing.T) {
 	// condition is true because all operands are true
 	condition := commons.NewConditionAnd([]commons.Condition{or, ctrue})
 
-	p := commons.NewContent[commons.Modelable](DummyComponentImplementation{})
+	p := commons.NewContent(DummyComponentImplementation{})
 	if value, err := condition.Matches(p); err != nil {
 		t.Log(err)
 		t.Fail()

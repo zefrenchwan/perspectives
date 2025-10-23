@@ -322,7 +322,7 @@ func conditionTreeCombineSignatures(condition Condition) FormalParameters {
 		return parametersCombine(values)
 	}
 
-	dummyValue := NewContent[Modelable](nil)
+	dummyValue := NewContent(nil)
 	result, _ := conditionTreeMapReduce(condition, dummyValue, conditionLeafSignature, conditionParametersReduce)
 	return result
 }

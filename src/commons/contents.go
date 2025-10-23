@@ -1,6 +1,9 @@
 package commons
 
-import "maps"
+import (
+	"iter"
+	"maps"
+)
 
 // GenericContent defines any values grouped together.
 // Typically, it may be used as parameters to run conditions.
@@ -62,7 +65,16 @@ type GenericContent[T any] interface {
 	Unique() (T, bool)
 }
 
-type Content GenericContent[Modelable]
+// Content is the most general use of a generic content: it applies to the elements of a model
+type Content = GenericContent[Modelable]
+
+// ContentLoader loads content from a source.
+// Implementations will map a source to content given expected variables or positions.
+// Generic option (as ContentLoader[T]) is so far useless because conditions and actions expect content.
+type ContentLoader interface {
+	// LoadVariables map source data into named content for those variables
+	LoadVariables(variables []string) iter.Seq[Content]
+}
 
 // simpleContainer defines a basic implementation
 // as an array for positional elements
@@ -320,25 +332,35 @@ func (a *simpleContainer[T]) MapNamedToPositionals(names []string) (GenericConte
 	return result, true
 }
 
-// NewContent returns a new content for a single element
-func NewContent[T any](element T) GenericContent[T] {
+// NewGenericContent returns a new content for a single element
+func NewGenericContent[T any](element T) GenericContent[T] {
 	result := new(simpleContainer[T])
 	result.positionals = append(result.positionals, element)
 	return result
 }
 
-// NewNamedContent returns a new content for a single named element
-func NewNamedContent[T any](name string, element T) GenericContent[T] {
+// NewContent builds a content with element as a positional value
+func NewContent(element Modelable) Content {
+	return NewGenericContent(element)
+}
+
+// NewGenericNamedContent constructs a new content linking element to a name
+func NewGenericNamedContent[T any](name string, element T) GenericContent[T] {
 	result := new(simpleContainer[T])
 	result.named = make(map[string]T)
 	result.named[name] = element
 	return result
 }
 
+// NewNamedContent returns a new content for a single named modelable
+func NewNamedContent(name string, element Modelable) Content {
+	return NewGenericNamedContent(name, element)
+}
+
 // NewNamedContentFromMap reads a map as named content
-func NewNamedContentFromMap[T any](values map[string]T) GenericContent[T] {
-	result := new(simpleContainer[T])
-	result.named = make(map[string]T)
+func NewNamedContentFromMap(values map[string]Modelable) Content {
+	result := new(simpleContainer[Modelable])
+	result.named = make(map[string]Modelable)
 	if values != nil {
 		maps.Copy(result.named, values)
 	}

@@ -63,7 +63,7 @@ func TestActiveObjectHandlerState(t *testing.T) {
 
 	now := time.Now().Truncate(time.Hour)
 	values := map[string]int{"a": 10, "b": 100}
-	object := commons.NewActiveObjectHandler[int](now, values, commons.NewEventProcessor(mapper))
+	object := commons.NewActiveObjectHandler(now, values, commons.NewEventProcessor(mapper))
 
 	if result := object.Read().Values(); len(result) != 2 {
 		t.Fail()

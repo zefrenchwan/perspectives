@@ -17,13 +17,13 @@ func TestDescribeStateFromStateObject(t *testing.T) {
 	obj := commons.NewModelStateObject[string]()
 	obj.SetValue("attr", "test")
 
-	content := commons.NewNamedContent[commons.Modelable]("y", obj)
+	content := commons.NewNamedContent("y", obj)
 	if status := desc.Describe(content); status != nil {
 		t.Log("no variable selection")
 		t.Fail()
 	}
 
-	content = commons.NewNamedContent[commons.Modelable]("x", obj)
+	content = commons.NewNamedContent("x", obj)
 	if status := desc.Describe(content); status == nil {
 		t.Log("no variable selection")
 		t.Fail()
@@ -41,7 +41,7 @@ func TestDescribeStateFromTemporalObject(t *testing.T) {
 	obj := commons.NewTemporalModelStateObject[string](commons.NewFullPeriod())
 	obj.SetValue("attr", "test")
 
-	content := commons.NewNamedContent[commons.Modelable]("x", obj)
+	content := commons.NewNamedContent("x", obj)
 	if status := desc.Describe(content); status == nil {
 		t.Log("no variable selection")
 		t.Fail()
@@ -57,7 +57,7 @@ func TestDescribeStateFromNonReadable(t *testing.T) {
 	desc := commons.NewRequestDescription[string]("x")
 	obj := DummyIdBasedImplementation{}
 
-	content := commons.NewNamedContent[commons.Modelable]("x", obj)
+	content := commons.NewNamedContent("x", obj)
 	if status := desc.Describe(content); status != nil {
 		t.Log("not a state reader")
 		t.Fail()
@@ -69,7 +69,7 @@ func TestTemporalDescribeFromTemporalObject(t *testing.T) {
 	obj := commons.NewTemporalModelStateObject[string](commons.NewFullPeriod())
 	obj.SetValue("attr", "test")
 
-	content := commons.NewNamedContent[commons.Modelable]("x", obj)
+	content := commons.NewNamedContent("x", obj)
 	if status := desc.Describe(content); status == nil {
 		t.Log("no variable selection")
 		t.Fail()

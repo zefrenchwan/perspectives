@@ -150,3 +150,76 @@ func NewFilterActivePeriod(variable string, operator TemporalOperator, period Pe
 	result.extractor = activePeriodExtractor
 	return result
 }
+
+// localStateValueSelector defines a condition variable.attribute operator reference.
+// For instance x.price < 0, or x.firstname = "Heinrich"
+type localStateValueSelector[T StateValue] struct {
+	// variable is the name of the variable
+	variable string
+	// attribute is the attribute to pick in the state
+	attribute string
+	// setOperator is the operator to go through references
+	setOperator LocalSetOperator[T]
+	// reference is the constant value to compare to loaded data
+	references []T
+}
+
+// Signature defines expected variable
+func (l localStateValueSelector[T]) Signature() FormalParameters {
+	return NewNamedFormalParameters([]string{l.variable})
+}
+
+// Matches uses the operators as the inner condition:
+// it runs through references via the setOperator and applies to each element its operator
+func (l localStateValueSelector[T]) Matches(c Content) (bool, error) {
+	if l.setOperator == nil {
+		return false, nil
+	} else if value, found := c.GetByName(l.variable); !found {
+		return false, nil
+	} else if value == nil {
+		return false, nil
+	} else if v, ok := value.(StateReader[T]); !ok {
+		return false, nil
+	} else if v == nil {
+		return false, nil
+	} else if state := v.Read(); state == nil {
+		return false, nil
+	} else if values := state.Values(); len(values) == 0 {
+		return false, nil
+	} else if operand, found := values[l.attribute]; !found {
+		return false, nil
+	} else {
+		return l.setOperator.Accepts(operand, l.references), nil
+	}
+}
+
+// NewFilterByStateOperator returns a new condition to compare an attribute value to a reference for that operator.
+// For instance object.x >= 0 (x coordinate for object should be positive).
+func NewFilterByStateOperator[T StateValue](variable, attribute string, operator LocalOperator[T], reference T) Condition {
+	if operator == nil {
+		return nil
+	}
+
+	return localStateValueSelector[T]{
+		variable:    variable,
+		attribute:   attribute,
+		setOperator: NewLocalSetOperator(MatchesOneInSetOperator, operator),
+		references:  []T{reference},
+	}
+}
+
+// NewFilterByStateSetOperator reads a value from an attribute and compares it to the reference set based on the operator.
+// For instance, to test if variable.attribute is in a given set of int values,
+// use NewLocalSetOperator(MatchesOneInSetOperator, IntEquals) for the operator.
+func NewFilterByStateSetOperator[T StateValue](variable, attribute string, operator LocalSetOperator[T], reference []T) Condition {
+	if operator == nil {
+		return nil
+	}
+
+	return localStateValueSelector[T]{
+		variable:    variable,
+		attribute:   attribute,
+		setOperator: operator,
+		references:  reference,
+	}
+}

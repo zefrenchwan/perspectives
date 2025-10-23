@@ -68,6 +68,8 @@ func TestDummyObjectImplementation(t *testing.T) {
 		t.Fail()
 	} else if v.Id() != "test" {
 		t.Fail()
+	} else if _, ok := value.(commons.Modelable); !ok {
+		t.Fail()
 	} else if v, ok := value.(commons.ModelObject); !ok {
 		t.Fail()
 	} else if v.GetType() != commons.TypeObject {

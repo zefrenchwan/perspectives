@@ -86,7 +86,7 @@ func TestContentMappers(t *testing.T) {
 	first := DummyComponentImplementation{}
 	second := DummyIdBasedImplementation{}
 
-	variables := commons.NewNamedContent[commons.Modelable]("x", first)
+	variables := commons.NewNamedContent("x", first)
 	variables.AppendAs("y", second)
 
 	if _, ok := variables.MapNamedToPositionals([]string{"x", "y", "z"}); ok {
@@ -105,7 +105,7 @@ func TestContentMappers(t *testing.T) {
 		t.Fail()
 	}
 
-	positionals := commons.NewContent[commons.Modelable](first)
+	positionals := commons.NewContent(first)
 	positionals.Append(second)
 	if _, ok := positionals.MapPositionalsToNamed([]string{"x", "y", "z"}); ok {
 		t.Fail()

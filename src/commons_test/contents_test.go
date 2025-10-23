@@ -36,8 +36,8 @@ func TestContentCreation(t *testing.T) {
 
 func TestContentGet(t *testing.T) {
 	var tanguy, alan commons.ModelComponent
-	tanguy = DummyIdBasedImplementation{id: "tanguy"}
-	alan = DummyIdBasedImplementation{id: "alan"}
+	tanguy = DummyObject{id: "tanguy"}
+	alan = DummyObject{id: "alan"}
 
 	p := commons.NewContent(tanguy)
 	p.Append(alan)
@@ -52,9 +52,9 @@ func TestContentGet(t *testing.T) {
 
 	if value := p.PositionalContent(); len(value) != 2 {
 		t.Fail()
-	} else if !slices.Contains(value, tanguy) {
+	} else if !slices.ContainsFunc(value, func(a commons.Modelable) bool { return a == tanguy }) {
 		t.Fail()
-	} else if !slices.Contains(value, alan) {
+	} else if !slices.ContainsFunc(value, func(a commons.Modelable) bool { return a == alan }) {
 		t.Fail()
 	} else if named := p.NamedContent(); len(named) != 0 {
 		t.Fail()
@@ -153,9 +153,8 @@ func TestContentSelect(t *testing.T) {
 }
 
 func TestContentUnique(t *testing.T) {
-	var empty DummyIdBasedImplementation
-	leila := DummyIdBasedImplementation{id: "leila"}
-	maria := DummyIdBasedImplementation{id: "maria"}
+	leila := DummyObject{id: "leila"}
+	maria := DummyObject{id: "maria"}
 
 	p := commons.NewNamedContent("x", leila)
 	if res, matching := p.Unique(); !matching {
@@ -167,7 +166,7 @@ func TestContentUnique(t *testing.T) {
 	p.Append(maria)
 	if res, matching := p.Unique(); matching {
 		t.Fail()
-	} else if res != empty {
+	} else if res != nil {
 		t.Fail()
 	}
 
@@ -182,12 +181,12 @@ func TestContentUnique(t *testing.T) {
 
 func TestContentDisjoin(t *testing.T) {
 	var a, b commons.GenericContent[int]
-	a = commons.NewContent(0)
+	a = commons.NewGenericContent(0)
 	if !a.Disjoin(b) {
 		t.Fail()
 	}
 
-	b = commons.NewNamedContent("x", 0)
+	b = commons.NewGenericNamedContent("x", 0)
 	if !a.Disjoin(b) {
 		t.Fail()
 	} else if !b.Disjoin(a) {
@@ -208,8 +207,8 @@ func TestContentDisjoin(t *testing.T) {
 		t.Fail()
 	}
 
-	a = commons.NewNamedContent("x", 0)
-	b = commons.NewNamedContent("y", 0)
+	a = commons.NewGenericNamedContent("x", 0)
+	b = commons.NewGenericNamedContent("y", 0)
 	if !a.Disjoin(b) {
 		t.Fail()
 	} else if !b.Disjoin(a) {
