@@ -10,16 +10,12 @@ type StateValue interface{ string | int | float64 | bool }
 
 // StateDescription describes a state with no memory of previous values
 type StateDescription[T StateValue] interface {
-	// Id returns the id of the state, not the object
-	Id() string
 	// Values returns the current state as a map of attributes and related values
 	Values() map[string]T
 }
 
 // TemporalStateDescription is historicized content
 type TemporalStateDescription[T StateValue] interface {
-	// Id of the state description, not the object
-	Id() string
 	// ActivePeriod returns the period the state makes sense (is active)
 	ActivePeriod() Period
 	// Values returns, for each attribute, the values and related periods.
@@ -77,78 +73,58 @@ type TemporalStateHandler[T StateValue] interface {
 	Remove(name string) bool
 }
 
-// StateRepresentation is basically as state as a map of attributes and values
-type StateRepresentation[T StateValue] struct {
-	// id of source
-	id string
-	// values is a map with keys as attributes, and related values
-	values map[string]T
-}
-
-// Id returns the id of the state.
-// NOT THE source, the id of the state.
-// Reason is that we may want to save it separated from the object
-func (s *StateRepresentation[T]) Id() string {
-	return s.id
-}
+// StateRepresentation is basically as state as a map of attributes and values.
+// Its purpose is to implement a full StateHandler.
+// For implementation, setting StateRepresentation[T StateValue] as map[string]T
+// will not work because we set
+type StateRepresentation[T StateValue] map[string]T
 
 // Values returns current state as a map
-func (s *StateRepresentation[T]) Values() map[string]T {
+func (s StateRepresentation[T]) Values() map[string]T {
 	if s == nil {
 		return nil
 	}
 
 	result := make(map[string]T)
-	if s.values != nil {
-		maps.Copy(result, s.values)
-	}
-
+	maps.Copy(result, s)
 	return result
 }
 
 // SetValue changes an attribute value by name
-func (s *StateRepresentation[T]) SetValue(name string, value T) {
-	if s.values == nil {
-		s.values = make(map[string]T)
-	}
-
-	s.values[name] = value
+func (s StateRepresentation[T]) SetValue(name string, value T) {
+	s[name] = value
 }
 
 // SetValues set values from values, does not affect other values
-func (s *StateRepresentation[T]) SetValues(values map[string]T) {
-	if s.values == nil {
-		s.values = make(map[string]T)
+func (s StateRepresentation[T]) SetValues(values map[string]T) {
+	for k, v := range values {
+		s[k] = v
 	}
-
-	maps.Copy(s.values, values)
 }
 
 // Remove excludes an attribute and returns true, or does nothing and return false if attribute was not set
-func (s *StateRepresentation[T]) Remove(name string) bool {
-	if s == nil || s.values == nil {
+func (s StateRepresentation[T]) Remove(name string) bool {
+	if s == nil {
 		return false
 	}
 
-	_, found := s.values[name]
+	_, found := s[name]
 	if !found {
 		return false
 	} else {
-		delete(s.values, name)
+		delete(s, name)
 		return true
 	}
 }
 
 // GetValue returns, if any, current value for that attribute
-func (s *StateRepresentation[T]) GetValue(name string) (T, bool) {
+func (s StateRepresentation[T]) GetValue(name string) (T, bool) {
 	var empty T
 	if s == nil {
 		return empty, false
 	}
 
-	if s.values == nil {
-		return empty, false
-	} else if value, found := s.values[name]; !found {
+	if value, found := s[name]; !found {
 		return empty, false
 	} else {
 		return value, true
@@ -156,29 +132,32 @@ func (s *StateRepresentation[T]) GetValue(name string) (T, bool) {
 }
 
 // Attributes returns the available attributes
-func (s *StateRepresentation[T]) Attributes() []string {
+func (s StateRepresentation[T]) Attributes() []string {
 	if s == nil {
 		return nil
 	}
 
 	var result []string
-	for name := range s.values {
+	for name := range s {
 		result = append(result, name)
 	}
 
 	return result
 }
 
+// Read just returns s
+func (s StateRepresentation[T]) Read() StateDescription[T] {
+	return s
+}
+
 // NewStateRepresentation makes a new empty state
-func NewStateRepresentation[T StateValue]() *StateRepresentation[T] {
-	result := new(StateRepresentation[T])
-	result.id = NewId()
-	result.values = make(map[string]T)
+func NewStateRepresentation[T StateValue]() StateRepresentation[T] {
+	result := make(StateRepresentation[T])
 	return result
 }
 
 // NewStateRepresentationFrom builds a new state, wih preset values
-func NewStateRepresentationFrom[T StateValue](values map[string]T) *StateRepresentation[T] {
+func NewStateRepresentationFrom[T StateValue](values map[string]T) StateRepresentation[T] {
 	result := NewStateRepresentation[T]()
 	for attr, value := range values {
 		result.SetValue(attr, value)
@@ -190,18 +169,12 @@ func NewStateRepresentationFrom[T StateValue](values map[string]T) *StateReprese
 // TimedStateRepresentation defines a state that changes over time.
 // State is defined as a map of key => values depending over time.
 // Keys are the attributes name, values depend on time.
+// Its purpose is to implement a full TemporalStateHandler
 type TimedStateRepresentation[T StateValue] struct {
-	// id of the state (not the object)
-	id string
 	// lifetime of the source, that is its the activation period
 	lifetime Period
 	// attributes represent the state as a time varying map
 	attributes map[string]TimeDependentValues[T]
-}
-
-// Id returns an unique id for that state.
-func (t *TimedStateRepresentation[T]) Id() string {
-	return t.id
 }
 
 // ActivePeriod returns the lifetime of that state
@@ -399,7 +372,7 @@ func (t *TimedStateRepresentation[T]) Values() map[string]map[T]Period {
 
 // Snapshot returns matching state with values fixed at given time.
 // If moment is NOT in lifetime, it returns empty map.
-func (t *TimedStateRepresentation[T]) Snapshot(moment time.Time) *StateRepresentation[T] {
+func (t *TimedStateRepresentation[T]) Snapshot(moment time.Time) StateRepresentation[T] {
 	if t == nil {
 		return nil
 	}
@@ -418,6 +391,31 @@ func (t *TimedStateRepresentation[T]) Snapshot(moment time.Time) *StateRepresent
 	return NewStateRepresentationFrom(result)
 }
 
+// Read() returns current state, state is time dependent
+func (t *TimedStateRepresentation[T]) Read() TemporalStateDescription[T] {
+	return t
+}
+
+// ReadAtTime() returns state at that time as a constant content
+func (t *TimedStateRepresentation[T]) ReadAtTime(moment time.Time) StateDescription[T] {
+	if t == nil {
+		return nil
+	} else if t.attributes == nil {
+		return nil
+	} else if !t.lifetime.Contains(moment) {
+		return nil
+	} else {
+		result := NewStateRepresentation[T]()
+		for name, attr := range t.attributes {
+			if v, found := attr.GetValue(moment); found {
+				result[name] = v
+			}
+		}
+
+		return result
+	}
+}
+
 // NewSimpleTimedStateRepresentation returns a time dependent state for a constantly living element
 func NewSimpleTimedStateRepresentation[T StateValue]() *TimedStateRepresentation[T] {
 	return NewTimedStateRepresentation[T](NewFullPeriod())
@@ -426,7 +424,6 @@ func NewSimpleTimedStateRepresentation[T StateValue]() *TimedStateRepresentation
 // NewTimedStateRepresentation returns a state with no attribute, during a given period
 func NewTimedStateRepresentation[T StateValue](period Period) *TimedStateRepresentation[T] {
 	result := new(TimedStateRepresentation[T])
-	result.id = NewId()
 	result.lifetime = period
 	result.attributes = make(map[string]TimeDependentValues[T])
 	return result

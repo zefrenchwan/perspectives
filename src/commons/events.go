@@ -62,6 +62,56 @@ type EventObservableProcessor interface {
 	AddObserver(EventObserver)
 }
 
+// eventObserverDecorator decorates a processor to deal with observers
+type eventObserverDecorator struct {
+	// observers are the observers to notify when a message is received or emitted
+	observers []EventObserver
+	// processor is the actual event processor
+	processor EventProcessor
+}
+
+// AddObserver adds an observer (if not nil)
+func (e *eventObserverDecorator) AddObserver(observer EventObserver) {
+	if e == nil {
+		return
+	} else if observer != nil {
+		existing := e.observers
+		existing = append(existing, observer)
+		existing = SliceDeduplicate(existing)
+		e.observers = existing
+	}
+}
+
+// Process notifies observers, actually processes the event, and notifies observers with result
+func (e *eventObserverDecorator) Process(event Event) ([]Event, error) {
+	if e == nil {
+		return nil, nil
+	}
+
+	for _, observer := range e.observers {
+		observer.OnIncomingEvent(event)
+	}
+
+	result, errProcessing := e.processor.Process(event)
+	for _, observer := range e.observers {
+		observer.OnProcessingEvents(result, errProcessing)
+	}
+
+	return result, errProcessing
+}
+
+// NewEventObservableProcessor decorates a processor to become able to notify others
+func NewEventObservableProcessor(processor EventProcessor) EventObservableProcessor {
+	if processor == nil {
+		return nil
+	}
+
+	result := new(eventObserverDecorator)
+	result.observers = make([]EventObserver, 0)
+	result.processor = processor
+	return result
+}
+
 // EventTick notifies an event processor to run one step further
 type EventTick struct {
 	// id of the event

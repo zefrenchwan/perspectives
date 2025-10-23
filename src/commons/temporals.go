@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// Temporal defines that its implementation has a lifetime or active period
-type Temporal interface {
+// TemporalReader defines that its implementation has a lifetime or active period we may read
+type TemporalReader interface {
 	// ActivePeriod returns the period the element is active during
 	ActivePeriod() Period
 }
@@ -16,7 +16,7 @@ type Temporal interface {
 // TemporalHandler allows full control over activity
 type TemporalHandler interface {
 	// To handler periods, it is necessary to read it
-	Temporal
+	TemporalReader
 	// SetActivePeriod forces activity for compound
 	SetActivePeriod(period Period)
 }

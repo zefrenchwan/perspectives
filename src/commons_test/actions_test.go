@@ -10,7 +10,7 @@ import (
 
 func TestSetStateAction(t *testing.T) {
 	action := commons.NewSetStateAction("x", "price", 10)
-	object := commons.NewModelStateObject[int]()
+	object := commons.NewStateObject[int]()
 	object.SetValue("price", 1000)
 
 	// bad type
@@ -30,7 +30,7 @@ func TestSetStateAction(t *testing.T) {
 	}
 
 	// matching single value
-	object = commons.NewModelStateObject[int]()
+	object = commons.NewStateObject[int]()
 	object.SetValue("price", 1000)
 	content = commons.NewNamedContent("x", object)
 	action = commons.NewSetStateAction("x", "price", 10)
@@ -43,7 +43,7 @@ func TestSetStateAction(t *testing.T) {
 	}
 
 	// matching multiple values
-	object = commons.NewModelStateObject[int]()
+	object = commons.NewStateObject[int]()
 	object.SetValue("price", 1000)
 	action = commons.NewSetStateActionFrom("x", map[string]int{"price": 5, "status": 170})
 	content = commons.NewNamedContent("x", object)
@@ -78,7 +78,7 @@ func TestEndPeriodAction(t *testing.T) {
 	}
 
 	// test on object
-	obj := commons.NewTemporalModelStateObject[int](commons.NewFullPeriod())
+	obj := commons.NewTemporalStateObject[int](commons.NewFullPeriod())
 	values := commons.NewNamedContent("x", obj)
 
 	if variables := action.Signature().Variables(); len(variables) != 1 {
@@ -91,7 +91,7 @@ func TestEndPeriodAction(t *testing.T) {
 		t.Fail()
 	}
 
-	obj = commons.NewTemporalModelStateObject[int](commons.NewPeriodSince(now.AddDate(1, 0, 0), false))
+	obj = commons.NewTemporalStateObject[int](commons.NewPeriodSince(now.AddDate(1, 0, 0), false))
 	values = commons.NewNamedContent("x", obj)
 	if err := action.Execute(values); err != nil {
 		t.Fail()
@@ -108,7 +108,7 @@ func TestEndPeriodAction(t *testing.T) {
 }
 
 func TestSequentialActions(t *testing.T) {
-	object := commons.NewModelStateObject[int]()
+	object := commons.NewStateObject[int]()
 	object.SetValue("status", 1000)
 	content := commons.NewNamedContent("x", object)
 	content.AppendAs("y", object)

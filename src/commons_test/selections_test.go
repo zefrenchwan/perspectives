@@ -79,9 +79,9 @@ func TestCompareActivePeriod(t *testing.T) {
 	before := now.AddDate(-10, 0, 0)
 	activity := commons.NewPeriodUntil(before, true)
 
-	obj := commons.NewModelStateObject[string]()
-	nonMatching := commons.NewTemporalModelStateObject[string](commons.NewPeriodSince(now, true))
-	matching := commons.NewTemporalModelStateObject[string](commons.NewFullPeriod())
+	obj := DummyObject{id: "i have no time"}
+	nonMatching := commons.NewStateObjectSince[string](now)
+	matching := commons.NewTemporalStateObject[string](commons.NewFullPeriod())
 
 	condition := commons.NewFilterActivePeriod("x", commons.TemporalCommonPoint, activity)
 
@@ -137,7 +137,7 @@ func TestFilterByStateAttribute(t *testing.T) {
 	}
 
 	// no match due to missing value
-	value := commons.NewModelStateObject[string]()
+	value := commons.NewStateObject[string]()
 	content = commons.NewNamedContent("x", value)
 	if m, err := operator.Matches(content); err != nil {
 		t.Fail()
@@ -147,7 +147,7 @@ func TestFilterByStateAttribute(t *testing.T) {
 	}
 
 	// no value match
-	value = commons.NewModelStateObject[string]()
+	value = commons.NewStateObject[string]()
 	value.SetValue("name", "Thomas")
 	content = commons.NewNamedContent("x", value)
 	if m, err := operator.Matches(content); err != nil {
@@ -158,7 +158,7 @@ func TestFilterByStateAttribute(t *testing.T) {
 	}
 
 	// match
-	value = commons.NewModelStateObject[string]()
+	value = commons.NewStateObject[string]()
 	value.SetValue("name", "Oriane")
 	content = commons.NewNamedContent("x", value)
 	if m, err := operator.Matches(content); err != nil {
@@ -179,7 +179,7 @@ func TestFilterByStateSetAttribute(t *testing.T) {
 		t.Fail()
 	}
 
-	value := commons.NewModelStateObject[int]()
+	value := commons.NewStateObject[int]()
 	value.SetValue("age", 20)
 	content := commons.NewNamedContent("x", value)
 

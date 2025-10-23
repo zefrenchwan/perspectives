@@ -1,8 +1,6 @@
 package commons
 
-import (
-	"time"
-)
+import "time"
 
 // ModelObject is the component that runs in the structure.
 type ModelObject interface {
@@ -12,180 +10,130 @@ type ModelObject interface {
 	ModelComponent
 }
 
-// TemporalObject is an object that is active during a given period.
-// For instance, humans are active during their lifetime.
-type TemporalObject interface {
-	// A temporal object is an object
-	ModelObject
-	// By definition, an object has a lifetime we may read
-	Temporal
-}
-
-// StateObject is an object with a state.
-// This object may change over time, but it has no lifetime.
-// Typical use case would be a particule to simulate.
-type StateObject[T StateValue] interface {
-	// StateObject is a model object
-	ModelObject
-	// By definition, we may read the state
-	StateReader[T]
-	// Handler returns a state handler to modify the object.
-	// An object may modify its state (for example, we may move an arm).
-	// But a handler is a tool to modity an object with a direct access to its state.
-	// For instance, a system is subject to gravity no matter what.
-	Handler() StateHandler[T]
-}
-
-// TemporalStateObject is an object with a lifetime and historicized state.
-// Its state is then a TemporalStateHandler and it has an active period.
-type TemporalStateObject[T StateValue] interface {
-	// Temporal object is an object with an active period
-	TemporalObject
-	// TemporalStateReader to get a state with historicized content
-	TemporalStateReader[T]
-	// Handler returns an object to be able to change the state of the object
-	Handler() TemporalStateHandler[T]
-}
-
-// ModelStateObject implements StateObject by decorating a state.
-type ModelStateObject[T StateValue] struct {
-	// id of the object
+// StateObject is an object, with a lifetime, and a state
+type StateObject[T StateValue] struct {
+	// id returns the id of the object
 	id string
-	// State is a shared (pointer) implementation of a state
-	State *StateRepresentation[T]
-}
-
-// Id returns the object id
-func (m ModelStateObject[T]) Id() string {
-	return m.id
-}
-
-// GetType returns TypeObject for sure
-func (m ModelStateObject[T]) GetType() ModelableType {
-	return TypeObject
-}
-
-// Attributes returns set attributes
-func (m ModelStateObject[T]) Attributes() []string {
-	return m.State.Attributes()
-}
-
-// GetValue returns the value for a given attribute if any
-func (m ModelStateObject[T]) GetValue(attribute string) (T, bool) {
-	var empty T
-	if m.State == nil {
-		return empty, false
-	}
-
-	return m.State.GetValue(attribute)
-}
-
-// Read returns the state description
-func (m ModelStateObject[T]) Read() StateDescription[T] {
-	return m.State
-}
-
-// SetValue sets the value for that attribute
-func (m ModelStateObject[T]) SetValue(name string, value T) {
-	if m.State != nil {
-		m.State.SetValue(name, value)
-	}
-}
-
-// SetValues sets the values as a map of attributes and values
-func (m ModelStateObject[T]) SetValues(values map[string]T) {
-	if len(values) != 0 && m.State != nil {
-		m.State.SetValues(values)
-	}
-}
-
-// Remove attribute by name (if any) and returns if attribute was present
-func (m ModelStateObject[T]) Remove(name string) bool {
-	if m.State != nil {
-		return m.State.Remove(name)
-	} else {
-		return false
-	}
-}
-
-// Handler returns a state handler to modify the state
-func (m ModelStateObject[T]) Handler() StateHandler[T] {
-	return m
-}
-
-// NewModelStateObject returns a new empty ModelStateObject
-func NewModelStateObject[T StateValue]() ModelStateObject[T] {
-	return ModelStateObject[T]{State: NewStateRepresentation[T]()}
-}
-
-// TemporalModelStateObject is a model object to deal with historicized state
-type TemporalModelStateObject[T StateValue] struct {
-	// id of the object
-	id string
-	// State is the shared historiziced state
-	State *TimedStateRepresentation[T]
-}
-
-// ActivePeriod gets the active period of the object
-func (m TemporalModelStateObject[T]) ActivePeriod() Period {
-	return m.State.ActivePeriod()
-}
-
-// SetActivePeriod sets active period of the object
-func (m TemporalModelStateObject[T]) SetActivePeriod(period Period) {
-	m.State.SetActivePeriod(period)
-}
-
-// GetType returns TypeObject because this component is an object
-func (m TemporalModelStateObject[T]) GetType() ModelableType {
-	return TypeObject
+	// state allows to read and change current state
+	state StateRepresentation[T]
+	// activity to deal with time.
+	// Current object becomes a temporal reader, then
+	activity Period
 }
 
 // Id returns the id of the object
-func (m TemporalModelStateObject[T]) Id() string {
-	return m.id
+func (s *StateObject[T]) Id() string {
+	return s.id
 }
 
-// GetValue returns the historicized content for an attribute
-func (m TemporalModelStateObject[T]) GetValue(name string) (map[T]Period, bool) {
-	return m.State.GetValue(name, true)
+// GetType returns TypeObject
+func (s *StateObject[T]) GetType() ModelableType {
+	return TypeObject
 }
 
-// Read returns the historicized state for that object.
-func (m TemporalModelStateObject[T]) Read() TemporalStateDescription[T] {
-	return m.State
+// GetValue returns the value for that attribute (if any) or empty, false
+func (s *StateObject[T]) GetValue(name string) (T, bool) {
+	return s.state.GetValue(name)
 }
 
-// ReadAtTime builds the state at a given moment
-func (m TemporalModelStateObject[T]) ReadAtTime(moment time.Time) StateDescription[T] {
-	result := m.State.Snapshot(moment)
+// SetValue forces value for that attribute (by name)
+func (s *StateObject[T]) SetValue(name string, value T) {
+	s.state.SetValue(name, value)
+}
+
+// Read returns the current state of this element
+func (s *StateObject[T]) Read() StateDescription[T] {
+	return s.state.Read()
+}
+
+// SetValues sets values for a group of attributes
+func (s *StateObject[T]) SetValues(values map[string]T) {
+	s.state.SetValues(values)
+}
+
+// Remove excludes an attribute (if present).
+func (s *StateObject[T]) Remove(name string) bool {
+	return s.state.Remove(name)
+}
+
+// ActivePeriod returns current period of activity
+func (s *StateObject[T]) ActivePeriod() Period {
+	return s.activity
+}
+
+// SetActivePeriod forces current period of activity
+func (s *StateObject[T]) SetActivePeriod(newPeriod Period) {
+	s.activity = newPeriod
+}
+
+// NewStateObject returns an empty state object living forever
+func NewStateObject[T StateValue]() *StateObject[T] {
+	result := new(StateObject[T])
+	result.activity = NewFullPeriod()
+	result.id = NewId()
+	result.state = NewStateRepresentation[T]()
 	return result
 }
 
-// SetValueDuringPeriod changes value for a given attribute during a given period
-func (m TemporalModelStateObject[T]) SetValueDuringPeriod(name string, value T, period Period) {
-	m.State.SetValueDuringPeriod(name, value, period)
+// NewStateObjectSince creates a state object active since its creation
+func NewStateObjectSince[T StateValue](creation time.Time) *StateObject[T] {
+	result := NewStateObject[T]()
+	result.activity = NewPeriodSince(creation, true)
+	return result
 }
 
-// Handler returns an handler to modify historicized state
-func (m TemporalModelStateObject[T]) Handler() TemporalStateHandler[T] {
-	return m
+// TemporalStateObject is an object with an activity and time dependent values
+type TemporalStateObject[T StateValue] struct {
+	// id of the object
+	id string
+	// state deals with time dependent values AND activity
+	state TemporalStateHandler[T]
 }
 
-// SetValue changes the value for that attribute
-func (m TemporalModelStateObject[T]) SetValue(name string, value T) {
-	m.State.SetValue(name, value)
+// Id returns the object id
+func (t *TemporalStateObject[T]) Id() string {
+	return t.id
 }
 
-// Remove removes an attribute by name and returns if the attribute was set already (no action if not)
-func (m TemporalModelStateObject[T]) Remove(name string) bool {
-	return m.State.Remove(name)
+// GetType flags this object as an object
+func (t *TemporalStateObject[T]) GetType() ModelableType {
+	return TypeObject
 }
 
-// NewTemporalModelStateObject returns a new empty TemporalModelStateObject
-func NewTemporalModelStateObject[T StateValue](lifetime Period) TemporalModelStateObject[T] {
-	var result TemporalModelStateObject[T]
+// Read() returns current state, state is time dependent
+func (t *TemporalStateObject[T]) Read() TemporalStateDescription[T] {
+	return t.state.Read()
+}
+
+// ReadAtTime() returns state at that time as a constant content
+func (t *TemporalStateObject[T]) ReadAtTime(moment time.Time) StateDescription[T] {
+	return t.state.ReadAtTime(moment)
+}
+
+// SetValueDuringPeriod sets value for that attribute during a given period
+func (t *TemporalStateObject[T]) SetValueDuringPeriod(name string, value T, period Period) {
+	t.state.SetValueDuringPeriod(name, value, period)
+}
+
+// Remove removes an attribute by name (if any) and returns if it was present before removal
+func (t *TemporalStateObject[T]) Remove(name string) bool {
+	return t.state.Remove(name)
+}
+
+// ActivePeriod returns object active period
+func (t *TemporalStateObject[T]) ActivePeriod() Period {
+	return t.state.ActivePeriod()
+}
+
+// SetActivePeriod changes the period for that object
+func (t *TemporalStateObject[T]) SetActivePeriod(newPeriod Period) {
+	t.state.SetActivePeriod(newPeriod)
+}
+
+// NewTemporalStateObject creates a new time dependent object active during period
+func NewTemporalStateObject[T StateValue](period Period) *TemporalStateObject[T] {
+	result := new(TemporalStateObject[T])
 	result.id = NewId()
-	result.State = NewTimedStateRepresentation[T](lifetime)
+	result.state = NewTimedStateRepresentation[T](period)
 	return result
 }

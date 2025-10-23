@@ -128,7 +128,7 @@ func activePeriodExtractor(m Modelable) (Period, bool, error) {
 	var empty Period
 	if m == nil {
 		return empty, false, nil
-	} else if value, ok := m.(Temporal); !ok {
+	} else if value, ok := m.(TemporalReader); !ok {
 		return empty, false, nil
 	} else if value == nil {
 		return empty, false, nil

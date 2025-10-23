@@ -69,11 +69,12 @@ type GenericContent[T any] interface {
 type Content = GenericContent[Modelable]
 
 // ContentLoader loads content from a source.
-// Implementations will map a source to content given expected variables or positions.
+// Implementations will map a source to content given expected names or positions.
 // Generic option (as ContentLoader[T]) is so far useless because conditions and actions expect content.
 type ContentLoader interface {
-	// LoadVariables map source data into named content for those variables
-	LoadVariables(variables []string) iter.Seq[Content]
+	// Load produces a content iterator following load expectations.
+	// For instance, some loads come by name, expecting variables or named values for states
+	Load() iter.Seq[Content]
 }
 
 // simpleContainer defines a basic implementation
