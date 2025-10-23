@@ -8,21 +8,34 @@ import (
 )
 
 type DummyObserver struct {
+	// counter of incoming events
 	Incoming int
+	// counter of outgoing events
 	Outgoing int
-	Errors   int
+	// counter of errors
+	Errors int
+	// last executed processing
+	LastReceived commons.EventProcessing
 }
 
-func (o *DummyObserver) OnIncomingEvent(event commons.Event) {
+func (o *DummyObserver) OnEventProcessing(p commons.EventProcessing) {
 	o.Incoming += 1
-}
-
-func (o *DummyObserver) OnProcessingEvents(events []commons.Event, e error) {
-	if e != nil {
+	if p.Error != nil {
 		o.Errors++
 	}
 
-	o.Outgoing += len(events)
+	o.Outgoing += len(p.Outgoings)
+	o.LastReceived = p
+}
+
+func TestEventSource(t *testing.T) {
+	structure := DummyStructure{id: "structure"}
+	sevent := commons.NewEventLifetimeEnd(structure, time.Now())
+	if sevent.Source() != structure {
+		t.Fail()
+	} else if !commons.IsEventComingFromStructure(sevent) {
+		t.Fail()
+	}
 }
 
 func TestEventObservableProcessor(t *testing.T) {
@@ -52,6 +65,8 @@ func TestEventObservableProcessor(t *testing.T) {
 	} else if counter.Incoming != 1 {
 		t.Fail()
 	} else if counter.Outgoing != 1 {
+		t.Fail()
+	} else if counter.LastReceived.Source.Id() != observer.Id() {
 		t.Fail()
 	}
 }

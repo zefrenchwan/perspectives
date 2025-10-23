@@ -45,17 +45,28 @@ func NewEventProcessor(processFn func(Event) ([]Event, error)) EventProcessor {
 	return functionalEventProcessor(processFn)
 }
 
+// EventProcessing is the content of an event processing from an event processor
+type EventProcessing struct {
+	// Source is the observable processor that processed the events we got
+	Source Identifiable
+	// Incoming is the event that came into the processor
+	Incoming Event
+	// Outgoings are the events the processed returned
+	Outgoings []Event
+	// Error is the error than was raised (or not) by the processor
+	Error error
+}
+
 // EventObserver is notified once events are received and processed from the source it listens.
 // Although interface is permissive, the idea is to read events, no act on the source itself.
 type EventObserver interface {
-	// OnIncomingEvents is called as soon as an event is received from source.
-	OnIncomingEvent(Event)
-	// OnProcessingEvents is called as soon as events are processed by the source
-	OnProcessingEvents([]Event, error)
+	OnEventProcessing(EventProcessing)
 }
 
 // EventObservableProcessor is an event processer that notifies observers when it processes events
 type EventObservableProcessor interface {
+	// Identifiable to know who emitted the message
+	Identifiable
 	// an observable processor is a processor
 	EventProcessor
 	// AddObserver registers a new observer to be notified
@@ -64,10 +75,17 @@ type EventObservableProcessor interface {
 
 // eventObserverDecorator decorates a processor to deal with observers
 type eventObserverDecorator struct {
+	// id of the decorator, to implement Identifiable
+	id string
 	// observers are the observers to notify when a message is received or emitted
 	observers []EventObserver
 	// processor is the actual event processor
 	processor EventProcessor
+}
+
+// Id returns the id of the processor (because it defines Process)
+func (e *eventObserverDecorator) Id() string {
+	return e.id
 }
 
 // AddObserver adds an observer (if not nil)
@@ -88,13 +106,10 @@ func (e *eventObserverDecorator) Process(event Event) ([]Event, error) {
 		return nil, nil
 	}
 
-	for _, observer := range e.observers {
-		observer.OnIncomingEvent(event)
-	}
-
 	result, errProcessing := e.processor.Process(event)
+	processing := EventProcessing{Source: e, Incoming: event, Outgoings: result, Error: errProcessing}
 	for _, observer := range e.observers {
-		observer.OnProcessingEvents(result, errProcessing)
+		observer.OnEventProcessing(processing)
 	}
 
 	return result, errProcessing

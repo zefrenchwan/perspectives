@@ -10,6 +10,7 @@ blue=`tput setaf 4`
 magenta=`tput setaf 5`
 cyan=`tput setaf 6`
 reset=`tput sgr0`
+bold=`tput bold`
 
 # TEST EACH MODULE, fail as soon as one fails
 for module in  ${modulestest}; do
@@ -26,15 +27,6 @@ for module in  ${modulestest}; do
     fi 
 
     # assuming it is a go source directory
-    # print module info
-    echo -n "${reset}$module ${reset}"
-    echo -n "${yellow}    code:${reset} "
-    counter=`cat $module/*.go | wc -l`
-    echo -n "${yellow}$counter${reset} "
-
-    testcounter=`cat $testmodule/*.go | wc -l`
-    echo -n "${yellow}    test: ${reset}"
-    echo -n "${yellow}$testcounter ${reset}"
     # Run tests, and get result 
     testresult=`go test ./$testmodule/ | awk '{print $1 "  " $3}'`
     teststatus=`echo $testresult | awk '{print $1}'`
@@ -42,10 +34,18 @@ for module in  ${modulestest}; do
     # if success, print status and time 
     # else rerun test, no output capture
     if [ $teststatus = "ok" ]; then
-        echo -n "${green}    status: OK ( $testtime )${reset}"
+        echo -n "${bold}$module  ${reset}"
+        echo -n "${green}${bold}[GO]${reset} in $testtime "
+        echo -n "${yellow}    code:${reset} "
+        counter=`cat $module/*.go | wc -l`
+        echo -n "${yellow}$counter${reset} "
+        testcounter=`cat $testmodule/*.go | wc -l`
+        echo -n "${yellow}    test: ${reset}"
+        echo -n "${yellow}$testcounter ${reset}"
         echo
     else
-        echo -n "${red}    status: FAILURE${reset}"
+        echo -n "${bold}$module  ${reset}"
+        echo -n "${red}${bold}[FAILING]  ${reset}"
         echo
         go test ./$testmodule/
         exit 1
