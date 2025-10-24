@@ -29,6 +29,14 @@ func (o *DummyObserver) OnEventProcessing(source commons.Identifiable, in common
 	o.LastSource = source
 }
 
+type DummyInterceptor struct {
+	Result commons.Event
+}
+
+func (i DummyInterceptor) OnRecipientProcessing(event commons.Event, recipient commons.EventProcessor) ([]commons.Event, error) {
+	return []commons.Event{i.Result}, nil
+}
+
 func TestEventSource(t *testing.T) {
 	structure := DummyStructure{id: "structure"}
 	event := commons.NewEventLifetimeEnd(structure, time.Now())
@@ -85,7 +93,7 @@ func TestEventRedirection(t *testing.T) {
 		return []commons.Event{response}, nil
 	})
 
-	mapper := commons.NewEventRediction(catcher, processor, func(e commons.Event) bool { return true })
+	mapper := commons.NewEventRedirection(catcher, processor, func(e commons.Event) bool { return true })
 
 	if result, err := mapper.Process(event); err != nil {
 		t.Fail()
@@ -95,9 +103,29 @@ func TestEventRedirection(t *testing.T) {
 		t.Fail()
 	}
 
-	mapper = commons.NewEventRediction(catcher, processor, func(e commons.Event) bool { return false })
+	mapper = commons.NewEventRedirection(catcher, processor, func(e commons.Event) bool { return false })
 
 	if _, err := mapper.Process(event); err == nil {
+		t.Fail()
+	}
+}
+
+func TestEventInterception(t *testing.T) {
+	structure := DummyStructure{}
+	source := commons.NewEventTick(structure)
+	replace := commons.NewEventLifetimeEnd(structure, time.Now())
+
+	mapper := commons.NewEventProcessor(func(e commons.Event) ([]commons.Event, error) { return []commons.Event{source}, nil })
+	replacer := commons.NewEventInterceptor(func(e commons.Event, p commons.EventProcessor) ([]commons.Event, error) {
+		return []commons.Event{replace}, nil
+	})
+
+	interceptor := commons.NewEventInterception(mapper, replacer)
+	if result, err := interceptor.Process(nil); err != nil {
+		t.Fail()
+	} else if len(result) != 1 {
+		t.Fail()
+	} else if result[0].Id() != replace.Id() {
 		t.Fail()
 	}
 }

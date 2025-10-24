@@ -1,6 +1,8 @@
 package commons
 
-import "time"
+import (
+	"time"
+)
 
 // Event is the general definition of an event:
 // messages between agents, structures triggering a change of state, etc.
@@ -120,46 +122,68 @@ func NewEventObservableProcessor(processor EventProcessor) EventObservableProces
 	return result
 }
 
-// eventInterceptor catches some incoming events from processor to redirect them to a catcher
-type eventInterceptor struct {
-	// catcher may process some events originally from processor depending on a condition
-	catcher EventProcessor
-	// processor is the event processor if catcher did not process it first
-	processor EventProcessor
-	// catchingPredicate may redirect the event to catcher (if true) or let it to processor (if false)
-	catchingPredicate func(Event) bool
+// EventInterceptor is the interface to implement for event interception.
+// Assume a processor P expectes event E, then an interceptor will be notified
+// and will execute OnRecipientProcessing(E, P) INSTEAD OF P.
+// Result will be sent INSTEAD OF P.Process(E).
+// Why do we do this ?
+// Assume a structure that notifies an object of an "end lifetime" event.
+// Code for that object may not accept or process that event.
+// So, to avoid it, we regroup all "classical" event processing within an interceptor,
+// and interceptor will deal with special events itself, letting object unable to act
+// on its states or activity changes
+type EventInterceptor interface {
+	// OnRecipientProcessing catches event from recipient and returns a result.
+	// Note that it is possible to call recipient.Process(event) in this function
+	OnRecipientProcessing(event Event, recipient EventProcessor) ([]Event, error)
 }
 
-// Process picks if event will be processed by:
-// catcher (if any and if predicate said yes),
-// or processor (if no predicate or if predicate redirected to the processor)
-func (e eventInterceptor) Process(event Event) ([]Event, error) {
-	if e.catchingPredicate == nil {
-		return e.processor.Process(event)
-	} else if e.catchingPredicate(event) && e.catcher != nil {
-		return e.catcher.Process(event)
-	} else {
-		return e.processor.Process(event)
+// eventFunctionalInterceptor implements EventInterceptor as a function call
+type eventFunctionalInterceptor func(Event, EventProcessor) ([]Event, error)
+
+// OnRecipientProcessing just calls itself
+func (f eventFunctionalInterceptor) OnRecipientProcessing(event Event, recipient EventProcessor) ([]Event, error) {
+	return f(event, recipient)
+}
+
+// NewEventInterceptor builds a new event interceptor decorating replacer
+func NewEventInterceptor(replacer func(Event, EventProcessor) ([]Event, error)) EventInterceptor {
+	if replacer == nil {
+		return nil
 	}
+
+	return eventFunctionalInterceptor(replacer)
 }
 
-// NewEventRediction redirects an event from original to catcher if catcherAcceptance for that evebt is true.
-// The event will be processed anyway, but, under given conditions, by the catcher.
-// The idea is that once a state object receives an "end your lifetime" event, it cannot ignore it.
-// To avoid any object implementation breaking structure invariants, structure may catch events.
-// Result is then:
-// catcher for no original,
-// original for no catcher or no predicate,
-// expected predicate for nil value,
-// nil if the three of them are nil.
-func NewEventRediction(catcher, original EventProcessor, catcherAcceptance func(Event) bool) EventProcessor {
-	if catcher == nil || catcherAcceptance == nil {
-		return original
-	} else if original == nil {
+// NewEventRedirection redirectes events from catcher to processor based on catcherAcceptance.
+// If catcherAcceptance is true for an event, then processing goes to catcher, otherwise, it goes to processor.
+func NewEventRedirection(catcher, processor EventProcessor, catcherAcceptance func(e Event) bool) EventProcessor {
+	if catcherAcceptance == nil || catcher == nil {
+		return processor
+	} else if processor == nil {
 		return catcher
 	}
 
-	return eventInterceptor{catcher: catcher, processor: original, catchingPredicate: catcherAcceptance}
+	result := func(e Event) ([]Event, error) {
+		if catcherAcceptance(e) {
+			return catcher.Process(e)
+		} else {
+			return processor.Process(e)
+		}
+	}
+
+	return NewEventProcessor(result)
+}
+
+// NewEventInterception returns a new processor built from interceptor replacing original
+func NewEventInterception(original EventProcessor, interceptor EventInterceptor) EventProcessor {
+	if interceptor == nil {
+		return original
+	} else {
+		return NewEventProcessor(func(e Event) ([]Event, error) {
+			return interceptor.OnRecipientProcessing(e, original)
+		})
+	}
 }
 
 // EventTick notifies an event processor to run one step further
