@@ -45,22 +45,16 @@ func NewEventProcessor(processFn func(Event) ([]Event, error)) EventProcessor {
 	return functionalEventProcessor(processFn)
 }
 
-// EventProcessing is the content of an event processing from an event processor
-type EventProcessing struct {
-	// Source is the observable processor that processed the events we got
-	Source Identifiable
-	// Incoming is the event that came into the processor
-	Incoming Event
-	// Outgoings are the events the processed returned
-	Outgoings []Event
-	// Error is the error than was raised (or not) by the processor
-	Error error
-}
-
 // EventObserver is notified once events are received and processed from the source it listens.
 // Although interface is permissive, the idea is to read events, no act on the source itself.
 type EventObserver interface {
-	OnEventProcessing(EventProcessing)
+	// OnEventProcessing is received by observers as soon as source processes the message.
+	// Parameters are:
+	// source as the event observable processor,
+	// incoming as the event received by observable,
+	// outgoings as the outgoing events (if any),
+	// err as the raised error if any
+	OnEventProcessing(source Identifiable, incoming Event, outgoings []Event, err error)
 }
 
 // EventObservableProcessor is an event processer that notifies observers when it processes events
@@ -107,9 +101,8 @@ func (e *eventObserverDecorator) Process(event Event) ([]Event, error) {
 	}
 
 	result, errProcessing := e.processor.Process(event)
-	processing := EventProcessing{Source: e, Incoming: event, Outgoings: result, Error: errProcessing}
 	for _, observer := range e.observers {
-		observer.OnEventProcessing(processing)
+		observer.OnEventProcessing(e, event, result, errProcessing)
 	}
 
 	return result, errProcessing
@@ -125,6 +118,48 @@ func NewEventObservableProcessor(processor EventProcessor) EventObservableProces
 	result.observers = make([]EventObserver, 0)
 	result.processor = processor
 	return result
+}
+
+// eventInterceptor catches some incoming events from processor to redirect them to a catcher
+type eventInterceptor struct {
+	// catcher may process some events originally from processor depending on a condition
+	catcher EventProcessor
+	// processor is the event processor if catcher did not process it first
+	processor EventProcessor
+	// catchingPredicate may redirect the event to catcher (if true) or let it to processor (if false)
+	catchingPredicate func(Event) bool
+}
+
+// Process picks if event will be processed by:
+// catcher (if any and if predicate said yes),
+// or processor (if no predicate or if predicate redirected to the processor)
+func (e eventInterceptor) Process(event Event) ([]Event, error) {
+	if e.catchingPredicate == nil {
+		return e.processor.Process(event)
+	} else if e.catchingPredicate(event) && e.catcher != nil {
+		return e.catcher.Process(event)
+	} else {
+		return e.processor.Process(event)
+	}
+}
+
+// NewEventRediction redirects an event from original to catcher if catcherAcceptance for that evebt is true.
+// The event will be processed anyway, but, under given conditions, by the catcher.
+// The idea is that once a state object receives an "end your lifetime" event, it cannot ignore it.
+// To avoid any object implementation breaking structure invariants, structure may catch events.
+// Result is then:
+// catcher for no original,
+// original for no catcher or no predicate,
+// expected predicate for nil value,
+// nil if the three of them are nil.
+func NewEventRediction(catcher, original EventProcessor, catcherAcceptance func(Event) bool) EventProcessor {
+	if catcher == nil || catcherAcceptance == nil {
+		return original
+	} else if original == nil {
+		return catcher
+	}
+
+	return eventInterceptor{catcher: catcher, processor: original, catchingPredicate: catcherAcceptance}
 }
 
 // EventTick notifies an event processor to run one step further

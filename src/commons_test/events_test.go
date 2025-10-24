@@ -1,6 +1,7 @@
 package commons_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -14,26 +15,26 @@ type DummyObserver struct {
 	Outgoing int
 	// counter of errors
 	Errors int
-	// last executed processing
-	LastReceived commons.EventProcessing
+	// LastSource contains the last identifiable that emitted
+	LastSource commons.Identifiable
 }
 
-func (o *DummyObserver) OnEventProcessing(p commons.EventProcessing) {
+func (o *DummyObserver) OnEventProcessing(source commons.Identifiable, in commons.Event, out []commons.Event, e error) {
 	o.Incoming += 1
-	if p.Error != nil {
+	if e != nil {
 		o.Errors++
 	}
 
-	o.Outgoing += len(p.Outgoings)
-	o.LastReceived = p
+	o.Outgoing += len(out)
+	o.LastSource = source
 }
 
 func TestEventSource(t *testing.T) {
 	structure := DummyStructure{id: "structure"}
-	sevent := commons.NewEventLifetimeEnd(structure, time.Now())
-	if sevent.Source() != structure {
+	event := commons.NewEventLifetimeEnd(structure, time.Now())
+	if event.Source() != structure {
 		t.Fail()
-	} else if !commons.IsEventComingFromStructure(sevent) {
+	} else if !commons.IsEventComingFromStructure(event) {
 		t.Fail()
 	}
 }
@@ -66,7 +67,37 @@ func TestEventObservableProcessor(t *testing.T) {
 		t.Fail()
 	} else if counter.Outgoing != 1 {
 		t.Fail()
-	} else if counter.LastReceived.Source.Id() != observer.Id() {
+	} else if counter.LastSource.Id() != observer.Id() {
+		t.Fail()
+	}
+}
+
+func TestEventRedirection(t *testing.T) {
+	structure := DummyStructure{id: "structure"}
+	event := commons.NewEventLifetimeEnd(structure, time.Now())
+	response := commons.NewEventTick(structure)
+
+	processor := commons.NewEventProcessor(func(e commons.Event) ([]commons.Event, error) {
+		return nil, errors.ErrUnsupported
+	})
+
+	catcher := commons.NewEventProcessor(func(e commons.Event) ([]commons.Event, error) {
+		return []commons.Event{response}, nil
+	})
+
+	mapper := commons.NewEventRediction(catcher, processor, func(e commons.Event) bool { return true })
+
+	if result, err := mapper.Process(event); err != nil {
+		t.Fail()
+	} else if len(result) != 1 {
+		t.Fail()
+	} else if result[0].Id() != response.Id() {
+		t.Fail()
+	}
+
+	mapper = commons.NewEventRediction(catcher, processor, func(e commons.Event) bool { return false })
+
+	if _, err := mapper.Process(event); err == nil {
 		t.Fail()
 	}
 }

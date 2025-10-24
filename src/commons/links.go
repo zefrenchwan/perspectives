@@ -13,6 +13,18 @@ const RoleObject = "object"
 // Linkable should be as simple as possible.
 type Linkable interface{}
 
+// LinkLabel is a label to qualify other elements.
+// For instance, human, nice, etc.
+type LinkLabel struct {
+	// label is the value of the label.
+	label string
+}
+
+// NewLabel builds a new linkable label
+func NewLabel(name string) Linkable {
+	return LinkLabel{label: name}
+}
+
 // Link is a constant relation over instances of linkables.
 // Link is also Linkable, so it may be used in links.
 type Link interface {

@@ -7,8 +7,8 @@ import (
 
 // GenericContent defines any values grouped together.
 // Typically, it may be used as parameters to run conditions.
-// A condition does not depend on a single entity:
-// for instance, a join condition uses two entities.
+// A condition does not depend on a single element:
+// for instance, a join condition uses two elements.
 // So, to regroup all cases into a general form, we use GenericContent.
 // There are two types of values:
 // POSITIONAL values: no name, just values one after another

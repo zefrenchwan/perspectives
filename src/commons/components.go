@@ -2,7 +2,7 @@ package commons
 
 // ModelComponent is the most general component within a model.
 // There are three types of components:
-// * entities : what we observe
+// * objects : what we observe
 // * structures: what contains the objects
 // * constraints: what objects can and cannot do (and how it changes their structure)
 type ModelComponent interface {
