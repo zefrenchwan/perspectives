@@ -72,5 +72,11 @@ func TestTemporalStateObject(t *testing.T) {
 		t.Fail()
 	} else if !values[10].Equals(beforePeriod) {
 		t.Fail()
+	} else if result, found := obj.GetValue("attr", true); !found {
+		t.Fail()
+	} else if len(result) != 1 {
+		t.Fail()
+	} else if !result[10].Equals(activity) {
+		t.Fail()
 	}
 }

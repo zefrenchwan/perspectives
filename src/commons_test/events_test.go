@@ -47,6 +47,15 @@ func TestEventSource(t *testing.T) {
 	}
 }
 
+func TestEventTick(t *testing.T) {
+	structure := DummyStructure{id: "structure"}
+	now := time.Now().Truncate(commons.TIME_PRECISION)
+	tick := commons.NewEventTickTime(structure, now)
+	if !tick.ProcessingTime().Equal(now) {
+		t.Fail()
+	}
+}
+
 func TestEventObservableProcessor(t *testing.T) {
 
 	structure := DummyStructure{id: "structure"}

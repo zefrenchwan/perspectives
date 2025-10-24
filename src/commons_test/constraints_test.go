@@ -7,7 +7,7 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-func TestConstraintOnStateEvent(t *testing.T) {
+func TestConstraintOnStateObject(t *testing.T) {
 	structure := DummyStructure{}
 	obj := commons.NewStateObject[int]()
 
@@ -24,6 +24,36 @@ func TestConstraintOnStateEvent(t *testing.T) {
 
 	// test period change
 	now := time.Now().Truncate(time.Second)
+	end := commons.NewEventLifetimeEnd(structure, now)
+	if propagate := commons.ApplyStateActivityConstraintsOnEvent(end, obj); propagate {
+		t.Fail()
+	} else if !obj.ActivePeriod().Equals(commons.NewPeriodUntil(now, false)) {
+		t.Fail()
+	}
+}
+
+func TestConstraintOnTemporalStateObject(t *testing.T) {
+	structure := DummyStructure{}
+	obj := commons.NewTemporalStateObject[int](commons.NewFullPeriod())
+
+	// test event change
+	obj.SetValueDuringPeriod("age", 10, commons.NewFullPeriod())
+	now := time.Now().Truncate(time.Second)
+	event := commons.NewEventStateChanges(structure, now, map[string]int{"age": 100})
+	if propagate := commons.ApplyStateActivityConstraintsOnEvent(event, obj); propagate {
+		t.Fail()
+	} else if values, found := obj.GetValue("age", true); !found || len(values) != 2 {
+		t.Fail()
+	} else if !values[10].Equals(commons.NewPeriodUntil(now, false)) {
+		t.Fail()
+	} else if !values[100].Equals(commons.NewPeriodSince(now, true)) {
+		t.Fail()
+	} else if !obj.ActivePeriod().Equals(commons.NewFullPeriod()) {
+		t.Fail()
+	}
+
+	// test period change
+	obj = commons.NewTemporalStateObject[int](commons.NewFullPeriod())
 	end := commons.NewEventLifetimeEnd(structure, now)
 	if propagate := commons.ApplyStateActivityConstraintsOnEvent(end, obj); propagate {
 		t.Fail()

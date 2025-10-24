@@ -11,6 +11,8 @@ type Event interface {
 	Identifiable
 	// Source returns the unique source of the event
 	Source() ModelComponent
+	// ProcessingTime returns the moment to consider the event should be processed
+	ProcessingTime() time.Time
 }
 
 // IsEventComingFromStructure returns true if source of e is a structure
@@ -186,12 +188,15 @@ func NewEventInterception(original EventProcessor, interceptor EventInterceptor)
 	}
 }
 
-// EventTick notifies an event processor to run one step further
+// EventTick notifies an event processor that time passes.
+// Some event processors may use that event to go one step further.
 type EventTick struct {
 	// id of the event
 	id string
 	// source is the structure emitting the tick
 	source ModelStructure
+	// processingTime is the tick value
+	processingTime time.Time
 }
 
 // Id returns the id of the event
@@ -204,9 +209,19 @@ func (t EventTick) Source() ModelComponent {
 	return t.source
 }
 
-// NewEventTick returns a new tick for that moment
-func NewEventTick(source ModelStructure) EventTick {
-	return EventTick{id: NewId(), source: source}
+// ProcessingTime returns the tick value
+func (t EventTick) ProcessingTime() time.Time {
+	return t.processingTime
+}
+
+// NewEventTick returns a new tick at now (truncated according to configuration)
+func NewEventTick(source ModelStructure) Event {
+	return EventTick{id: NewId(), source: source, processingTime: time.Now().Truncate(TIME_PRECISION)}
+}
+
+// NewEventTickTime returns a new tick at a given time
+func NewEventTickTime(source ModelStructure, moment time.Time) Event {
+	return EventTick{id: NewId(), source: source, processingTime: moment}
 }
 
 // EventLifetimeEnd ends lifetime of temporal values at end time
@@ -239,16 +254,15 @@ func NewEventLifetimeEnd(source ModelStructure, end time.Time) EventLifetimeEnd 
 	return EventLifetimeEnd{id: NewId(), source: source, end: end.Truncate(TIME_PRECISION)}
 }
 
-// EventStateChanges notifies a state handler that it should set those values for those attributes
+// EventStateChanges notifies a state handler that it should set those values for those attributes.
+// For this particular kind of events, the processing time returns the moment to change values.
+// For temporal values, it means that we end previous values at that date.
+// For simple state values, it is just ignored
 type EventStateChanges[T StateValue] interface {
 	// this is an event
 	Event
 	// Changes are the changes to perform as key values
 	Changes() map[string]T
-	// ProcessingTime returns the moment to change values.
-	// For temporal values, it means that we end previous values at that date.
-	// For simple state values, it is just ignored
-	ProcessingTime() time.Time
 }
 
 // timedEventStateChange is a simple EventStateChanges
@@ -297,8 +311,6 @@ type EventCreation[T Identifiable] interface {
 	Event
 	// Content is the new content to create
 	Content() T
-	// CreationTime is processing time, the "birth date" of that content
-	CreationTime() time.Time
 }
 
 // simpleEventCreation implements an event creation by storing fields
@@ -329,7 +341,7 @@ func (s simpleEventCreation[T]) Content() T {
 }
 
 // CreationTime returns the time to consider as the content creation time
-func (s simpleEventCreation[T]) CreationTime() time.Time {
+func (s simpleEventCreation[T]) ProcessingTime() time.Time {
 	return s.creationTime
 }
 
