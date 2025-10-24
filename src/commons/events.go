@@ -303,9 +303,13 @@ type EventCreation[T Identifiable] interface {
 
 // simpleEventCreation implements an event creation by storing fields
 type simpleEventCreation[T Identifiable] struct {
-	id           string
-	source       ModelComponent
-	content      T
+	// id is the event id
+	id string
+	// source is the creator of the content
+	source ModelComponent
+	// content is the created content
+	content T
+	// creationTime is the beginning of the lifetime (if any) for that content
 	creationTime time.Time
 }
 
