@@ -10,25 +10,36 @@ type ModelObject interface {
 	ModelComponent
 }
 
+// baseObject implements object the simplest way
+type baseObject struct {
+	// id of the object
+	id string
+}
+
+// Id returns the id of the object
+func (b baseObject) Id() string {
+	return b.id
+}
+
+// GetType returns TypeObject to flag element as an object
+func (b baseObject) GetType() ModelableType {
+	return TypeObject
+}
+
+// NewModelObject returns a new object
+func NewModelObject() ModelObject {
+	return baseObject{id: NewId()}
+}
+
 // StateObject is an object, with a lifetime, and a state
 type StateObject[T StateValue] struct {
-	// id returns the id of the object
-	id string
+	// state object is an object
+	ModelObject
 	// state allows to read and change current state
 	StateRepresentation[T]
 	// activity to deal with time.
 	// Current object becomes a temporal reader, then
 	activity Period
-}
-
-// Id returns the id of the object
-func (s *StateObject[T]) Id() string {
-	return s.id
-}
-
-// GetType returns TypeObject
-func (s *StateObject[T]) GetType() ModelableType {
-	return TypeObject
 }
 
 // ActivePeriod returns current period of activity
@@ -45,7 +56,7 @@ func (s *StateObject[T]) SetActivePeriod(newPeriod Period) {
 func NewStateObject[T StateValue]() *StateObject[T] {
 	result := new(StateObject[T])
 	result.activity = NewFullPeriod()
-	result.id = NewId()
+	result.ModelObject = NewModelObject()
 	result.StateRepresentation = NewStateRepresentation[T]()
 	return result
 }
@@ -59,26 +70,16 @@ func NewStateObjectSince[T StateValue](creation time.Time) *StateObject[T] {
 
 // TemporalStateObject is an object with an activity and time dependent values
 type TemporalStateObject[T StateValue] struct {
-	// id of the object
-	id string
+	// a temporal state object is an object
+	ModelObject
 	// state deals with time dependent values AND activity
 	*TimedStateRepresentation[T]
-}
-
-// Id returns the object id
-func (t *TemporalStateObject[T]) Id() string {
-	return t.id
-}
-
-// GetType flags this object as an object
-func (t *TemporalStateObject[T]) GetType() ModelableType {
-	return TypeObject
 }
 
 // NewTemporalStateObject creates a new time dependent object active during period
 func NewTemporalStateObject[T StateValue](period Period) *TemporalStateObject[T] {
 	result := new(TemporalStateObject[T])
-	result.id = NewId()
+	result.ModelObject = NewModelObject()
 	result.TimedStateRepresentation = NewTimedStateRepresentation[T](period)
 	return result
 }
