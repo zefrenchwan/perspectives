@@ -56,16 +56,28 @@ type eventContent[C any] struct {
 
 // EventProcessor processes events each time an event is received.
 type EventProcessor interface {
+	// A processor deals with events, we want to know who made that
+	Identifiable
 	// Process the notified event, may emit some events or raise an error
 	Process(notified Event) ([]Event, error)
 }
 
 // functionalEventProcessor is the tool to convert a function to an event processor
-type functionalEventProcessor func(Event) ([]Event, error)
+type functionalEventProcessor struct {
+	// id of the current functional processor
+	id string
+	// processorFn is the function to use for events processing
+	processorFn func(Event) ([]Event, error)
+}
+
+// Id returns current processor id
+func (f functionalEventProcessor) Id() string {
+	return f.id
+}
 
 // Process just uses inner function to process events
 func (f functionalEventProcessor) Process(event Event) ([]Event, error) {
-	return f(event)
+	return f.processorFn(event)
 }
 
 // NewEventProcessor builds a new event processor based on that function
@@ -74,7 +86,7 @@ func NewEventProcessor(processFn func(Event) ([]Event, error)) EventProcessor {
 		return nil
 	}
 
-	return functionalEventProcessor(processFn)
+	return functionalEventProcessor{id: NewId(), processorFn: processFn}
 }
 
 // EventObserver is notified once events are received and processed from the source it listens.
@@ -91,27 +103,19 @@ type EventObserver interface {
 
 // EventObservableProcessor is an event processer that notifies observers when it processes events
 type EventObservableProcessor interface {
-	// Identifiable to know who emitted the message
-	Identifiable
 	// an observable processor is a processor
 	EventProcessor
 	// AddObserver registers a new observer to be notified
 	AddObserver(EventObserver)
 }
 
-// eventObserverDecorator decorates a processor to deal with observers
+// eventObserverDecorator decorates a processor to deal with observers.
+// EventProcessor is identifiable, so we use the same id as the original processor
 type eventObserverDecorator struct {
-	// id of the decorator, to implement Identifiable
-	id string
+	// EventProcess by definition
+	EventProcessor
 	// observers are the observers to notify when a message is received or emitted
 	observers []EventObserver
-	// processor is the actual event processor
-	processor EventProcessor
-}
-
-// Id returns the id of the processor (because it defines Process)
-func (e *eventObserverDecorator) Id() string {
-	return e.id
 }
 
 // AddObserver adds an observer (if not nil)
@@ -132,7 +136,7 @@ func (e *eventObserverDecorator) Process(event Event) ([]Event, error) {
 		return nil, nil
 	}
 
-	result, errProcessing := e.processor.Process(event)
+	result, errProcessing := e.EventProcessor.Process(event)
 	for _, observer := range e.observers {
 		observer.OnEventProcessing(e, event, result, errProcessing)
 	}
@@ -148,7 +152,7 @@ func NewEventObservableProcessor(processor EventProcessor) EventObservableProces
 
 	result := new(eventObserverDecorator)
 	result.observers = make([]EventObserver, 0)
-	result.processor = processor
+	result.EventProcessor = processor
 	return result
 }
 

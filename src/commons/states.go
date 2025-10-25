@@ -73,10 +73,7 @@ type TemporalStateHandler[T StateValue] interface {
 	Remove(name string) bool
 }
 
-// StateRepresentation is basically as state as a map of attributes and values.
-// Its purpose is to implement a full StateHandler.
-// For implementation, setting StateRepresentation[T StateValue] as map[string]T
-// will not work because we set
+// StateRepresentation implements  StateHandler as a map of attributes and values.
 type StateRepresentation[T StateValue] map[string]T
 
 // Values returns current state as a map
