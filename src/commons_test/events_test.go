@@ -37,16 +37,6 @@ func (i DummyInterceptor) OnRecipientProcessing(event commons.Event, recipient c
 	return []commons.Event{i.Result}, nil
 }
 
-func TestEventSource(t *testing.T) {
-	structure := DummyStructure{id: "structure"}
-	event := commons.NewEventLifetimeEnd(structure, time.Now())
-	if event.Source() != structure {
-		t.Fail()
-	} else if !commons.IsEventComingFromStructure(event) {
-		t.Fail()
-	}
-}
-
 func TestEventTick(t *testing.T) {
 	structure := DummyStructure{id: "structure"}
 	now := time.Now().Truncate(commons.TIME_PRECISION)

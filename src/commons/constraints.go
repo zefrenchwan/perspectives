@@ -13,7 +13,7 @@ func applyConstraintLifetimeEvent(event Event, object ModelObject) bool {
 	}
 
 	if end, ok := event.(EventLifetimeEnd); ok {
-		endTime := end.ProcessingTime()
+		endTime := end.End()
 		if thandler, okHandler := object.(TemporalHandler); okHandler && thandler != nil {
 			current := thandler.ActivePeriod()
 			remaining := current.Remove(NewPeriodSince(endTime, true))

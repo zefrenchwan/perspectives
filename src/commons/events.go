@@ -15,15 +15,43 @@ type Event interface {
 	ProcessingTime() time.Time
 }
 
-// IsEventComingFromStructure returns true if source of e is a structure
-func IsEventComingFromStructure(e Event) bool {
-	if e == nil {
-		return false
-	} else if e.Source() == nil {
-		return false
-	} else {
-		return e.Source().GetType() == TypeStructure
-	}
+// simpleEvent is the most basic event implementation
+type simpleEvent struct {
+	// id of the event
+	id string
+	// source is the component the event comes from
+	source ModelComponent
+	// processingTime is usually the moment to process the event.
+	// For instance, on an element creation, it means the creation date of that element
+	processingTime time.Time
+}
+
+// Id returns the event id
+func (s simpleEvent) Id() string {
+	return s.id
+}
+
+// Source returns the component asking for the creation
+func (s simpleEvent) Source() ModelComponent {
+	return s.source
+}
+
+// ProcessingTime returns the time to consider as the time to process the event
+func (s simpleEvent) ProcessingTime() time.Time {
+	return s.processingTime
+}
+
+// newSimpleContent builds a new simple content for a given processing time and coming from a given source
+func newSimpleContent(moment time.Time, source ModelComponent) simpleEvent {
+	return simpleEvent{id: NewId(), processingTime: moment, source: source}
+}
+
+// eventContent encapsulates a content
+type eventContent[C any] struct {
+	// base is a simple event, we just add a content
+	simpleEvent
+	// content is the content to provide
+	content C
 }
 
 // EventProcessor processes events each time an event is received.
@@ -188,70 +216,38 @@ func NewEventInterception(original EventProcessor, interceptor EventInterceptor)
 	}
 }
 
-// EventTick notifies an event processor that time passes.
-// Some event processors may use that event to go one step further.
-type EventTick struct {
-	// id of the event
-	id string
-	// source is the structure emitting the tick
-	source ModelStructure
-	// processingTime is the tick value
-	processingTime time.Time
-}
-
-// Id returns the id of the event
-func (t EventTick) Id() string {
-	return t.id
-}
-
-// Source returns the model structure as a component
-func (t EventTick) Source() ModelComponent {
-	return t.source
-}
-
-// ProcessingTime returns the tick value
-func (t EventTick) ProcessingTime() time.Time {
-	return t.processingTime
-}
-
 // NewEventTick returns a new tick at now (truncated according to configuration)
 func NewEventTick(source ModelStructure) Event {
-	return EventTick{id: NewId(), source: source, processingTime: time.Now().Truncate(TIME_PRECISION)}
+	return simpleEvent{id: NewId(), source: source, processingTime: time.Now().Truncate(TIME_PRECISION)}
 }
 
-// NewEventTickTime returns a new tick at a given time
+// NewEventTickTime returns a new tick at moment
 func NewEventTickTime(source ModelStructure, moment time.Time) Event {
-	return EventTick{id: NewId(), source: source, processingTime: moment}
+	return simpleEvent{id: NewId(), source: source, processingTime: moment}
 }
 
-// EventLifetimeEnd ends lifetime of temporal values at end time
-type EventLifetimeEnd struct {
-	// id is the event id
-	id string
-	// source is the structure emitting the event
-	source ModelStructure
-	// end is the moment a temporal ends
-	end time.Time
+// EventLifetimeEnd defines, for active elements, when to end their lifetime
+type EventLifetimeEnd interface {
+	// a lifetime end event is an event
+	Event
+	// End returns the moment to end the lifetime
+	End() time.Time
 }
 
-// Id returns that event id
-func (l EventLifetimeEnd) Id() string {
-	return l.id
+// eventEnd uses a simple event with end lifetime = processing time
+type eventEnd struct {
+	// eventEnd is a simple event with a different use of its processing time
+	simpleEvent
 }
 
-// Source returns the structure source
-func (l EventLifetimeEnd) Source() ModelComponent {
-	return l.source
-}
-
-// ProcessingTime returns the time to end the period
-func (l EventLifetimeEnd) ProcessingTime() time.Time {
-	return l.end
+// End returns the moment to end the lifetime
+func (e eventEnd) End() time.Time {
+	return e.processingTime
 }
 
 // NewEventLifetimeEnd builds a new event to end a lifetime at given time from that structure
 func NewEventLifetimeEnd(source ModelStructure, end time.Time) EventLifetimeEnd {
-	return EventLifetimeEnd{id: NewId(), source: source, end: end.Truncate(TIME_PRECISION)}
+	return eventEnd{simpleEvent: newSimpleContent(end, source)}
 }
 
 // EventStateChanges notifies a state handler that it should set those values for those attributes.
@@ -266,42 +262,19 @@ type EventStateChanges[T StateValue] interface {
 }
 
 // timedEventStateChange is a simple EventStateChanges
-type timedEventStateChange[T StateValue] struct {
-	// id returns the id of the event
-	id string
-	// source is the structure that emitted change event
-	source ModelStructure
-	// moment is shared with all attributes and values.
-	// It does not apply for state handlers (they just store current state)
-	moment time.Time
-	// values are the values to change.
-	// It contains new values to set
-	values map[string]T
-}
-
-// Id returns that event id
-func (t timedEventStateChange[T]) Id() string {
-	return t.id
-}
-
-// Source returns the source that created the event
-func (t timedEventStateChange[T]) Source() ModelComponent {
-	return t.source
-}
-
-// ProcessingTime returns the time to apply changes
-func (t timedEventStateChange[T]) ProcessingTime() time.Time {
-	return t.moment
-}
+type simpleEventStateChange[T StateValue] eventContent[map[string]T]
 
 // Changes returns the changes to force on the processor
-func (t timedEventStateChange[T]) Changes() map[string]T {
-	return t.values
+func (t simpleEventStateChange[T]) Changes() map[string]T {
+	return t.content
 }
 
 // NewEventStateChanges defines a source setting values since given moment
 func NewEventStateChanges[T StateValue](source ModelStructure, moment time.Time, values map[string]T) EventStateChanges[T] {
-	return timedEventStateChange[T]{id: NewId(), source: source, moment: moment, values: values}
+	var result simpleEventStateChange[T]
+	result.simpleEvent = newSimpleContent(moment, source)
+	result.content = values
+	return result
 }
 
 // EventCreation defines an event to notify that content exists since processing time.
@@ -311,43 +284,6 @@ type EventCreation[T Identifiable] interface {
 	Event
 	// Content is the new content to create
 	Content() T
-}
-
-// simpleEventCreation implements an event creation by storing fields
-type simpleEventCreation[T Identifiable] struct {
-	// id is the event id
-	id string
-	// source is the creator of the content
-	source ModelComponent
-	// content is the created content
-	content T
-	// creationTime is the beginning of the lifetime (if any) for that content
-	creationTime time.Time
-}
-
-// Id returns the event id
-func (s simpleEventCreation[T]) Id() string {
-	return s.id
-}
-
-// Source returns the component asking for the creation
-func (s simpleEventCreation[T]) Source() ModelComponent {
-	return s.source
-}
-
-// Content returns the content to create
-func (s simpleEventCreation[T]) Content() T {
-	return s.content
-}
-
-// CreationTime returns the time to consider as the content creation time
-func (s simpleEventCreation[T]) ProcessingTime() time.Time {
-	return s.creationTime
-}
-
-// NewEventCreation returns a new creation event from that source, to create content at creation time
-func NewEventCreation[T Identifiable](source ModelComponent, content T, creationTime time.Time) EventCreation[T] {
-	return simpleEventCreation[T]{id: NewId(), source: source, content: content, creationTime: creationTime}
 }
 
 // EventCreateLink is a link creation event
