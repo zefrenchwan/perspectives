@@ -170,3 +170,38 @@ func NewEventInterception(original EventProcessor, interceptor EventInterceptor)
 		})
 	}
 }
+
+// StateBasedProcessor is a function that changes its state and calculates events to produce when receiving event.
+// Parameters are: state as the current state, event as the event to process.
+// Result is: events to produce (may be nil), an error if any
+type StateBasedProcessor[T StateValue] func(state StateHandler[T], event Event) ([]Event, error)
+
+// StateBasedEventProcessor uses a state to process events.
+// It is an object able to process events based on source and its own state.
+// It may change its state depending on the events, using that object as a handler.
+type StateBasedEventProcessor[T StateValue] struct {
+	// current state representation
+	*StateObject[T]
+	// calculator calculates the next events and state changes based on current state and incoming event
+	calculator StateBasedProcessor[T]
+}
+
+// Process is using the calculator based on current state
+func (s *StateBasedEventProcessor[T]) Process(event Event) ([]Event, error) {
+	return s.calculator(s.StateObject, event)
+}
+
+// NewStateBasedEventProcessor builds a new state based event processor with an initial state and a state event processor.
+// Result is a state handler, an object, and an event processor.
+func NewStateBasedEventProcessor[T StateValue](initialState map[string]T, transformer StateBasedProcessor[T]) *StateBasedEventProcessor[T] {
+	if transformer == nil {
+		return nil
+	}
+
+	object := NewStateObject[T]()
+	object.SetValues(initialState)
+	result := new(StateBasedEventProcessor[T])
+	result.StateObject = object
+	result.calculator = transformer
+	return result
+}
