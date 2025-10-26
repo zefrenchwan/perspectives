@@ -2,43 +2,43 @@ package commons
 
 import "slices"
 
-// unarySelector is the defintion of an unary selection over a Modelable.
-// It reads a variable from content (by name), then performs a test over reference and a modelable.
-// For instance:
-// to test an id,
-// reference would be expected id,
-// acceptance reads a source and compares its id wih reference.
-type unarySelector[T any] struct {
-	// variable to read from content
+// objectPredicate defines a predicate condition
+type objectPredicate[T any] struct {
+	// predicate to accept or reject an element
+	predicate func(T) bool
+	// variable name to pick in the content
 	variable string
-	// reference value for that condition.
-	// We accept the source based on that reference.
-	reference T
-	// acceptance is the match condition:
-	// we read a part of the source and compare with reference.
-	// It returns true or false if acceptance, an error if any.
-	// Returning true, nil means accepting the source.
-	acceptance func(source Modelable, reference T) (bool, error)
 }
 
-// Signature returns formal parameters for its variable
-func (s unarySelector[T]) Signature() FormalParameters {
-	return NewNamedFormalParameters([]string{s.variable})
+// Signature returns the expected parameters
+func (p objectPredicate[T]) Signature() FormalParameters {
+	return NewNamedFormalParameters([]string{p.variable})
 }
 
-// Matches uses the acceptance function as the inner condition
-func (s unarySelector[T]) Matches(c Content) (bool, error) {
-	if value, found := c.GetByName(s.variable); !found {
+// Matches returns true if this condition accepts content, or an error if any.
+func (p objectPredicate[T]) Matches(content Content) (bool, error) {
+	if content == nil {
 		return false, nil
-	} else if value == nil {
+	} else if p.predicate == nil {
 		return false, nil
-	} else if s.acceptance == nil {
+	} else if value, found := content.GetByName(p.variable); !found {
 		return false, nil
-	} else if res, err := s.acceptance(value, s.reference); err != nil {
-		return false, err
+	} else if obj, ok := value.(T); !ok {
+		return false, nil
 	} else {
-		return res, nil
+		return p.predicate(obj), nil
 	}
+}
+
+// NewFilterPredicate is a named condition for a given predicate.
+// It accepts a predicate on any type (hence the type parameter).
+// It applies on variables only based on a given predicate.
+func NewFilterPredicate[T any](variable string, predicate func(T) bool) Condition {
+	if predicate == nil {
+		return nil
+	}
+
+	return objectPredicate[T]{variable: variable, predicate: predicate}
 }
 
 // localOperatorSelector defines  a condition to deal with operators.
@@ -82,44 +82,27 @@ func (l localOperatorSelector[T]) Matches(c Content) (bool, error) {
 	}
 }
 
-// acceptsModelableByid returns true if modelable is identifiable with that id, false otherwise
-func acceptsModelableByid(source Modelable, reference string) (bool, error) {
-	if value, ok := source.(Identifiable); !ok {
-		return false, nil
-	} else if value == nil {
-		return false, nil
-	} else {
-		return value.Id() == reference, nil
-	}
-}
-
 // NewFilterById returns a new condition for a variable to have a given id.
 // If variable = x and expected id is "id", then condition is x.id == "id".
 func NewFilterById(variable string, expectedId string) Condition {
-	var result unarySelector[string]
-	result.variable = variable
-	result.reference = expectedId
-	result.acceptance = acceptsModelableByid
-	return result
-}
-
-// acceptModelableByTypes accepts source if it is not nil and its type is in reference (as a set)
-func acceptModelableByTypes(source Modelable, reference []ModelableType) (bool, error) {
-	if source == nil || len(reference) == 0 {
-		return false, nil
-	} else {
-		currentType := source.GetType()
-		return slices.ContainsFunc(reference, func(a ModelableType) bool { return a == currentType }), nil
-	}
+	return NewFilterPredicate(variable, func(e Modelable) bool {
+		if e == nil {
+			return false
+		} else if value, ok := e.(Identifiable); !ok {
+			return false
+		} else if value == nil {
+			return false
+		} else {
+			return value.Id() == expectedId
+		}
+	})
 }
 
 // NewFilterByTypes creates a new condition for a variable to have its type in expected types
 func NewFilterByTypes(variable string, expectedTypes []ModelableType) Condition {
-	var result unarySelector[[]ModelableType]
-	result.variable = variable
-	result.reference = SliceDeduplicate(expectedTypes)
-	result.acceptance = acceptModelableByTypes
-	return result
+	return NewFilterPredicate(variable, func(e Modelable) bool {
+		return e != nil && len(expectedTypes) != 0 && slices.Contains(expectedTypes, e.GetType())
+	})
 }
 
 // activePeriodExtractor extracts the active period of m, if any.

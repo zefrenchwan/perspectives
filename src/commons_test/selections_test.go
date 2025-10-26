@@ -7,6 +7,36 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
+func TestFilterPredicate(t *testing.T) {
+	objectFn := func(a commons.Modelable) bool { return a.GetType() == commons.TypeObject }
+	objectPredicate := commons.NewFilterPredicate("x", objectFn)
+	s := DummyStructure{id: "structure"}
+	o := DummyObject{id: "object"}
+	contentStructure := commons.NewNamedContent("x", s)
+	contentObject := commons.NewNamedContent("x", o)
+	contentY := commons.NewNamedContent("y", o)
+
+	if variables := objectPredicate.Signature().Variables(); len(variables) != 1 {
+		t.Fail()
+	} else if variables[0] != "x" {
+		t.Fail()
+	} else if m, err := objectPredicate.Matches(contentStructure); err != nil {
+		t.Fail()
+	} else if m {
+		t.Log("structure is not an object, predicate does not filter")
+		t.Fail()
+	} else if m, err := objectPredicate.Matches(contentObject); err != nil {
+		t.Fail()
+	} else if !m {
+		t.Log("object should match")
+		t.Fail()
+	} else if m, err := objectPredicate.Matches(contentY); err != nil {
+		t.Fail()
+	} else if m {
+		t.Fail()
+	}
+}
+
 func TestFilterById(t *testing.T) {
 	condition := commons.NewFilterById("x", "id")
 

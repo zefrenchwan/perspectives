@@ -1,7 +1,6 @@
 package commons
 
 import (
-	"iter"
 	"maps"
 )
 
@@ -67,15 +66,6 @@ type GenericContent[T any] interface {
 
 // Content is the most general use of a generic content: it applies to the elements of a model
 type Content = GenericContent[Modelable]
-
-// ContentLoader loads content from a source.
-// Implementations will map a source to content given expected names or positions.
-// Generic option (as ContentLoader[T]) is so far useless because conditions and actions expect content.
-type ContentLoader interface {
-	// Load produces a content iterator following load expectations.
-	// For instance, some loads come by name, expecting variables or named values for states
-	Load() iter.Seq[Content]
-}
 
 // simpleContainer defines a basic implementation
 // as an array for positional elements

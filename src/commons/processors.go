@@ -8,6 +8,14 @@ type EventProcessor interface {
 	Process(notified Event) ([]Event, error)
 }
 
+// EventObjectProcessor just makes an event processor AND an object
+type EventObjectProcessor interface {
+	// it is an object
+	ModelObject
+	// it is an event processor
+	EventProcessor
+}
+
 // functionalEventProcessor is the tool to convert a function to an event processor
 type functionalEventProcessor struct {
 	// id of the current functional processor
