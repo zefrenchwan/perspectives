@@ -71,12 +71,12 @@ func applyConstraintStateEvent(event Event, object ModelObject) bool {
 	return counter != 0
 }
 
-// ApplyStateActivityConstraintsOnEvent applies event on object to change its state or lifetime if possible.
+// OnEventApplyConstraintsToObject applies event on object to change its state or lifetime if possible.
 // It is a constraint: an object has to follow some events without being able to negociate them.
 // Result is true if event should be processed by object too, false otherwise.
 // For instance, a ending lifetime shuts down the object no matter what, so no need to transmit.
 // This is default implementation.
-func ApplyStateActivityConstraintsOnEvent(event Event, object ModelObject) bool {
+func OnEventApplyConstraintsToObject(event Event, object ModelObject) bool {
 	if event == nil {
 		return false
 	} else if object == nil {

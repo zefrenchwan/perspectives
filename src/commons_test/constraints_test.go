@@ -14,7 +14,7 @@ func TestConstraintOnStateObject(t *testing.T) {
 	// test event change
 	obj.SetValue("age", 10)
 	event := commons.NewEventStateChanges(structure, time.Now(), map[string]int{"age": 100})
-	if propagate := commons.ApplyStateActivityConstraintsOnEvent(event, obj); propagate {
+	if propagate := commons.OnEventApplyConstraintsToObject(event, obj); propagate {
 		t.Fail()
 	} else if v, found := obj.GetValue("age"); !found || v != 100 {
 		t.Fail()
@@ -25,7 +25,7 @@ func TestConstraintOnStateObject(t *testing.T) {
 	// test period change
 	now := time.Now().Truncate(time.Second)
 	end := commons.NewEventLifetimeEnd(structure, now)
-	if propagate := commons.ApplyStateActivityConstraintsOnEvent(end, obj); propagate {
+	if propagate := commons.OnEventApplyConstraintsToObject(end, obj); propagate {
 		t.Fail()
 	} else if !obj.ActivePeriod().Equals(commons.NewPeriodUntil(now, false)) {
 		t.Fail()
@@ -40,7 +40,7 @@ func TestConstraintOnTemporalStateObject(t *testing.T) {
 	obj.SetValueDuringPeriod("age", 10, commons.NewFullPeriod())
 	now := time.Now().Truncate(time.Second)
 	event := commons.NewEventStateChanges(structure, now, map[string]int{"age": 100})
-	if propagate := commons.ApplyStateActivityConstraintsOnEvent(event, obj); propagate {
+	if propagate := commons.OnEventApplyConstraintsToObject(event, obj); propagate {
 		t.Fail()
 	} else if values, found := obj.GetValue("age", true); !found || len(values) != 2 {
 		t.Fail()
@@ -55,7 +55,7 @@ func TestConstraintOnTemporalStateObject(t *testing.T) {
 	// test period change
 	obj = commons.NewTemporalStateObject[int](commons.NewFullPeriod())
 	end := commons.NewEventLifetimeEnd(structure, now)
-	if propagate := commons.ApplyStateActivityConstraintsOnEvent(end, obj); propagate {
+	if propagate := commons.OnEventApplyConstraintsToObject(end, obj); propagate {
 		t.Fail()
 	} else if !obj.ActivePeriod().Equals(commons.NewPeriodUntil(now, false)) {
 		t.Fail()

@@ -9,6 +9,8 @@ import (
 )
 
 type DummyObserver struct {
+	// to implement identifiable
+	id string
 	// counter of incoming events
 	Incoming int
 	// counter of outgoing events
@@ -19,7 +21,11 @@ type DummyObserver struct {
 	LastSource commons.Identifiable
 }
 
-func (o *DummyObserver) OnEventProcessing(source commons.Identifiable, in commons.Event, out []commons.Event, e error) {
+func (o *DummyObserver) Id() string {
+	return o.id
+}
+
+func (o *DummyObserver) OnEventProcessing(source commons.EventProcessor, in commons.Event, out []commons.Event, e error) {
 	o.Incoming += 1
 	if e != nil {
 		o.Errors++
@@ -29,15 +35,7 @@ func (o *DummyObserver) OnEventProcessing(source commons.Identifiable, in common
 	o.LastSource = source
 }
 
-type DummyInterceptor struct {
-	Result commons.Event
-}
-
-func (i DummyInterceptor) OnRecipientProcessing(event commons.Event, recipient commons.EventProcessor) ([]commons.Event, error) {
-	return []commons.Event{i.Result}, nil
-}
-
-func TestEventObservableProcessor(t *testing.T) {
+func TestEventProcessorObservation(t *testing.T) {
 
 	structure := DummyStructure{id: "structure"}
 	source := commons.NewEventLifetimeEnd(structure, time.Now())
@@ -48,12 +46,11 @@ func TestEventObservableProcessor(t *testing.T) {
 	}
 
 	processor := commons.NewEventProcessor(mapper)
-	observer := commons.NewEventObservableProcessor(processor)
 
-	counter := &DummyObserver{}
-	observer.AddObserver(counter)
+	counter := &DummyObserver{id: "observer"}
+	processor.AddObserver(counter)
 
-	if values, err := observer.Process(source); err != nil {
+	if values, err := processor.Process(source); err != nil {
 		t.Fail()
 	} else if len(values) != 1 {
 		t.Fail()
@@ -65,7 +62,27 @@ func TestEventObservableProcessor(t *testing.T) {
 		t.Fail()
 	} else if counter.Outgoing != 1 {
 		t.Fail()
-	} else if counter.LastSource.Id() != observer.Id() {
+	} else if counter.LastSource.Id() != processor.Id() {
+		t.Fail()
+	}
+
+	if obs := processor.Observers(); len(obs) != 1 {
+		t.Fail()
+	} else if obs[0].Id() != counter.Id() {
+		t.Fail()
+	}
+
+	processor.RemoveObservers(func(eo commons.EventObserver) bool { return eo.Id() != counter.id })
+	if obs := processor.Observers(); len(obs) != 1 {
+		t.Log("should keep observers intact because we EXCLUDE counter")
+		t.Fail()
+	} else if obs[0].Id() != counter.Id() {
+		t.Fail()
+	}
+
+	processor.RemoveObservers(func(eo commons.EventObserver) bool { return eo.Id() == counter.id })
+	if obs := processor.Observers(); len(obs) != 0 {
+		t.Log("should remove counter because of the predicate")
 		t.Fail()
 	}
 }
@@ -96,26 +113,6 @@ func TestEventRedirection(t *testing.T) {
 	mapper = commons.NewEventRedirection(catcher, processor, func(e commons.Event) bool { return false })
 
 	if _, err := mapper.Process(event); err == nil {
-		t.Fail()
-	}
-}
-
-func TestEventInterception(t *testing.T) {
-	structure := DummyStructure{}
-	source := commons.NewEventTick(structure)
-	replace := commons.NewEventLifetimeEnd(structure, time.Now())
-
-	mapper := commons.NewEventProcessor(func(e commons.Event) ([]commons.Event, error) { return []commons.Event{source}, nil })
-	replacer := commons.NewEventInterceptor(func(e commons.Event, p commons.EventProcessor) ([]commons.Event, error) {
-		return []commons.Event{replace}, nil
-	})
-
-	interceptor := commons.NewEventInterception(mapper, replacer)
-	if result, err := interceptor.Process(nil); err != nil {
-		t.Fail()
-	} else if len(result) != 1 {
-		t.Fail()
-	} else if result[0].Id() != replace.Id() {
 		t.Fail()
 	}
 }

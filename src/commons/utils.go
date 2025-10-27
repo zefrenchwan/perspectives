@@ -134,3 +134,15 @@ func SlicesContainsAllFunc[T any](base []T, other []T, equals func(a, b T) bool)
 
 	return true
 }
+
+// SlicesFilter returns a new slice containing only  elements that match the predicate
+func SlicesFilter[T any](base []T, keepPredicate func(T) bool) []T {
+	var result []T
+	for _, element := range base {
+		if keepPredicate == nil || keepPredicate(element) {
+			result = append(result, element)
+		}
+	}
+
+	return result
+}
