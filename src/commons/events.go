@@ -21,6 +21,8 @@ type Message interface {
 	Event
 	// Destination returns the destination of the message
 	Destination() EventProcessor
+	// Content returns the event to process for destination
+	Content() Event
 }
 
 // simpleEvent is the most basic event implementation
@@ -49,8 +51,8 @@ func (s simpleEvent) ProcessingTime() time.Time {
 	return s.processingTime
 }
 
-// newSimpleContent builds a new simple content for a given processing time and coming from a given source
-func newSimpleContent(moment time.Time, source ModelComponent) simpleEvent {
+// newSimpleEvent builds a new simple content for a given processing time and coming from a given source
+func newSimpleEvent(moment time.Time, source ModelComponent) simpleEvent {
 	return simpleEvent{id: NewId(), processingTime: moment, source: source}
 }
 
@@ -60,6 +62,8 @@ type simpleMessage struct {
 	Event
 	// recipient for that message
 	recipient EventProcessor
+	// payload is the content to process by recipient
+	payload Event
 }
 
 // Destination returns the recipient for that message
@@ -67,15 +71,23 @@ func (m simpleMessage) Destination() EventProcessor {
 	return m.recipient
 }
 
-// NewMessage builds a new message for an event to reach its destination
+// Content returns the payload as the event to process by destination
+func (m simpleMessage) Content() Event {
+	return m.payload
+}
+
+// NewMessage builds a new message for an event to reach its destination.
+// Result has a different id from base (it is an event per se),
+// but the same source and same processing time as base.
 func NewMessage(base Event, destination EventProcessor) Message {
 	if base == nil {
 		return nil
 	}
 
 	var result simpleMessage
-	result.Event = base
+	result.Event = newSimpleEvent(base.ProcessingTime(), base.Source())
 	result.recipient = destination
+	result.payload = base
 	return result
 }
 
@@ -118,7 +130,7 @@ func (e eventEnd) End() time.Time {
 
 // NewEventLifetimeEnd builds a new event to end a lifetime at given time from that structure
 func NewEventLifetimeEnd(source ModelStructure, end time.Time) EventLifetimeEnd {
-	return eventEnd{simpleEvent: newSimpleContent(end, source)}
+	return eventEnd{simpleEvent: newSimpleEvent(end, source)}
 }
 
 // EventStateChanges notifies a state handler that it should set those values for those attributes.
@@ -143,7 +155,7 @@ func (t simpleEventStateChange[T]) Changes() map[string]T {
 // NewEventStateChanges defines a source setting values since given moment
 func NewEventStateChanges[T StateValue](source ModelStructure, moment time.Time, values map[string]T) EventStateChanges[T] {
 	var result simpleEventStateChange[T]
-	result.simpleEvent = newSimpleContent(moment, source)
+	result.simpleEvent = newSimpleEvent(moment, source)
 	result.content = values
 	return result
 }
@@ -153,9 +165,19 @@ func NewEventStateChanges[T StateValue](source ModelStructure, moment time.Time,
 type EventCreation[T Identifiable] interface {
 	// creating elements is an event
 	Event
-	// Content is the new content to create
-	Content() T
+	// Creation is the new content to create
+	Creation() T
 }
 
-// EventCreateLink is a link creation event
-type EventCreateLink = EventCreation[Link]
+// simpleEventCreation reuses event containers
+type simpleEventCreation[T Identifiable] eventContent[T]
+
+// Creation returns the element to create
+func (s simpleEventCreation[T]) Creation() T {
+	return s.content
+}
+
+// NewEventCreation builds an event to create content
+func NewEventCreation[T Identifiable](content T) EventCreation[T] {
+	return simpleEventCreation[T]{content: content}
+}

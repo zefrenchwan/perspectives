@@ -24,9 +24,13 @@ func TestEventMessage(t *testing.T) {
 	processor := commons.NewEventProcessor(func(e commons.Event) ([]commons.Event, error) { return nil, nil })
 	message := commons.NewMessage(tick, processor)
 
-	if message.Source().Id() != structure.id {
+	if message.Id() == tick.Id() {
+		t.Fail()
+	} else if message.Source().Id() != structure.id {
 		t.Fail()
 	} else if message.Destination().Id() != processor.Id() {
+		t.Fail()
+	} else if message.Content().Id() != tick.Id() {
 		t.Fail()
 	}
 }
