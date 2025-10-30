@@ -8,12 +8,11 @@ import (
 )
 
 func TestConstraintOnStateObject(t *testing.T) {
-	structure := DummyStructure{}
 	obj := commons.NewStateObject[int]()
 
 	// test event change
 	obj.SetValue("age", 10)
-	event := commons.NewEventStateChanges(structure, time.Now(), map[string]int{"age": 100})
+	event := commons.NewEventStateChanges(time.Now(), map[string]int{"age": 100})
 	if propagate := commons.OnEventApplyConstraintsToObject(event, obj); propagate {
 		t.Fail()
 	} else if v, found := obj.GetValue("age"); !found || v != 100 {
@@ -24,7 +23,7 @@ func TestConstraintOnStateObject(t *testing.T) {
 
 	// test period change
 	now := time.Now().Truncate(time.Second)
-	end := commons.NewEventLifetimeEnd(structure, now)
+	end := commons.NewEventLifetimeEnd(now)
 	if propagate := commons.OnEventApplyConstraintsToObject(end, obj); propagate {
 		t.Fail()
 	} else if !obj.ActivePeriod().Equals(commons.NewPeriodUntil(now, false)) {
@@ -33,13 +32,12 @@ func TestConstraintOnStateObject(t *testing.T) {
 }
 
 func TestConstraintOnTemporalStateObject(t *testing.T) {
-	structure := DummyStructure{}
 	obj := commons.NewTemporalStateObject[int](commons.NewFullPeriod())
 
 	// test event change
 	obj.SetValueDuringPeriod("age", 10, commons.NewFullPeriod())
 	now := time.Now().Truncate(time.Second)
-	event := commons.NewEventStateChanges(structure, now, map[string]int{"age": 100})
+	event := commons.NewEventStateChanges(now, map[string]int{"age": 100})
 	if propagate := commons.OnEventApplyConstraintsToObject(event, obj); propagate {
 		t.Fail()
 	} else if values, found := obj.GetValue("age", true); !found || len(values) != 2 {
@@ -54,7 +52,7 @@ func TestConstraintOnTemporalStateObject(t *testing.T) {
 
 	// test period change
 	obj = commons.NewTemporalStateObject[int](commons.NewFullPeriod())
-	end := commons.NewEventLifetimeEnd(structure, now)
+	end := commons.NewEventLifetimeEnd(now)
 	if propagate := commons.OnEventApplyConstraintsToObject(end, obj); propagate {
 		t.Fail()
 	} else if !obj.ActivePeriod().Equals(commons.NewPeriodUntil(now, false)) {
