@@ -287,8 +287,8 @@ func NewLocalAction[V Identifiable, E any](action func(source V, destination V, 
 	return simpleLocalAction[V, E](action)
 }
 
-// DynamicGraphExecuteAction executes an action in a graph based on an iterator
-func DynamicGraphExecuteAction[V Identifiable, E any](iterator DynamicGraphWalker[V, E], action LocalAction[V, E]) error {
+// DynamicGraphSpreadAction executes an action in a graph based on an iterator
+func DynamicGraphSpreadAction[V Identifiable, E any](iterator DynamicGraphWalker[V, E], action LocalAction[V, E]) error {
 	if iterator == nil || action == nil {
 		return nil
 	}
@@ -300,6 +300,18 @@ func DynamicGraphExecuteAction[V Identifiable, E any](iterator DynamicGraphWalke
 		edge := iterator.SourceEdge()
 
 		if err := action.Apply(source, position, edge); err != nil {
+			allErrors = errors.Join(allErrors, err)
+		}
+	}
+
+	return allErrors
+}
+
+// DynamicGraphAction executes an action from source to its direct neighbors
+func DynamicGraphAction[V Identifiable, E any](graph DynamicGraph[V, E], source V, moment time.Time, action LocalAction[V, E]) error {
+	var allErrors error
+	for neighor, edge := range graph.Neighbors(source, moment) {
+		if err := action.Apply(source, neighor, edge); err != nil {
 			allErrors = errors.Join(allErrors, err)
 		}
 	}

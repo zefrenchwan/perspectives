@@ -223,7 +223,7 @@ func TestDynamicWalker(t *testing.T) {
 	}
 }
 
-func TestDynamicAction(t *testing.T) {
+func TestDynamicIteratorAction(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	period := commons.NewPeriodSince(now, true)
 	source := commons.NewStateObject[int]()
@@ -244,8 +244,9 @@ func TestDynamicAction(t *testing.T) {
 		return nil
 	}
 
+	// apply on the whole iteration
 	iterator := commons.NewDynamicGraphWalker(graph, source, now)
-	if err := commons.DynamicGraphExecuteAction(iterator, commons.NewLocalAction(processor5000)); err != nil {
+	if err := commons.DynamicGraphSpreadAction(iterator, commons.NewLocalAction(processor5000)); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value, found := sink.GetValue("validated"); !found {
@@ -260,5 +261,56 @@ func TestDynamicAction(t *testing.T) {
 			t.Fail()
 		}
 	}
+}
 
+func TestDynamicApply(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	period := commons.NewPeriodSince(now, true)
+	source := commons.NewStateObject[int]()
+	dest := commons.NewStateObject[int]()
+	other := commons.NewStateObject[int]()
+	sink := commons.NewStateObject[int]()
+	graph := commons.NewDynamicGraph[*commons.StateObject[int], int]()
+	graph.Relate(source, dest, 5, period)
+	graph.Relate(source, other, 50, period)
+	graph.Relate(dest, sink, 500, period)
+	graph.Relate(other, sink, 5000, period)
+
+	processor5000 := func(source, destination *commons.StateObject[int], edge int) error {
+		if edge >= 5000 {
+			destination.SetValue("validated", 100)
+		}
+
+		return nil
+	}
+
+	// apply locally: should change nothing from source
+	others := []*commons.StateObject[int]{source, dest, other, sink}
+	if err := commons.DynamicGraphAction(graph, source, now, commons.NewLocalAction(processor5000)); err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	for _, element := range others {
+		if _, found := element.GetValue("validated"); found {
+			t.Fail()
+		}
+	}
+
+	// but it should work on other to change sink
+	if err := commons.DynamicGraphAction(graph, other, now, commons.NewLocalAction(processor5000)); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if value, found := sink.GetValue("validated"); !found {
+		t.Fail()
+	} else if value != 100 {
+		t.Fail()
+	}
+
+	others = []*commons.StateObject[int]{source, dest, other}
+	for _, element := range others {
+		if _, found := element.GetValue("validated"); found {
+			t.Fail()
+		}
+	}
 }
