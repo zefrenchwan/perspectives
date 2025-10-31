@@ -10,7 +10,7 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-func TestTemporalGraph(t *testing.T) {
+func TestDynamicGraph(t *testing.T) {
 	source := commons.NewModelObject()
 	dest := commons.NewModelObject()
 	sink := commons.NewModelObject()
@@ -115,7 +115,7 @@ func TestTemporalGraph(t *testing.T) {
 	}
 }
 
-func TestTemporalWalker(t *testing.T) {
+func TestDynamicWalker(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	before := now.AddDate(-10, 0, 0)
 	period := commons.NewPeriodSince(now, true)
@@ -223,40 +223,7 @@ func TestTemporalWalker(t *testing.T) {
 	}
 }
 
-func TestTemporalQuery(t *testing.T) {
-	now := time.Now().Truncate(time.Second)
-	period := commons.NewPeriodSince(now, true)
-	source := DummyIdBasedImplementation{id: "0"}
-	dest := DummyIdBasedImplementation{id: "1"}
-	other := DummyIdBasedImplementation{id: "2"}
-	sink := DummyIdBasedImplementation{id: "3"}
-	graph := commons.NewDynamicGraph[DummyIdBasedImplementation, int]()
-	graph.Relate(source, dest, 5, period)
-	graph.Relate(source, other, 50, period)
-	graph.Relate(dest, sink, 500, period)
-	graph.Relate(other, sink, 5000, period)
-
-	acceptor5000 := func(a, b DummyIdBasedImplementation, edge int) bool {
-		return edge >= 5000
-	}
-
-	// test on last part of the graph
-	if value := maps.Collect(commons.DynamicGraphLocalQuery(graph, source, now, acceptor5000)); len(value) != 1 {
-		t.Log("failed edge predicate")
-		t.Fail()
-	} else if value[other] != sink {
-		t.Log("failed edge predicate")
-		t.Fail()
-	}
-
-	// test on false
-	if value := maps.Collect(commons.DynamicGraphLocalQuery(graph, source, now, func(a, b DummyIdBasedImplementation, v int) bool { return false })); len(value) != 0 {
-		t.Log("failed false predicate")
-		t.Fail()
-	}
-}
-
-func TestTemporalAction(t *testing.T) {
+func TestDynamicAction(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	period := commons.NewPeriodSince(now, true)
 	source := commons.NewStateObject[int]()
@@ -269,22 +236,29 @@ func TestTemporalAction(t *testing.T) {
 	graph.Relate(dest, sink, 500, period)
 	graph.Relate(other, sink, 5000, period)
 
-	acceptor5000 := func(a, b *commons.StateObject[int], edge int) bool {
-		return edge >= 5000
-	}
+	processor5000 := func(source, destination *commons.StateObject[int], edge int) error {
+		if edge >= 5000 {
+			destination.SetValue("validated", 100)
+		}
 
-	processor := func(o *commons.StateObject[int]) error {
-		o.SetValue("validated", 100)
 		return nil
 	}
 
-	if err := commons.DynamicGraphLocalAction(graph, source, now, acceptor5000, processor); err != nil {
+	iterator := commons.NewDynamicGraphWalker(graph, source, now)
+	if err := commons.DynamicGraphExecuteAction(iterator, commons.NewLocalAction(processor5000)); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value, found := sink.GetValue("validated"); !found {
 		t.Fail()
 	} else if value != 100 {
 		t.Fail()
+	}
+
+	others := []*commons.StateObject[int]{source, dest, other}
+	for _, element := range others {
+		if _, found := element.GetValue("validated"); found {
+			t.Fail()
+		}
 	}
 
 }

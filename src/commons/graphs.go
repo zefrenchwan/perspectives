@@ -268,69 +268,41 @@ func NewDynamicGraphWalker[V Identifiable, E any](base DynamicGraph[V, E], start
 	return result
 }
 
-// DynamicGraphLocalQuery finds all source -> destination values matching a predicate
-func DynamicGraphLocalQuery[V Identifiable, E any](
-	graph DynamicGraph[V, E],
-	startingPoint V,
-	processingTime time.Time,
-	accepts func(destination, source V, edge E) bool,
-) iter.Seq2[V, V] {
-	if graph == nil || accepts == nil {
-		return nil
-	}
-
-	walker := NewDynamicGraphWalker(graph, startingPoint, processingTime)
-	seen := make(map[string]bool)
-	return func(yield func(V, V) bool) {
-		for walker.Next() {
-			current := walker.Position()
-			previous := walker.Source()
-			edge := walker.SourceEdge()
-			id := NewCompositeId(previous, current)
-			if seen[id] {
-				continue
-			} else {
-				seen[id] = true
-			}
-
-			if accepts(current, previous, edge) {
-				if !yield(previous, current) {
-					return
-				}
-			}
-		}
-	}
+// LocalAction in a graph may apply during a walk.
+// For instance, change destination based on source and edge.
+type LocalAction[V Identifiable, E any] interface {
+	Apply(source V, destination V, edge E) error
 }
 
-// DynamicGraphLocalAction executes ONCE an action if condition matches
-func DynamicGraphLocalAction[V Identifiable, E any](
-	graph DynamicGraph[V, E], // current graph to find elements on
-	startingPoint V, // startingPoint of walking
-	processingTime time.Time, // processingTime to find links
-	accepts func(destination, source V, edge E) bool, // accepts (based on destination, source and edge)
-	action func(destination V) error, // action is applied ONCE per destination if accepts accepted the link
-) error {
-	if graph == nil || accepts == nil || action == nil {
+// simpleLocalAction is a simple action, with no state (as a function)
+type simpleLocalAction[V Identifiable, E any] func(source V, destination V, edge E) error
+
+// Apply just calls s
+func (s simpleLocalAction[V, E]) Apply(source, destination V, edge E) error {
+	return s(source, destination, edge)
+}
+
+// NewLocalAction builds a local action to apply during a walk
+func NewLocalAction[V Identifiable, E any](action func(source V, destination V, edge E) error) LocalAction[V, E] {
+	return simpleLocalAction[V, E](action)
+}
+
+// DynamicGraphExecuteAction executes an action in a graph based on an iterator
+func DynamicGraphExecuteAction[V Identifiable, E any](iterator DynamicGraphWalker[V, E], action LocalAction[V, E]) error {
+	if iterator == nil || action == nil {
 		return nil
 	}
 
-	var alLErrors error
-	walker := NewDynamicGraphWalker(graph, startingPoint, processingTime)
-	processed := make(map[string]bool)
-	for walker.Next() {
-		current := walker.Position()
-		previous := walker.Source()
-		edge := walker.SourceEdge()
-		if accepts(current, previous, edge) {
-			if !processed[current.Id()] {
-				if err := action(current); err != nil {
-					alLErrors = errors.Join(alLErrors, err)
-				}
-			} else {
-				processed[current.Id()] = true
-			}
+	var allErrors error
+	for iterator.Next() {
+		source := iterator.Source()
+		position := iterator.Position()
+		edge := iterator.SourceEdge()
+
+		if err := action.Apply(source, position, edge); err != nil {
+			allErrors = errors.Join(allErrors, err)
 		}
 	}
 
-	return alLErrors
+	return allErrors
 }
