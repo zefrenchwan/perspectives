@@ -17,7 +17,7 @@ func TestDynamicGraph(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	before := now.AddDate(-1, 0, 0)
 	after := now.AddDate(10, 0, 0)
-	graph := commons.NewDynamicGraph[commons.ModelObject, int]()
+	graph := commons.NewDynamicConnectionGraph[commons.ModelObject, int]()
 
 	// test empty => iterate but nothing (test if ends)
 	if result := maps.Collect(graph.Neighbors(source, now)); len(result) != 0 {
@@ -27,7 +27,7 @@ func TestDynamicGraph(t *testing.T) {
 	}
 
 	// test one element at different times
-	graph.Relate(source, dest, 10, commons.NewPeriodSince(now, true))
+	graph.Connect(source, dest, 10, commons.NewPeriodSince(now, true))
 	if result := maps.Collect(graph.Neighbors(source, now)); len(result) != 1 {
 		t.Fail()
 	} else if result[dest] != 10 {
@@ -57,8 +57,8 @@ func TestDynamicGraph(t *testing.T) {
 	}
 
 	// test with two elements
-	graph.Relate(source, dest, 10, commons.NewPeriodSince(before, true))
-	graph.Relate(source, sink, 100, commons.NewPeriodSince(now, true))
+	graph.Connect(source, dest, 10, commons.NewPeriodSince(before, true))
+	graph.Connect(source, sink, 100, commons.NewPeriodSince(now, true))
 	if result := maps.Collect(graph.Neighbors(source, now)); len(result) != 2 {
 		t.Fail()
 	} else if result[dest] != 10 {
@@ -85,8 +85,8 @@ func TestDynamicGraph(t *testing.T) {
 	}
 
 	// test time management
-	graph = commons.NewDynamicGraph[commons.ModelObject, int]()
-	graph.Relate(source, dest, 10, commons.NewFinitePeriod(before, now, true, false))
+	graph = commons.NewDynamicConnectionGraph[commons.ModelObject, int]()
+	graph.Connect(source, dest, 10, commons.NewFinitePeriod(before, now, true, false))
 	if result := maps.Collect(graph.Neighbors(source, before)); len(result) != 1 {
 		t.Fail()
 	} else if result[dest] != 10 {
@@ -104,7 +104,7 @@ func TestDynamicGraph(t *testing.T) {
 	}
 
 	// Test set
-	graph = commons.NewDynamicGraph[commons.ModelObject, int]()
+	graph = commons.NewDynamicConnectionGraph[commons.ModelObject, int]()
 	graph.Set(source)
 	if result := maps.Collect(graph.Neighbors(source, before)); len(result) != 0 {
 		t.Fail()
@@ -123,11 +123,11 @@ func TestDynamicWalker(t *testing.T) {
 	dest := DummyIdBasedImplementation{id: "1"}
 	other := DummyIdBasedImplementation{id: "2"}
 	sink := DummyIdBasedImplementation{id: "3"}
-	graph := commons.NewDynamicGraph[DummyIdBasedImplementation, int]()
-	graph.Relate(source, dest, 5, period)
-	graph.Relate(source, other, 50, period)
-	graph.Relate(dest, sink, 500, period)
-	graph.Relate(other, sink, 5000, period)
+	graph := commons.NewDynamicConnectionGraph[DummyIdBasedImplementation, int]()
+	graph.Connect(source, dest, 5, period)
+	graph.Connect(source, other, 50, period)
+	graph.Connect(dest, sink, 500, period)
+	graph.Connect(other, sink, 5000, period)
 
 	// test if neighbors work NOW
 	if values := maps.Collect(graph.Neighbors(source, now)); len(values) != 2 {
@@ -223,6 +223,37 @@ func TestDynamicWalker(t *testing.T) {
 	}
 }
 
+func TestDynamicWalkerCycle(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	period := commons.NewPeriodSince(now, true)
+	source := DummyIdBasedImplementation{id: "0"}
+	dest := DummyIdBasedImplementation{id: "1"}
+	other := DummyIdBasedImplementation{id: "2"}
+	graph := commons.NewDynamicConnectionGraph[DummyIdBasedImplementation, int]()
+	graph.Connect(source, dest, 5, period)
+	graph.Connect(dest, other, 50, period)
+	graph.Connect(other, source, 500, period)
+
+	var values []string
+	walker := commons.NewDynamicGraphWalker(graph, source, now)
+	for walker.Next() {
+		composite := walker.Source().Id() + ";" + walker.Position().Id() + ";" + strconv.Itoa(walker.SourceEdge())
+		values = append(values, composite)
+	}
+
+	expected := []string{"0;1;5", "1;2;50", "2;0;500"}
+	slices.Sort(expected)
+	slices.Sort(values)
+
+	if len(values) != len(expected) {
+		t.Log("failed cycle walk")
+		t.Fail()
+	} else if slices.Compare(expected, values) != 0 {
+		t.Log("failed cycle walk")
+		t.Fail()
+	}
+}
+
 func TestDynamicIteratorAction(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	period := commons.NewPeriodSince(now, true)
@@ -230,11 +261,11 @@ func TestDynamicIteratorAction(t *testing.T) {
 	dest := commons.NewStateObject[int]()
 	other := commons.NewStateObject[int]()
 	sink := commons.NewStateObject[int]()
-	graph := commons.NewDynamicGraph[*commons.StateObject[int], int]()
-	graph.Relate(source, dest, 5, period)
-	graph.Relate(source, other, 50, period)
-	graph.Relate(dest, sink, 500, period)
-	graph.Relate(other, sink, 5000, period)
+	graph := commons.NewDynamicConnectionGraph[*commons.StateObject[int], int]()
+	graph.Connect(source, dest, 5, period)
+	graph.Connect(source, other, 50, period)
+	graph.Connect(dest, sink, 500, period)
+	graph.Connect(other, sink, 5000, period)
 
 	processor5000 := func(source, destination *commons.StateObject[int], edge int) error {
 		if edge >= 5000 {
@@ -244,9 +275,8 @@ func TestDynamicIteratorAction(t *testing.T) {
 		return nil
 	}
 
-	// apply on the whole iteration
-	iterator := commons.NewDynamicGraphWalker(graph, source, now)
-	if err := commons.DynamicGraphSpreadAction(iterator, commons.NewLocalAction(processor5000)); err != nil {
+	// apply on the whole graph
+	if err := commons.DynamicGraphSpreadAction(graph, source, now, commons.NewLocalAction(processor5000)); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else if value, found := sink.GetValue("validated"); !found {
@@ -270,11 +300,11 @@ func TestDynamicApply(t *testing.T) {
 	dest := commons.NewStateObject[int]()
 	other := commons.NewStateObject[int]()
 	sink := commons.NewStateObject[int]()
-	graph := commons.NewDynamicGraph[*commons.StateObject[int], int]()
-	graph.Relate(source, dest, 5, period)
-	graph.Relate(source, other, 50, period)
-	graph.Relate(dest, sink, 500, period)
-	graph.Relate(other, sink, 5000, period)
+	graph := commons.NewDynamicConnectionGraph[*commons.StateObject[int], int]()
+	graph.Connect(source, dest, 5, period)
+	graph.Connect(source, other, 50, period)
+	graph.Connect(dest, sink, 500, period)
+	graph.Connect(other, sink, 5000, period)
 
 	processor5000 := func(source, destination *commons.StateObject[int], edge int) error {
 		if edge >= 5000 {

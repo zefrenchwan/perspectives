@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// DynamicGraphWalker is a walkthrough run (using a BFS)
-type DynamicGraphWalker[V Identifiable, E any] interface {
+// GraphWalker is a walkthrough run (using a BFS)
+type GraphWalker[V Identifiable, E any] interface {
 	// Position is the current vertex
 	Position() V
 	// Source is the vertex that walker came from
@@ -22,19 +22,25 @@ type DynamicGraphWalker[V Identifiable, E any] interface {
 
 // DynamicGraph is a directed graph with edges active during a given period.
 type DynamicGraph[V Identifiable, E any] interface {
-	// Set adds vertex if not found, or changes its value if already present
-	Set(V)
-	// Connect source and destination during period, with given value.
-	// If vertices are not in graph, add them too.
-	Relate(source, destination V, value E, period Period)
-	// Remove the edge (if any) from source to destination
-	Remove(source, destination V)
 	// Neighbors provides neighbors from source at a given time, as vertices and edge values
 	Neighbors(source V, moment time.Time) iter.Seq2[V, E]
 	// Vertices returns an iterator over the vertices of that graph
 	Vertices() iter.Seq[V]
 	// Lookup finds (if any) a vertex by id
 	Lookup(id string) (V, bool)
+}
+
+// DynamicConnectionGraph is a dynamic graph with explicit connections between vertices
+type DynamicConnectionGraph[V Identifiable, E any] interface {
+	// Features of DynamicGraph are relevant when connections are explicit
+	DynamicGraph[V, E]
+	// Set adds vertex if not found, or changes its value if already present
+	Set(V)
+	// Connect source and destination during period, with given value.
+	// If vertices are not in graph, add them too.
+	Connect(source, destination V, value E, period Period)
+	// Remove the edge (if any) from source to destination
+	Remove(source, destination V)
 }
 
 // localDynamicEdge decorates an edge with the period the edge was active
@@ -45,8 +51,8 @@ type localDynamicEdge[E any] struct {
 	activity Period
 }
 
-// localDynamicGraph implements DynamicGraph as an adjacency dynamic matrix
-type localDynamicGraph[V Identifiable, E any] struct {
+// localDynamicConnectionGraph implements DynamicConnectionGraph as an adjacency dynamic matrix
+type localDynamicConnectionGraph[V Identifiable, E any] struct {
 	// elements link vertices with their id
 	elements map[string]V
 	// edges as sourceId => destinationId => decorated edge
@@ -54,7 +60,7 @@ type localDynamicGraph[V Identifiable, E any] struct {
 }
 
 // Set either adds the vertex, or updates its value
-func (g *localDynamicGraph[V, E]) Set(vertex V) {
+func (g *localDynamicConnectionGraph[V, E]) Set(vertex V) {
 	if g == nil {
 		return
 	}
@@ -67,7 +73,7 @@ func (g *localDynamicGraph[V, E]) Set(vertex V) {
 }
 
 // Connect links source and destination at a given value, since creationTime
-func (g *localDynamicGraph[V, E]) Relate(source, destination V, edge E, period Period) {
+func (g *localDynamicConnectionGraph[V, E]) Connect(source, destination V, edge E, period Period) {
 	if g == nil {
 		return
 	}
@@ -102,7 +108,7 @@ func (g *localDynamicGraph[V, E]) Relate(source, destination V, edge E, period P
 }
 
 // Remove unlinks from source to destination instantly
-func (g *localDynamicGraph[V, E]) Remove(source, destination V) {
+func (g *localDynamicConnectionGraph[V, E]) Remove(source, destination V) {
 	if g == nil {
 		return
 	} else if len(g.elements) == 0 {
@@ -118,7 +124,7 @@ func (g *localDynamicGraph[V, E]) Remove(source, destination V) {
 }
 
 // Neighbors returns the neighbors of source active at moment.
-func (g *localDynamicGraph[V, E]) Neighbors(source V, moment time.Time) iter.Seq2[V, E] {
+func (g *localDynamicConnectionGraph[V, E]) Neighbors(source V, moment time.Time) iter.Seq2[V, E] {
 	if g == nil {
 		return nil
 	}
@@ -141,7 +147,7 @@ func (g *localDynamicGraph[V, E]) Neighbors(source V, moment time.Time) iter.Seq
 }
 
 // Vertices returns an iterator over the vertices of that graph
-func (g *localDynamicGraph[V, E]) Vertices() iter.Seq[V] {
+func (g *localDynamicConnectionGraph[V, E]) Vertices() iter.Seq[V] {
 	return func(yield func(V) bool) {
 		if g == nil {
 			return
@@ -157,7 +163,7 @@ func (g *localDynamicGraph[V, E]) Vertices() iter.Seq[V] {
 
 // Lookup finds an element by id (if any).
 // It returns said element if any, or zero value with false
-func (g *localDynamicGraph[V, E]) Lookup(id string) (V, bool) {
+func (g *localDynamicConnectionGraph[V, E]) Lookup(id string) (V, bool) {
 	var empty V
 	if g == nil || g.elements == nil {
 		return empty, false
@@ -167,9 +173,9 @@ func (g *localDynamicGraph[V, E]) Lookup(id string) (V, bool) {
 	return result, found
 }
 
-// NewDynamicGraph returns a new empty graph
-func NewDynamicGraph[V Identifiable, E any]() DynamicGraph[V, E] {
-	result := new(localDynamicGraph[V, E])
+// NewDynamicConnectionGraph returns a new empty graph
+func NewDynamicConnectionGraph[V Identifiable, E any]() DynamicConnectionGraph[V, E] {
+	result := new(localDynamicConnectionGraph[V, E])
 	result.edges = make(map[string]map[string]localDynamicEdge[E])
 	result.elements = make(map[string]V)
 	return result
@@ -248,7 +254,7 @@ func (w *localGraphWalker[V, E]) Stop() {
 }
 
 // NewDynamicGraphWalker walks from startingPoint at current time within the base graph
-func NewDynamicGraphWalker[V Identifiable, E any](base DynamicGraph[V, E], startingPoint V, currentTime time.Time) DynamicGraphWalker[V, E] {
+func NewDynamicGraphWalker[V Identifiable, E any](base DynamicGraph[V, E], startingPoint V, currentTime time.Time) GraphWalker[V, E] {
 	if base == nil {
 		return nil
 	} else if _, found := base.Lookup(startingPoint.Id()); !found {
@@ -271,6 +277,7 @@ func NewDynamicGraphWalker[V Identifiable, E any](base DynamicGraph[V, E], start
 // LocalAction in a graph may apply during a walk.
 // For instance, change destination based on source and edge.
 type LocalAction[V Identifiable, E any] interface {
+	// Apply may choose to apply or not
 	Apply(source V, destination V, edge E) error
 }
 
@@ -288,12 +295,18 @@ func NewLocalAction[V Identifiable, E any](action func(source V, destination V, 
 }
 
 // DynamicGraphSpreadAction executes an action in a graph based on an iterator
-func DynamicGraphSpreadAction[V Identifiable, E any](iterator DynamicGraphWalker[V, E], action LocalAction[V, E]) error {
-	if iterator == nil || action == nil {
+func DynamicGraphSpreadAction[V Identifiable, E any](
+	graph DynamicGraph[V, E],
+	startingPoint V,
+	currentTime time.Time,
+	action LocalAction[V, E],
+) error {
+	var allErrors error
+	if graph == nil || action == nil {
 		return nil
 	}
 
-	var allErrors error
+	iterator := NewDynamicGraphWalker(graph, startingPoint, currentTime)
 	for iterator.Next() {
 		source := iterator.Source()
 		position := iterator.Position()
