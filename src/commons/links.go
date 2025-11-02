@@ -52,31 +52,26 @@ type Link interface {
 // TemporalLink decorates a link over a period.
 // It should implement both link and Temporal.
 type TemporalLink struct {
-	// id: not the same as the underlying link
+	// id (cannot use the same as the orignal one because their properties are different)
 	id string
+	// decorated link
+	Link
 	// activity of the link
 	period Period
-	// value is link decoration
-	value Link
 }
 
 // NewTemporalLink decorates a link true for given duration
 func NewTemporalLink(duration Period, value Link) *TemporalLink {
 	result := new(TemporalLink)
+	result.Link = value
 	result.id = NewId()
 	result.period = duration
-	result.value = value
 	return result
 }
 
 // Id() returns the id of the temporal link, not the same as underlying
 func (t *TemporalLink) Id() string {
 	return t.id
-}
-
-// GetType flags temporal link as a link
-func (t *TemporalLink) GetType() ModelableType {
-	return TypeLink
 }
 
 // ActivePeriod is the duration which the link is true
@@ -93,49 +88,6 @@ func (t *TemporalLink) SetActivePeriod(period Period) {
 	if t != nil {
 		t.period = period
 	}
-}
-
-// Name returns the name of the link.
-func (t *TemporalLink) Name() string {
-	var empty string
-	if t == nil {
-		return empty
-	} else if t.value == nil {
-		return empty
-	}
-
-	return t.value.Name()
-}
-
-// Roles returns all the roles set for that link
-func (t *TemporalLink) Roles() []string {
-	if t == nil {
-		return nil
-	} else if t.value == nil {
-		return nil
-	}
-
-	return t.value.Roles()
-}
-
-// Operands returns the roles and related values for that link
-func (t *TemporalLink) Operands() map[string]Linkable {
-	if t == nil {
-		return nil
-	} else if t.value == nil {
-		return nil
-	}
-
-	return t.value.Operands()
-}
-
-// Get returns, if any, the element for that name.
-func (t *TemporalLink) Get(role string) (Linkable, bool) {
-	if t == nil || t.value == nil {
-		return nil, false
-	}
-
-	return t.value.Get(role)
 }
 
 // simpleLinkNode decorates a value to ensure that it has an unique id (even for similar values)

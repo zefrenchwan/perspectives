@@ -9,11 +9,9 @@ import (
 type Event interface {
 	// each event has a unique id
 	Identifiable
-	// ProcessingTime returns the moment to consider the event should be processed
-	ProcessingTime() time.Time
 }
 
-// EventProcessor processes events
+// EventProcessor defines the ability to process events
 type EventProcessor interface {
 	// OnEvent is called when processor receives an event
 	OnEvent(Event) error
@@ -23,9 +21,6 @@ type EventProcessor interface {
 type simpleEvent struct {
 	// id of the event
 	id string
-	// processingTime is usually the moment to process the event.
-	// For instance, on an element creation, it means the creation date of that element
-	processingTime time.Time
 }
 
 // Id returns the event id
@@ -33,32 +28,9 @@ func (s simpleEvent) Id() string {
 	return s.id
 }
 
-// ProcessingTime returns the time to consider as the time to process the event
-func (s simpleEvent) ProcessingTime() time.Time {
-	return s.processingTime
-}
-
-// newSimpleEvent builds a new simple content for a given processing time
-func newSimpleEvent(moment time.Time) simpleEvent {
-	return simpleEvent{id: NewId(), processingTime: moment}
-}
-
-// eventContent encapsulates a content
-type eventContent[C any] struct {
-	// base is a simple event, we just add a content
-	simpleEvent
-	// content is the content to provide
-	content C
-}
-
-// NewEventTick returns a new tick at now (truncated according to configuration)
-func NewEventTick() Event {
-	return simpleEvent{id: NewId(), processingTime: time.Now().Truncate(TIME_PRECISION)}
-}
-
-// NewEventTickTime returns a new tick at moment
-func NewEventTickTime(moment time.Time) Event {
-	return simpleEvent{id: NewId(), processingTime: moment}
+// newSimpleEvent builds a new simple content
+func newSimpleEvent() simpleEvent {
+	return simpleEvent{id: NewId()}
 }
 
 // EventLifetimeEnd defines, for active elements, when to end their lifetime
@@ -69,20 +41,46 @@ type EventLifetimeEnd interface {
 	End() time.Time
 }
 
-// eventEnd uses a simple event with end lifetime = processing time
+// eventEnd notifies to end a lifetime
 type eventEnd struct {
 	// eventEnd is a simple event with a different use of its processing time
 	simpleEvent
+	// moment to end a lifetime
+	end time.Time
 }
 
 // End returns the moment to end the lifetime
 func (e eventEnd) End() time.Time {
-	return e.processingTime
+	return e.end
 }
 
 // NewEventLifetimeEnd builds a new event to end a lifetime at given time
 func NewEventLifetimeEnd(end time.Time) EventLifetimeEnd {
-	return eventEnd{simpleEvent: newSimpleEvent(end)}
+	return eventEnd{simpleEvent: newSimpleEvent(), end: end}
+}
+
+// eventContent encapsulates a content
+type eventContent[C any] struct {
+	// base is a simple event, we just add a content
+	simpleEvent
+	// processingTime is the time to deal with the content
+	processingTime time.Time
+	// content is the content to provide
+	content C
+}
+
+// ProcessingTime returns the processing time for that event
+func (e eventContent[C]) ProcessingTime() time.Time {
+	return e.processingTime
+}
+
+// newEventContent returns a new
+func newEventContent[C any](moment time.Time, value C) eventContent[C] {
+	var result eventContent[C]
+	result.simpleEvent = newSimpleEvent()
+	result.processingTime = moment
+	result.content = value
+	return result
 }
 
 // EventStateChanges notifies a state handler that it should set those values for those attributes.
@@ -92,6 +90,8 @@ func NewEventLifetimeEnd(end time.Time) EventLifetimeEnd {
 type EventStateChanges[T StateValue] interface {
 	// this is an event
 	Event
+	// ProcessingTime returns the moment to apply the changes
+	ProcessingTime() time.Time
 	// Changes are the changes to perform as key values
 	Changes() map[string]T
 }
@@ -104,12 +104,15 @@ func (t simpleEventStateChange[T]) Changes() map[string]T {
 	return t.content
 }
 
+// ProcessingTime (re)implementation
+func (t simpleEventStateChange[T]) ProcessingTime() time.Time {
+	return t.processingTime
+}
+
 // NewEventStateChanges defines an event to set values since given moment
 func NewEventStateChanges[T StateValue](moment time.Time, values map[string]T) EventStateChanges[T] {
-	var result simpleEventStateChange[T]
-	result.simpleEvent = newSimpleEvent(moment)
-	result.content = values
-	return result
+	result := newEventContent(moment, values)
+	return simpleEventStateChange[T](result)
 }
 
 // EventCreation defines an event to notify that content exists since processing time.
