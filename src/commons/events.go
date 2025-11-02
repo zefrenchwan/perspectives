@@ -13,6 +13,12 @@ type Event interface {
 	ProcessingTime() time.Time
 }
 
+// EventProcessor processes events
+type EventProcessor interface {
+	// OnEvent is called when processor receives an event
+	OnEvent(Event) error
+}
+
 // simpleEvent is the most basic event implementation
 type simpleEvent struct {
 	// id of the event
