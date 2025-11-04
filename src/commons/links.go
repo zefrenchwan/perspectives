@@ -2,6 +2,7 @@ package commons
 
 import (
 	"errors"
+	"slices"
 )
 
 // RoleSubject specifies the subject role
@@ -20,9 +21,54 @@ type LinkLabel struct {
 	label string
 }
 
+// Name returns the name of that label
+func (l LinkLabel) Name() string {
+	return l.label
+}
+
 // NewLabel builds a new linkable label
 func NewLabel(name string) Linkable {
 	return LinkLabel{label: name}
+}
+
+// LinkVariable is a placeholder for values (such as objects and links)
+type LinkVariable interface {
+	// Name returns the name for that variable
+	Name() string
+	// Accepts returns true if replacement is valid
+	Accepts(Linkable) bool
+}
+
+// simpleLinkVariable uses a name and an acceptor and we are done
+type simpleLinkVariable struct {
+	// name of the variable
+	name string
+	// acceptance for links to replace (nil means false)
+	acceptance func(Linkable) bool
+}
+
+// Name returns the name for that variable
+func (s simpleLinkVariable) Name() string {
+	return s.name
+}
+
+// Accepts returns true if l could replace that variable
+func (s simpleLinkVariable) Accepts(l Linkable) bool {
+	return s.acceptance != nil && s.acceptance(l)
+}
+
+// linkableRefuse returns false
+func linkableRefuse(link Linkable) bool {
+	return false
+}
+
+// NewLinkVariable builds a new link variable that accepts based on that predicate
+func NewLinkVariable(name string, predicate func(Linkable) bool) LinkVariable {
+	if predicate == nil {
+		return simpleLinkVariable{name, linkableRefuse}
+	}
+
+	return simpleLinkVariable{name, predicate}
 }
 
 // Link is a constant relation over instances of linkables.
@@ -184,4 +230,192 @@ func NewLink(name string, values map[string]Linkable) (Link, error) {
 // NewSimpleLink is just creating a link of given name with content equals to "subject" => subject, "object": object
 func NewSimpleLink(name string, subject Linkable, object Linkable) (Link, error) {
 	return NewLink(name, map[string]Linkable{RoleSubject: subject, RoleObject: object})
+}
+
+// linkNodeMapping is a container to put any relevant node data in a link or a leaf (union struct).
+// It contains any node information (old values to read, new values to map)
+type linkNodeMapping struct {
+	// invariantId kept before and after mapping
+	invariantId string
+	// originalValue is read from the original link
+	originalValue Linkable
+	// newValue is mapped node (after)
+	newValue Linkable
+	// changed is true if newValue and originalValue are different
+	changed bool
+	// role is the role of the value from parent
+	role string
+}
+
+// initializeLinkNodeMapping gets a linkable and initialiaze mapping node
+func initializeLinkNodeMapping(originalValue Linkable) linkNodeMapping {
+	var result linkNodeMapping
+	result.invariantId = NewId()
+	result.originalValue = originalValue
+	return result
+}
+
+// LinkMapLeafs maps leafs and returns a new link with same structure, just different leafs.
+// baseLink is the link to map, mapper maps the leaf to another and returns true to flag a change.
+func LinkMapLeafs(baseLink Link, mapper func(Linkable) (Linkable, bool)) (Link, error) {
+	if baseLink == nil || baseLink.IsEmpty() {
+		return baseLink, nil
+	}
+
+	// mapping contains each node to map (old and new values)
+	mapping := make(map[string]linkNodeMapping)
+	// structure links a parent (link) to all its child links
+	structure := make(map[string][]string)
+	// parents link a child to its parent (structure does the opposite)
+	parents := make(map[string]string)
+	// starting point, what is the root
+	root := initializeLinkNodeMapping(baseLink)
+	// register root, to ensure invariant
+	mapping[root.invariantId] = root
+	// BFS walkthrough
+	queue := []linkNodeMapping{root}
+
+	// for each node
+	for len(queue) != 0 {
+		// pop node
+		current := queue[0]
+		queue = queue[1:]
+		var currentLink Link
+		if l, ok := current.originalValue.(Link); l != nil && ok {
+			currentLink = l
+		} else {
+			// should not happen, but we just ignore a non link
+			continue
+		}
+
+		currentId := current.invariantId
+		// for each child, we already have node in the map, so we add links childs
+		for role, child := range currentLink.Operands() {
+			// child is an operand, may not be a link
+			if child == nil {
+				continue
+			} else {
+				mappedChild := initializeLinkNodeMapping(child)
+				mappedChild.role = role
+				mapping[mappedChild.invariantId] = mappedChild
+				// link current link to that child
+				values := structure[currentId]
+				values = append(values, mappedChild.invariantId)
+				structure[currentId] = SliceDeduplicate(values)
+				parents[mappedChild.invariantId] = currentId
+				// if child is a link, then add it to processing
+				if childLink, ok := child.(Link); childLink != nil && ok {
+					queue = append(queue, mappedChild)
+				}
+			}
+		}
+	}
+
+	// We now know the full link structure
+	// Then, find leafs by taking the difference of all childs and the heads
+	var leafs, heads []string
+	for head, childs := range structure {
+		leafs = append(leafs, childs...)
+		heads = append(heads, head)
+	}
+
+	// leafs are values that has no child
+	leafs = SlicesFilter(SliceDeduplicate(leafs), func(s string) bool { return !slices.Contains(heads, s) })
+
+	// init the bottom up walkthrough : map leafs
+	var processed []string
+	for _, leafId := range leafs {
+		leafContent := mapping[leafId]
+		leafMapping, mapped := mapper(leafContent.originalValue)
+		leafContent.changed = mapped
+		leafContent.newValue = leafMapping
+		mapping[leafId] = leafContent
+		processed = append(processed, leafId)
+	}
+
+	for len(processed) != 0 {
+		var nexts []string
+		for _, currentId := range processed {
+			// current exists for sure, but it may not be a link.
+			// Find parent. If not, it means the root
+			if parent, found := parents[currentId]; found {
+				// parent may have been dealt with already
+				if mapping[parent].newValue != nil {
+					nexts = append(nexts, parent)
+				} else {
+					// first time we see the parent.
+					// We want to process parent if all its childs are processed
+					allSiblingsDone := true
+					// siblingChanged is true if at lease one sibling changed (to change parent id)
+					siblingChanged := false
+					// allSiblings contains the id of all the childs of that parent
+					var allSiblings []string
+					// for each sibling (then all childs of the parent)
+					for _, sibling := range structure[parent] {
+						allSiblings = append(allSiblings, sibling)
+						siblingValue := mapping[sibling]
+						// if a value is not done, then parent may not be processed
+						if siblingValue.newValue == nil {
+							allSiblingsDone = false
+						}
+						// if a value changed, then parent id should be different
+						if siblingValue.changed {
+							siblingChanged = true
+						}
+					}
+
+					// if all siblings are done, then we may process the parent
+					if allSiblingsDone {
+						parentValue := mapping[parent]
+						// parent is a link for sure
+						parentLink, _ := parentValue.originalValue.(Link)
+						if siblingChanged {
+							// copy the link values from the original link, change its id
+							parentValue.changed = true
+							roles := make(map[string]Linkable)
+							for _, child := range structure[parent] {
+								childValue := mapping[child]
+								roles[childValue.role] = childValue.newValue
+							}
+
+							if newLink, err := NewLink(parentLink.Name(), roles); err != nil {
+								return nil, err
+							} else {
+								parentValue.newValue = newLink
+								parentValue.changed = true
+								mapping[parent] = parentValue
+							}
+						} else {
+							parentValue.changed = false
+							parentValue.newValue = parentValue.originalValue
+							mapping[parent] = parentValue
+						}
+
+						// parent may be processed on the next run
+						nexts = append(nexts, parent)
+						// we do not need the siblings values, just clean them
+						for _, sibling := range allSiblings {
+							delete(mapping, sibling)
+						}
+					}
+				}
+			}
+		}
+
+		// new processed is current next
+		processed = nil
+		nexts = SliceDeduplicate(nexts)
+		processed = make([]string, len(nexts))
+		copy(processed, nexts)
+	}
+
+	// at this point, there is no upper level, so we basically read the root mapping
+	result := mapping[root.invariantId]
+	if result.newValue == nil {
+		return nil, errors.New("no mapping for root")
+	} else if rootLink, ok := result.newValue.(Link); !ok || rootLink == nil {
+		return nil, errors.New("no root link")
+	} else {
+		return rootLink, nil
+	}
 }
