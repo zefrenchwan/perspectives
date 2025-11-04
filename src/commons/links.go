@@ -14,6 +14,39 @@ const RoleObject = "object"
 // Linkable should be as simple as possible.
 type Linkable interface{}
 
+// LinkableEquality defines when two linkables are the same
+type LinkableEquality func(a, b Linkable) bool
+
+// LinkableSame is default implementation for same linkables.
+// It returns true if a and b may be conidered as equivalent
+func LinkableSame(a, b Linkable) bool {
+	if a == nil && b == nil {
+		return true
+	} else if a == nil || b == nil {
+		return false
+	} else if label, ok := a.(LinkLabel); ok {
+		if otherLabel, otherOk := b.(LinkLabel); otherOk {
+			return label.Name() == otherLabel.Name()
+		} else {
+			return false
+		}
+	} else if variable, ok := a.(LinkVariable); ok {
+		if otherVariable, otherOk := b.(LinkVariable); otherOk {
+			return variable.Name() == otherVariable.Name()
+		} else {
+			return false
+		}
+	} else if idBased, ok := a.(Identifiable); ok {
+		if otherIdBased, otherOk := b.(Identifiable); otherOk {
+			return idBased.Id() == otherIdBased.Id()
+		} else {
+			return false
+		}
+	} else {
+		return false
+	}
+}
+
 // LinkLabel is a label to qualify other elements.
 // For instance, human, nice, etc.
 type LinkLabel struct {
@@ -27,7 +60,7 @@ func (l LinkLabel) Name() string {
 }
 
 // NewLabel builds a new linkable label
-func NewLabel(name string) Linkable {
+func NewLabel(name string) LinkLabel {
 	return LinkLabel{label: name}
 }
 
@@ -418,4 +451,96 @@ func LinkMapLeafs(baseLink Link, mapper func(Linkable) (Linkable, bool)) (Link, 
 	} else {
 		return rootLink, nil
 	}
+}
+
+// LinkAcceptsInstantiation returns a possible variables mapping (if any) to use from pattern to baseLink.
+// For instance, Knows(Paul, Jules) is an instantiation of Knows(Paul, X) with X => Jules.
+// Signature is:
+// the base link (the possible instantiation) to compare to the pattern (may be a variable)
+// and the matchingsEqualsFn to test equality on variables matches.
+func LinkAcceptsInstantiation(baseLink Link, pattern Linkable, matchingsEqualsFn LinkableEquality) (map[string]Linkable, bool) {
+	variablesInstantiation := make(map[string]Linkable)
+	var patternLink Link
+	// either both parameters are links,
+	// or second one is a variable (and we test) or we end it as false
+	if baseLink == nil && pattern == nil {
+		return nil, true
+	} else if baseLink == nil || pattern == nil {
+		return nil, false
+	} else if v, ok := pattern.(LinkVariable); ok {
+		if v == nil {
+			return nil, false
+		} else if v.Accepts(baseLink) {
+			variablesInstantiation[v.Name()] = baseLink
+			return variablesInstantiation, true
+		} else {
+			return nil, false
+		}
+	} else if l, ok := pattern.(Link); !ok {
+		return nil, false
+	} else {
+		patternLink = l
+	}
+
+	// go for a walk through each graph, stop as soon as structures differ.
+	baseQueue := []Link{baseLink}
+	patternQueue := []Link{patternLink}
+
+	// for each node (BFS)
+	for len(baseQueue) != 0 {
+		if len(baseQueue) != len(patternQueue) {
+			return nil, false
+		}
+
+		// both are links as an invariant
+		currentLink := baseQueue[0]
+		baseQueue = baseQueue[1:]
+		referenceLink := patternQueue[0]
+		patternQueue = patternQueue[1:]
+
+		if currentLink.Name() != referenceLink.Name() {
+			return nil, false
+		}
+
+		currentOperands := currentLink.Operands()
+		referenceOperands := referenceLink.Operands()
+		if len(currentOperands) != len(referenceOperands) {
+			return nil, false
+		}
+
+		// go through each role, and compare each role accordingly.
+		for role, baseValue := range currentOperands {
+			referenceValue, found := referenceOperands[role]
+			if !found {
+				return nil, false
+			} else if referenceVariable, ok := referenceValue.(LinkVariable); ok {
+				if !referenceVariable.Accepts(baseValue) {
+					return nil, false
+				} else {
+					if mappings, found := variablesInstantiation[referenceVariable.Name()]; !found {
+						variablesInstantiation[referenceVariable.Name()] = baseValue
+					} else if matchingsEqualsFn(baseValue, mappings) {
+						variablesInstantiation[referenceVariable.Name()] = baseValue
+					} else {
+						return nil, false
+					}
+				}
+			} else if !LinkableSame(baseValue, referenceValue) {
+				return nil, false
+			}
+
+			// if base value is a link (so is reference value), then keep walking through
+			if baseLink, ok := baseValue.(Link); ok {
+				if otherLink, otherOk := referenceValue.(Link); otherOk {
+					// both are links, equivalent (same) with each other
+					baseQueue = append(baseQueue, baseLink)
+					patternQueue = append(patternQueue, otherLink)
+				} else {
+					return nil, false
+				}
+			}
+		}
+	}
+
+	return variablesInstantiation, len(baseQueue) == len(patternQueue)
 }

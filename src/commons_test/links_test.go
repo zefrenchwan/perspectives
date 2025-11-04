@@ -9,6 +9,33 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
+func TestLinkableSame(t *testing.T) {
+	labelA := commons.NewLabel("a")
+	labelB := commons.NewLabel("b")
+	objectA := commons.NewModelObject()
+	objectB := commons.NewModelObject()
+	varA := commons.NewLinkVariable("a", func(l commons.Linkable) bool { return true })
+	varB := commons.NewLinkVariable("b", func(l commons.Linkable) bool { return true })
+
+	if commons.LinkableSame(labelA, labelB) {
+		t.Fail()
+	} else if commons.LinkableSame(labelA, objectA) {
+		t.Fail()
+	} else if !commons.LinkableSame(labelA, labelA) {
+		t.Fail()
+	} else if commons.LinkableSame(objectA, objectB) {
+		t.Fail()
+	} else if !commons.LinkableSame(objectA, objectA) {
+		t.Fail()
+	} else if commons.LinkableSame(varA, varB) {
+		t.Fail()
+	} else if !commons.LinkableSame(varA, varA) {
+		t.Fail()
+	} else if commons.LinkableSame(varA, objectA) {
+		t.Fail()
+	}
+}
+
 func TestLinkUsage(t *testing.T) {
 	a := DummyIdBasedImplementation{}
 	if link, err := commons.NewLink("link", map[string]commons.Linkable{"role": a}); err != nil {
@@ -243,6 +270,161 @@ func TestLeafMappingUnbalanced(t *testing.T) {
 	} else if o, ok := tiramisuOps[commons.RoleObject].(commons.LinkLabel); !ok {
 		t.Fail()
 	} else if o.Name() != "AMAZING" {
+		t.Fail()
+	}
+}
+
+func TestLinkAcceptsInstantiationSameLink(t *testing.T) {
+	link, _ := commons.NewSimpleLink("extends", commons.NewLabel("dessert"), commons.NewLabel("food"))
+	otherLink, _ := commons.NewSimpleLink("extends", commons.NewLabel("cakes"), commons.NewLabel("food"))
+
+	if _, ok := commons.LinkAcceptsInstantiation(link, link, commons.LinkableSame); !ok {
+		t.Log("same link")
+		t.Fail()
+	}
+
+	if _, ok := commons.LinkAcceptsInstantiation(link, otherLink, commons.LinkableSame); ok {
+		t.Log("different structure")
+		t.Fail()
+	}
+}
+
+func TestLinkAcceptsInstantiationRoot(t *testing.T) {
+	linkAcceptor := func(l commons.Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		link, ok := l.(commons.Link)
+		return link != nil && ok
+	}
+
+	labelAcceptor := func(l commons.Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		_, ok := l.(commons.LinkLabel)
+		return ok
+	}
+
+	link, _ := commons.NewSimpleLink("extends", commons.NewLabel("dessert"), commons.NewLabel("food"))
+	other := commons.NewLinkVariable("x", linkAcceptor)
+
+	if assignations, ok := commons.LinkAcceptsInstantiation(link, other, commons.LinkableSame); !ok {
+		t.Log("match")
+		t.Fail()
+	} else if len(assignations) != 1 {
+		t.Fail()
+	} else if value, found := assignations["x"]; !found {
+		t.Fail()
+	} else if l, ok := value.(commons.Link); !ok || l == nil {
+		t.Fail()
+	} else if l.Id() != link.Id() {
+		t.Fail()
+	}
+
+	otherLabel := commons.NewLinkVariable("x", labelAcceptor)
+	if _, ok := commons.LinkAcceptsInstantiation(link, otherLabel, commons.LinkableSame); ok {
+		t.Log("no match")
+		t.Fail()
+	}
+}
+
+func TestLinkAcceptsInstantiationStructure(t *testing.T) {
+	linkAcceptor := func(l commons.Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		link, ok := l.(commons.Link)
+		return link != nil && ok
+	}
+
+	labelAcceptor := func(l commons.Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		_, ok := l.(commons.LinkLabel)
+		return ok
+	}
+
+	x := commons.NewLinkVariable("x", linkAcceptor)
+	y := commons.NewLinkVariable("y", labelAcceptor)
+
+	kate := commons.NewModelObject()
+	chocolate := commons.NewLabel("chocolate")
+	baseLink, _ := commons.NewSimpleLink("likes", kate, chocolate)
+	differentLink, _ := commons.NewSimpleLink("loves", kate, chocolate)
+	patternMatching, _ := commons.NewSimpleLink("likes", kate, y)
+	patternNOMatch, _ := commons.NewSimpleLink("likes", kate, x)
+
+	if matching, ok := commons.LinkAcceptsInstantiation(baseLink, patternMatching, commons.LinkableSame); !ok {
+		t.Log("y => chocolate is a match")
+		t.Fail()
+	} else if len(matching) != 1 {
+		t.Fail()
+	} else if m, found := matching["y"]; !found {
+		t.Fail()
+	} else if label, ok := m.(commons.LinkLabel); !ok {
+		t.Fail()
+	} else if label.Name() != chocolate.Name() {
+		t.Fail()
+	}
+
+	if _, ok := commons.LinkAcceptsInstantiation(differentLink, patternMatching, commons.LinkableSame); ok {
+		t.Log("different link")
+		t.Fail()
+	}
+
+	if _, ok := commons.LinkAcceptsInstantiation(baseLink, patternNOMatch, commons.LinkableSame); ok {
+		t.Log("x accepts links only")
+		t.Fail()
+	}
+}
+
+func TestLinkAcceptsInstantiationMultipleMatches(t *testing.T) {
+
+	labelAcceptor := func(l commons.Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		_, ok := l.(commons.LinkLabel)
+		return ok
+	}
+
+	x := commons.NewLinkVariable("x", labelAcceptor)
+	y := commons.NewLinkVariable("y", labelAcceptor)
+
+	women := commons.NewLabel("women")
+	humans := commons.NewLabel("humans")
+	baseLink, _ := commons.NewSimpleLink("extends", women, humans)
+	patternMatching, _ := commons.NewSimpleLink("extends", x, y)
+	patternNOMatch, _ := commons.NewSimpleLink("extends", x, x)
+
+	if matching, ok := commons.LinkAcceptsInstantiation(baseLink, patternMatching, commons.LinkableSame); !ok {
+		t.Log("y => chocolate is a match")
+		t.Fail()
+	} else if len(matching) != 2 {
+		t.Fail()
+	} else if mx, found := matching["x"]; !found {
+		t.Fail()
+	} else if lx, ok := mx.(commons.LinkLabel); !ok {
+		t.Fail()
+	} else if lx.Name() != women.Name() {
+		t.Fail()
+	} else if my, found := matching["y"]; !found {
+		t.Fail()
+	} else if ly, ok := my.(commons.LinkLabel); !ok {
+		t.Fail()
+	} else if ly.Name() != humans.Name() {
+		t.Fail()
+	}
+
+	if _, ok := commons.LinkAcceptsInstantiation(baseLink, patternNOMatch, commons.LinkableSame); ok {
+		t.Log("x assigned with different values")
 		t.Fail()
 	}
 }
