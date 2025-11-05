@@ -104,6 +104,30 @@ func NewLinkVariable(name string, predicate func(Linkable) bool) LinkVariable {
 	return simpleLinkVariable{name, predicate}
 }
 
+// NewLinkVariableForObject returns a new variable accepting any NOT NIL object
+func NewLinkVariableForObject(name string) LinkVariable {
+	return NewLinkVariable(name, func(l Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		o, ok := l.(ModelObject)
+		return ok && o != nil
+	})
+}
+
+// NewLinkVariableForLink creates a variable that accepts anynon nil link
+func NewLinkVariableForLink(name string) LinkVariable {
+	return NewLinkVariable(name, func(l Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		link, ok := l.(Link)
+		return ok && link != nil
+	})
+}
+
 // Link is a constant relation over instances of linkables.
 // Link is also Linkable, so it may be used in links.
 type Link interface {
@@ -547,9 +571,37 @@ func LinkAcceptsInstantiation(baseLink Link, pattern Linkable, matchingsEqualsFn
 	return variablesInstantiation, len(baseQueue) == len(patternQueue)
 }
 
-// LinkFindAll finds all nodes matching a condition.
+// LinkSetVariables just sets variables within a link, rest is unchanged.
+// In particular, it returns the same link is there is no variable to replace.
+func LinkSetVariables(baseLink Link, values map[string]Linkable) (Link, error) {
+	if baseLink == nil || len(values) == 0 {
+		return nil, nil
+	}
+
+	mapper := func(l Linkable) (Linkable, bool) {
+		if l == nil {
+			return nil, false
+		}
+
+		if v, ok := l.(LinkVariable); !ok {
+			return l, false
+		} else if ok && v != nil {
+			if replacer, found := values[v.Name()]; !found {
+				return l, false
+			} else {
+				return replacer, true
+			}
+		}
+
+		return l, false
+	}
+
+	return LinkMapLeafs(baseLink, mapper)
+}
+
+// LinkFindAllMatching finds all nodes matching a condition.
 // Walkthrough is a BFS, but the map roles implementation does not guarantee a strict deterministic order
-func LinkFindAll(base Link, condition func(Linkable) bool) []Linkable {
+func LinkFindAllMatching(base Link, condition func(Linkable) bool) []Linkable {
 	if base == nil || condition == nil {
 		return nil
 	}

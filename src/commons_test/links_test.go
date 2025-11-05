@@ -456,7 +456,7 @@ func TestLinkFindAll(t *testing.T) {
 		return ok && label.Name() == "awesome"
 	}
 
-	if result := commons.LinkFindAll(thinks, findLinks); len(result) != 2 {
+	if result := commons.LinkFindAllMatching(thinks, findLinks); len(result) != 2 {
 		t.Fail()
 	} else if l, ok := result[0].(commons.Link); !ok || l == nil {
 		t.Fail()
@@ -468,11 +468,74 @@ func TestLinkFindAll(t *testing.T) {
 		t.Fail()
 	}
 
-	if result := commons.LinkFindAll(likes, findAwesome); len(result) != 1 {
+	if result := commons.LinkFindAllMatching(likes, findAwesome); len(result) != 1 {
 		t.Fail()
 	} else if l, ok := result[0].(commons.LinkLabel); !ok {
 		t.Fail()
 	} else if l.Name() != "awesome" {
+		t.Fail()
+	}
+}
+
+func TestLinkUseVariables(t *testing.T) {
+	dad := commons.NewModelObject()
+	kid := commons.NewModelObject()
+	variable := commons.NewLinkVariableForObject("x")
+	parent, _ := commons.NewSimpleLink("parent", dad, kid)
+	generic, _ := commons.NewSimpleLink("parent", dad, variable)
+
+	if inst, matches := commons.LinkAcceptsInstantiation(parent, generic, commons.LinkableSame); !matches {
+		t.Fail()
+	} else if len(inst) != 1 {
+		t.Fail()
+	} else if value, found := inst["x"]; !found {
+		t.Fail()
+	} else if k, ok := value.(commons.ModelObject); !ok {
+		t.Fail()
+	} else if k.Id() != kid.Id() {
+		t.Fail()
+	} else if result, err := commons.LinkSetVariables(generic, inst); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if result.Name() != parent.Name() {
+		t.Fail()
+	} else if ops := result.Operands(); len(ops) != 2 {
+		t.Fail()
+	} else if s, found := ops[commons.RoleSubject]; !found {
+		t.Fail()
+	} else if subject, ok := s.(commons.ModelObject); !ok {
+		t.Fail()
+	} else if subject.Id() != dad.Id() {
+		t.Fail()
+	} else if o, found := ops[commons.RoleObject]; !found {
+		t.Fail()
+	} else if object, ok := o.(commons.ModelObject); !ok {
+		t.Fail()
+	} else if object.Id() != kid.Id() {
+		t.Fail()
+	}
+
+	// test no change when no variable
+	if result, err := commons.LinkSetVariables(parent, map[string]commons.Linkable{"x": kid}); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if result.Id() != parent.Id() {
+		t.Fail()
+	} else if result.Name() != parent.Name() {
+		t.Fail()
+	} else if ops := result.Operands(); len(ops) != 2 {
+		t.Fail()
+	} else if s, found := ops[commons.RoleSubject]; !found {
+		t.Fail()
+	} else if subject, ok := s.(commons.ModelObject); !ok {
+		t.Fail()
+	} else if subject.Id() != dad.Id() {
+		t.Fail()
+	} else if o, found := ops[commons.RoleObject]; !found {
+		t.Fail()
+	} else if object, ok := o.(commons.ModelObject); !ok {
+		t.Fail()
+	} else if object.Id() != kid.Id() {
 		t.Fail()
 	}
 }
