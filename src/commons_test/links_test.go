@@ -428,3 +428,51 @@ func TestLinkAcceptsInstantiationMultipleMatches(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestLinkFindAll(t *testing.T) {
+	books, _ := commons.NewSimpleLink("is", commons.NewLabel("reading"), commons.NewLabel("awesome"))
+	hugh := commons.NewModelObject()
+	timothy := commons.NewModelObject()
+	thinks, _ := commons.NewSimpleLink("thinks", timothy, books)
+	likes, _ := commons.NewSimpleLink("likes", hugh, thinks)
+
+	findLinks := func(l commons.Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		link, ok := l.(commons.Link)
+
+		return ok && link != nil
+	}
+
+	findAwesome := func(l commons.Linkable) bool {
+		if l == nil {
+			return false
+		}
+
+		label, ok := l.(commons.LinkLabel)
+
+		return ok && label.Name() == "awesome"
+	}
+
+	if result := commons.LinkFindAll(thinks, findLinks); len(result) != 2 {
+		t.Fail()
+	} else if l, ok := result[0].(commons.Link); !ok || l == nil {
+		t.Fail()
+	} else if l.Id() != thinks.Id() {
+		t.Fail()
+	} else if l, ok := result[1].(commons.Link); !ok || l == nil {
+		t.Fail()
+	} else if l.Id() != books.Id() {
+		t.Fail()
+	}
+
+	if result := commons.LinkFindAll(likes, findAwesome); len(result) != 1 {
+		t.Fail()
+	} else if l, ok := result[0].(commons.LinkLabel); !ok {
+		t.Fail()
+	} else if l.Name() != "awesome" {
+		t.Fail()
+	}
+}

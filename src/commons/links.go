@@ -458,6 +458,8 @@ func LinkMapLeafs(baseLink Link, mapper func(Linkable) (Linkable, bool)) (Link, 
 // Signature is:
 // the base link (the possible instantiation) to compare to the pattern (may be a variable)
 // and the matchingsEqualsFn to test equality on variables matches.
+// Then, if there is a mapping that matches, first result is variable name => Linkable to replace.
+// Otherwise, it returns nil, false.
 func LinkAcceptsInstantiation(baseLink Link, pattern Linkable, matchingsEqualsFn LinkableEquality) (map[string]Linkable, bool) {
 	variablesInstantiation := make(map[string]Linkable)
 	var patternLink Link
@@ -543,4 +545,38 @@ func LinkAcceptsInstantiation(baseLink Link, pattern Linkable, matchingsEqualsFn
 	}
 
 	return variablesInstantiation, len(baseQueue) == len(patternQueue)
+}
+
+// LinkFindAll finds all nodes matching a condition.
+// Walkthrough is a BFS, but the map roles implementation does not guarantee a strict deterministic order
+func LinkFindAll(base Link, condition func(Linkable) bool) []Linkable {
+	if base == nil || condition == nil {
+		return nil
+	}
+
+	// result contains all linkables matching condition (link, leafs, etc)
+	var result []Linkable
+
+	queue := []Link{base}
+	for len(queue) != 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		// link test
+		if condition(current) {
+			result = append(result, current)
+		}
+
+		for _, operand := range current.Operands() {
+			if child, ok := operand.(Link); ok && child != nil {
+				// no need to test child, will be done after
+				queue = append(queue, child)
+			} else if condition(operand) {
+				// operand is not a link, so test but not queue
+				result = append(result, operand)
+			}
+		}
+	}
+
+	return result
 }
