@@ -37,8 +37,7 @@ type StateObject[T StateValue] struct {
 	ModelObject
 	// state allows to read and change current state
 	StateRepresentation[T]
-	// activity to deal with time.
-	// Current object becomes a temporal reader, then
+	// activity to deal with time
 	activity Period
 }
 
