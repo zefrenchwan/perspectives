@@ -7,6 +7,24 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
+type DummyIdentifiable struct{ id string }
+
+func (d DummyIdentifiable) Id() string { return d.id }
+
+func NewDummyIdentifiable(id string) DummyIdentifiable { return DummyIdentifiable{id: id} }
+
+func TestCompositeId(t *testing.T) {
+	a, b := NewDummyIdentifiable("a"), NewDummyIdentifiable("b")
+	if id := commons.NewCompositeId(a, b); id != "a#b" {
+		t.Fail()
+	}
+
+	if id := commons.NewCompositeId(a); id != "a" {
+		t.Fail()
+	}
+
+}
+
 func TestSliceReduce(t *testing.T) {
 	values := []int{0, 5, 10, 4, 15, 10, 10, 10}
 	expected := []int{0, 4, 5, 10, 15}

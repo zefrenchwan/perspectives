@@ -1,5 +1,7 @@
 package commons
 
+import "strings"
+
 // Identifiable defines anything that has an id.
 // An id should be globally unique no matter the type:
 // for instance, no link should share the same id as an object.
@@ -13,14 +15,14 @@ type Identifiable interface {
 // Id depends on ids of idenfifiables.
 // Same ids from identifiables should return same value
 func NewCompositeId(idenfifiables ...Identifiable) string {
-	var result string
+	var result strings.Builder
 	for index, id := range idenfifiables {
 		if index != 0 {
-			result += "#"
+			result.WriteString("#")
 		}
 
-		result += id.Id()
+		result.WriteString(id.Id())
 	}
 
-	return result
+	return result.String()
 }
