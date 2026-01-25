@@ -45,13 +45,21 @@ type Message struct {
 }
 
 // NewMessage returns a new message
-func NewMessage(source string, target []string, payload string) Message {
+func NewMessage(source string, targets []string, payload string) Message {
 	return Message{
 		Id:           uuid.NewString(),
 		CreationTime: time.Now(),
 		Source:       source,
-		Target:       target,
+		Target:       targets,
 		Payload:      payload,
 		Metadata:     make(map[string]string),
 	}
+}
+
+// DecoratedEvent decorates events coming from a single source
+type DecoratedEvent struct {
+	// Source is the id of the common emitter
+	Source string
+	// OriginalEvents are the events coming from that source
+	OriginalEvents []Event
 }
