@@ -10,12 +10,35 @@ import (
 type Event interface {
 }
 
-// EventProcessor processes events.
+// EventMapper processes events.
 // Special cases: event tick to act, no event to emit (just change state)
-type EventProcessor interface {
-	Identifiable
-	// OnEvent forces the processor to act, it may emit events
-	OnEvent(event []Event) []Event
+type EventMapper interface {
+	// OnEvents forces the processor to act, it may emit events
+	OnEvents(events []Event) []Event
+}
+
+// functionaEventMapper implements EventMapper as a basic function
+type functionaEventMapper func(events []Event) []Event
+
+// OnEvents is indeed a function call
+func (f functionaEventMapper) OnEvents(events []Event) []Event {
+	if f == nil {
+		return nil
+	}
+
+	return f(events)
+}
+
+// NewEventMapper return a new EventMapper decoring a function
+func NewEventMapper(mapper func([]Event) []Event) EventMapper {
+	return functionaEventMapper(mapper)
+}
+
+// NewEventIdMapper returns the id mapper
+func NewEventIdMapper() EventMapper {
+	return functionaEventMapper(func(events []Event) []Event {
+		return events
+	})
 }
 
 // EventTick is a special event to force action even for no other event
@@ -40,7 +63,7 @@ type Message struct {
 	CreationTime time.Time         `json:"creation_time"` // CreationTime defines the moment the message was created
 	Source       string            `json:"source"`        // Source is the agent that sent the message
 	Target       []string          `json:"targets"`       // Targets are the agents to send message to
-	Payload      string            `json:"payload"`       // Payload is the content to send
+	Payload      []byte            `json:"payload"`       // Payload is the content to send
 	Metadata     map[string]string `json:"metadata"`      // Metadata defines any metadata for the message
 }
 
@@ -51,7 +74,7 @@ func NewMessage(source string, targets []string, payload string) Message {
 		CreationTime: time.Now(),
 		Source:       source,
 		Target:       targets,
-		Payload:      payload,
+		Payload:      []byte(payload),
 		Metadata:     make(map[string]string),
 	}
 }
