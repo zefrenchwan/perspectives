@@ -2,17 +2,18 @@ package commons_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
+type DummyEvent struct{}
+
 func TestEventFunctionalMapper(t *testing.T) {
-	events := []commons.Event{commons.NewEventTick(time.Second)}
-	mapper := func(events []commons.Event) []commons.Event {
+	events := []commons.Event{DummyEvent{}}
+	mapper := func(e []commons.Event) []commons.Event {
 		return []commons.Event{
-			commons.NewMessage("source", []string{"dest"}, "test"),
-			commons.NewEventTick(time.Second),
+			DummyEvent{},
+			DummyEvent{},
 		}
 	}
 
@@ -23,16 +24,8 @@ func TestEventFunctionalMapper(t *testing.T) {
 }
 
 func TestEventIdMapper(t *testing.T) {
-	events := []commons.Event{commons.NewEventTick(time.Second)}
+	events := []commons.Event{DummyEvent{}}
 	if result := commons.NewEventIdMapper().OnEvents(events); len(result) != 1 {
-		t.Fail()
-	}
-}
-
-func TestEvents(t *testing.T) {
-	moment := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
-	result := commons.NewEventTick(time.Hour).Apply(moment)
-	if !moment.Add(time.Hour).Equal(result) {
 		t.Fail()
 	}
 }
