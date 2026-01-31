@@ -9,8 +9,15 @@
 
 \begin{document}
 \maketitle
-\abstract{Cet article se concentre sur une description d'un espace d'états. Dans un premier temps, un modèle mathématique général est proposé. Au lieu d'observer un objet évoluer dans un repère, on définit une trajectoire dans un espace d'états. La version graphe permet une meilleure gestion des objets observés, avec la prise en compte d'une mémoire. Les nœuds transforment des événements, et les liens les déplacent. Dès lors, on peut modéliser des systèmes sociaux, comme par exemple des réseaux sociaux. }
+\abstract{Cet article propose un outil de modélisation applicable sur les systèmes sociaux par analogie avec les  systèmes physiques. Après avoir reformulé les concepts de base de la mécanique Newtonienne, nous proposons une version discrète sous forme de graphes dynamique. }
+
 \section{Modèle de gestion d'états d'un système}
+
+Un observateur modélise une situation d'objets variant au sein d'un système. Ce dernier définit des contraintes, en tous cas des liens, entre les objets. La question peut être la prédiction des futurs états, l'explication du passé du système ou l'optimisation du comportement d'un objet en particulier. Nous allons proposer une modélisation générale pour passer d'un modèle à une trajectoire dans un espace d'états. 
+
+
+\subsection{Le modèle d'états continus}
+
 Prenons un exemple classique : des objets physiques sont représentés comme des masses ponctuelles. 
 On se donne un repère $R$ dans un espace de dimension $N=3$ (hormis le temps).
 Pour chacune, des forces de gravitation s'appliquent, soumettant chacun à une résultante $\vec{F}$. 
@@ -59,36 +66,37 @@ $$\text{}$$
 Ainsi, le principe est de prendre un espace d'états, donc un espace vectoriel de dimension finie. 
 Les changements peuvent être typés de n'importe quelle classe, tant que l'on sait produire une résultante sous forme de vecteur. 
 Alors $\mathcal{R}_{it}$ est la résultante des changements subis par $o_i$ à $t$. 
-Elle explique le changement d'état $\Delta E_{it}$. 
-Pour lier les deux, la formule générale est $$R_{it} \Delta t = \Psi(E_{it}) \Delta E_{it}$$
-mais le cas particulier le plus notoire reste une matrice $M_{it}$ ou un tenseur pour $\Psi$. 
-C'est d'ailleurs cette forme là que nous utiliserons dans la suite. 
-Rappelons qu'elle dépend du temps et de l'objet.
+Pour lier les deux, la formule générale est $$R_{it} \Delta t = M_{it} \Delta E_{it}$$
+Avec $M_{it}$ une matrice (dépendant de l'état de $o_i$ et du temps $t$). 
+Celle ci s'interprète comme la prise en compte de l'état dans le changement. 
+Par exemple, s'il n'y a aucune transformation ($M_{it} = I_v$ la matrice identité), le changement d'état est exactement expliqué par le produit de la durée et de la résultante. 
 Les termes à gauche sont ce qui est relatif \`a la cause extérieure, les termes à droite sont ceux qui dépendent uniquement de l'état. Signalons au passage qu'il est tout à fait possible d'avoir une interaction réciproque de type : $$\Delta M_{it} = \Phi (\mathcal{R}_{it},E_{it}, \Delta t )$$
 En terme physique, il est plus intéressant de le formuler en terme de $$E_{i,t+dt} = E_{it} + \Delta E_{it} = E_{it} + \Delta t M^{-1}_{it} R_{it} $$ mais cela implique des conditions sur $M_{it}$, évidemment qu'elle soit inversible pour commencer. 
-\clearpage
+$$\text{ }$$
 En terme de "mode d'emploi" du modèle: 
 \begin{enumerate}
 	\item l'observateur perçoit un système dynamique composé des objets $(o_i)_{i \in I}$. Il sait observer, pour son temps $t$ à lui, les interactions de $o_i$ vers $o_j$ pour tout couple $(i,j) \in I$. 
 	\item D'un point de vue formel, il connait donc $c_{ij}^t$ pour tout couple $(i,j) \in I^2$ et tout temps passé $t$. Chaque $c_{ij}^t$ est élément d'un ensemble $X$ dont la nature importe peu. 
-	\item l'observateur modélise l'état des objets observés et les changements dans un même espace vectoriel de dimension $v$. Il dispose donc de fonctions de vectorisation. D'abord, s'il observe un état de l'objet $o_i$ à $t$, il sait le vectoriser dans $\mathbb{R}^v$ via une fonction idoine. Il calcule alors $\Psi(E_{it})$. De même, s'il observe les changements $c_{ij}^t$, il dispose d'une fonction $\Phi_{it} : X^I \rightarrow \mathbb{R}^v$ (qui peut dépendre de $i$ et $t$). Il calcule alors $R_{it} = \Phi_{it}((c_{ij}^t)_{j \in I}) \in \mathbb{R}^v$. Par exemple, si $I$ est fini, les $c_{ij}^t$ sont des vecteurs et $\Phi_{it} = \sum_{j \in I}$ devient indépendant du temps et de l'objet. 
+	\item l'observateur modélise l'état des objets observés et les changements dans un même espace vectoriel de dimension $v$. Il dispose donc de fonctions de vectorisation. D'abord, s'il observe un état de l'objet $o_i$ à $t$, il sait le vectoriser dans $\mathbb{R}^v$ sous la forme d'une matrice de taille $v \times v$. Il calcule alors $M_{it}$. De même, s'il observe les changements $c_{ij}^t$, il dispose d'une fonction $\Phi_{it} : X^I \rightarrow \mathbb{R}^v$ (qui peut dépendre de $i$ et $t$). Il calcule alors $R_{it} = \Phi_{it}((c_{ij}^t)_{j \in I}) \in \mathbb{R}^v$. Par exemple, si $I$ est fini, les $c_{ij}^t$ sont des vecteurs et $\Phi_{it} = \sum_{j \in I}$ devient indépendant du temps et de l'objet. 
 	\item il applique alors l'équation générale et trouve le $\Delta E_{it}$. Il peut appliquer une rétroaction sur la $M_{it}$ si son modèle l'exige. Enfin, il calcule le nouvel état. 
 \end{enumerate}
 
-\section{Graphe d'états}
+\subsection{Graphe d'états}
 
-Le modèle précédent a pour vocation de poser une logique d'états expliqués par des changements traités par un objet. Nous proposons ici une autre piste, basée sur un graphe dynamique. Par nature, un graphe est une structure finie ou dénombrable. Le principe est de prendre des nœuds qui reçoivent des événements (ce qu'on appelait changement) et qui les traitent. Ces événements transitent via des liens qui les propagent avec une certaine latence. On note $\mathcal{E}$ l'ensemble des ensembles finis d'événements. Très pratiquement, on utilisera en fait $e \in \mathcal{E}$ pour dire "un ensemble fini d'événements"
+Le modèle précédent a pour vocation de poser une logique d'états expliqués par des changements traités par un objet. 
+Pour le rendre opérationnel et traitable par un programme informatique, nous proposons ici une implémentation basée sur un graphe dynamique. 
 
 \begin{itemize}
-	\item les nœuds sont nos objets $o_i$, ils une durée de vie : hors de cet ensemble, ils ne traitent pas de message. Chaque élément actif est une fonction $F_i : \mathcal{E} \rightarrow \mathcal{E}$
-	\item les liens sont orientés et valués par $\delta t > 0$. Leur source et leur destination sont donc des nœuds. Ils garantissent que si la source produit les événements $e \in \mathcal{E}$ à $t$, alors la destination les reçoit au plus tôt à $t+dt$ (où $t$ est le temps du lien, pas nécessairement celui de sa source ou de sa destination). Un lien a lui aussi une durée de vie : il peut ne pas transmettre d'événement à un moment donné. 
-	\item les nœuds peuvent avoir un état initial. Dès lors, le graphe les ajoute avec cet état initial et ils sont modifiés au fur et à mesure des événements produits. 
-\end{itemize}
+	\item Les nœuds sont les objets à modéliser. Ils traitent des flux d'événements. Le graphe définit les objets (les noeuds) et les interactions autorisées (via les liens). Noeuds et liens peuvent avoir une durée de vie en dehors de laquelle ils n'opèrent tout simplement pas. 
+	\item les liens sont orientés et définissent que la destination reçoit des flux d'événements de la source. La transmission n'est pas instantanée et prend une certaine latence $\delta t > 0$. Introduire ce délai permet d'éviter des boucles et introduit une forme de causalité. Si l'on prend toujours $\delta t = 1$, on simule un graphe "au tour par tour".
+	\item chaque nœud reçoit un flux d'événements à un temps $t$. Le principe du modèle reste le même. Pour chacun d'eux : le flux entrant induit un changement d'état, ce nouvel état va être pris en compte pour produire un flux sortant en réponse, et cette réponse est envoyée aux suivants. Par exemple, si l'on formalise un réseau social dans lequel les utilisateurs s'échangent des messages, l'état peut représenter des caractéristiques telles que la tendance à partager du contenu (donc envoyer beaucoup d'événements), l'état émotionnel ou psychologique en fonction des caractéristiques des messages reçus. 
+	\item deux formules sont le cœur mathématique du modèle. Les événements traités à l'instant $t$ par $i$ produisent une résultante $R_{it}$. Une matrice de sensibilité aux événements est attachée à chaque nœud : on note $S_{it} = M^{-1}_{it}$. On calcule alors $\Delta E_{it} =  S_{it} R_{it} \Delta t$ qui explique la variation d'état suite à la collecte et au traitement des événements. On calcule alors la réponse à apporter avec le nouvel état (par exemple, prise en compte de l'état émotionnel dans la réponse à apporter). Puis on transmet les événements produits en réponse.
+	\item L'observateur peut alors dérouler une séquence d'événements observée en conditions réelles pour décrire l'état ou prévoir le comportement de chaque objet via le noeud correspondant. Il peut aussi, à l'inverse, chercher la séquence d'événements permettant d'orienter l'objet modélisé vers un certain état (comme par exemple dans un contexte de marketing digital).
+\end{itemize} 
 $$\text{}$$
-En terme d'implémentation, la description très large du nœud permet d'avoir des états conservés qui déterminent la gestion des événements. Par exemple, on prend un réseau social avec les liens de suivre un compte. Dès lors, les événements sont interprétés comme des messages changeant l'état émotionnel d'un individu. Cet individu va alors suivre des comptes en fonction de son état courant. 
+Voici donc un tableau récapitulatif expliquant comment le graphe est un cas particulier du modèle général :
 
-$$\text{}$$
-On peut alors exploiter le modèle précédent de la manière suivante: 
+ 
 \begin{tabular}{|l|l|l|}
 	\hline 
 	Version modèle & Version graphe \\
@@ -107,11 +115,11 @@ On peut alors exploiter le modèle précédent de la manière suivante:
 	\hline
 \end{tabular}
 $$\text{}$$
-
 Bien sûr, d'autres formes plus évoluées sont possibles: 
 \begin{itemize}
 	\item des liens qui sont enrichis de certaines caractéristiques (usure, par exemple). On peut les affubler d'un nombre d'événements maximum par unité de temps, ou une usure qui les désactive sous certaines conditions. 
-	\item des liens qui filtrent les événements parce qu'ils ne sont pas sensibles à cette forme d'événement. Par exemple, un champ gravitationnel peut être insensible à toute forme de force électromagnétique.
+	\item des liens qui filtrent les événements parce qu'ils ne sont pas sensibles à cette forme d'interaction, ou qui en atténuent l'intensité au fur et à mesure qu'ils voyagent. On aurait alors une perte d'intensité en fonction d'une distance. 
 \end{itemize}
+	
 
 \end{document}
