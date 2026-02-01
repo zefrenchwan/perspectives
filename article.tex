@@ -4,16 +4,95 @@
 \author{zefrenchwan}
 \date{version du \today{}}
 
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage[french]{babel}
 \usepackage{amsfonts,amsmath,amssymb}
+\usepackage{float}
 
 \begin{document}
 \maketitle
-\abstract{Cet article propose un outil de modélisation applicable sur les systèmes sociaux par analogie avec les  systèmes physiques. Après avoir reformulé les concepts de base de la mécanique Newtonienne, nous proposons une version discrète sous forme de graphes dynamique. }
+\abstract{Nous avons chacun un point de vue sur notre système social, et nous passons notre temps à anticiper sa dynamique : ce qui sera fait, par qui, à quelle échéance. Cette capacité nous permet d'ajuster nos comportement au fur et à mesure, que ce soit tactiquement dans une situation donnée ou pour notre meilleur intérêt à plus long terme. La modélisation formelle d'un système social n'a rien de nouveau : elle est courante en politique (sondages, campagnes électorales), en marketing digital (maximiser l'impact d'une campagne) pour ne citer que celles ci. 	Cet article propose un outil de modélisation applicable sur les systèmes sociaux par analogie avec les  systèmes physiques. Après avoir reformulé les concepts de base de la mécanique Newtonienne, nous proposons une version discrète sous forme de graphes dynamique. }
+\tableofcontents
+\clearpage
+
+\section{Vers une modélisation des systèmes sociaux}
+
+Dans sa définition la plus générale, un système social est un ensemble d'entités évoluant au sein d'une structure d'interactions. Une entité peut être un individu, un groupe ou une institution, caractérisée par une identité stable et une durée de vie finie. Contrairement à un objet physique inerte, l'entité sociale est un acteur : elle comprend le monde de manière partielle et agit en fonction de buts spécifiques. Dès lors, chaque acteur met en œuvre avec des stratégies. Ce qu'il comprend du système, notamment des autres acteurs, est fonction des faits qu'il connait mais aussi, et surtout, de son point de vue sur le système. Un même événement peut donc déclencher des réactions opposées selon le prisme idéologique de l'acteur qui le reçoit. Si l'on isole les concepts centraux, on a donc ceci : 
+
+\begin{table}[H]
+\center
+\begin{tabular}{|l|l|}
+\hline 
+Nom & Description \\
+\hline 
+Acteur & Toute entité active (qui agit) et réflexive (qui pense) \\
+\hline 
+Lien & Toute forme d'interaction ou de contrainte \\
+\hline 
+Système & Cadre dans lequel les acteurs s'organisent \\
+ & en fonction des liens. \\
+\hline 
+Fait & Ce qui est observable ou objectivement vrai \\
+\hline 
+Vue & Point de vue sur une partie du système \\
+ & (par opposition au fait qui est objectif) \\
+\hline 
+But & Ce qu'un acteur veut obtenir, être ou réaliser \\
+\hline 
+Stratégie & Actions ou solutions trouvées par un acteur pour \\
+ & réaliser un but en propre ou au sein d'une alliance \\
+\hline 
+\end{tabular}
+\caption{Principaux concepts d'un modèle social}
+\end{table}
+
+Le concept clé que ce document veut mettre en avant est le suivant : \textbf{les vues définissent le comportement des acteurs, les comportements des acteurs modifient le système, le système change les vues des acteurs}. 
+Donc, un système social est en rétroaction permanente: 
+\begin{enumerate}
+	\item \textbf{Perception} : Les vues induisent des tensions.
+	\item \textbf{Action} : Les tensions déclenchent des actions qui modifient le système (création ou rupture de liens).
+	\item \textbf{Réaction} : La nouvelle structure du système modifie en retour la perception des acteurs. 
+\end{enumerate}
+
+$$\text{}$$
+C'est tout ce qui fait la difficulté d'un modèle réellement pertinent : 
+\begin{itemize}
+	\item les acteurs communiquent rarement leurs vue et leur stratégie de manière exhaustive et transparente. Il faut donc l'approximer en observant les actes, ou l'estimer par rapport à leur logique de maximisation de leur propre intérêt (tel parti a un intérêt à une alliance pour placer ses candidats à telle élection). 
+	\item les boucles de rétroaction permanentes amènent à des équations que l'on ne peut résoudre que sur des temps courts du fait de leur sensibilité aux conditions initiales. A supposer bien sûr que le système reste dans une configuration connue et mathématisable. 
+	\item les événements inattendus ou difficiles à anticiper, les fameux cygnes noirs, sont une évidence : on sait qu'on en aura.
+\end{itemize}
+
+Aussi, soyons modestes, et disons le tout de suite : le social ne se laisse pas docilement prédire ainsi. Il faut donc distinguer plusieurs objectifs de précision en fonction de ce que l'observateur sait d'un système: 
+
+\begin{enumerate}
+	\item la prédiction définit de manière unique l'état suivant, ce qu'on va observer à coup sûr. 
+	\item la prédiction fournit une distribution de probabilités, ou en tous cas la possibilité de décrire les prochains états en affirmant que celui ci est plus probable que celui là.
+	\item la prédiction donne un ensemble des possibles, qui est une façon surtout de dire que les autres sont absolument impossibles. On restreint donc l'ensemble des possibles. 
+\end{enumerate}
+
+\begin{table}[H]
+\center
+\begin{tabular}{|l|l|}
+\hline 
+Niveau de prédiction & Description \\
+\hline 
+Déterministe & L'état suivant est connu \\
+ & au fil du temps \\
+\hline 
+Probabiliste &  Les états suivants sont évaluables \\
+ & suivant une distribution de probabilités \\
+\hline 
+Prospectif & On exclut les états impossibles \\
+ & et on fournit des tendances à long terme \\
+ \hline 
+\end{tabular}
+\caption{Niveaux de prédiction possibles}
+\end{table}
 
 \section{Modèle de gestion d'états d'un système}
 
-Un observateur modélise une situation d'objets variant au sein d'un système. Ce dernier définit des contraintes, en tous cas des liens, entre les objets. La question peut être la prédiction des futurs états, l'explication du passé du système ou l'optimisation du comportement d'un objet en particulier. Nous allons proposer une modélisation générale pour passer d'un modèle à une trajectoire dans un espace d'états. 
+Dans cette section, après une mise en garde nécessaire sur les limites de la modélisation, nous proposons une approche pour décrire mathématiquement la dynamique d'un système en général. Si nous avons en tête son applicabilité à un système social, la mécanique que nous proposons est en réalité plus générale. Nous allons donc nous placer du point de vue d'un observateur. Celui ci modélise une situation d'objets variant au sein d'un système. Ce dernier définit des contraintes, en tous cas des liens, entre les objets. La question peut être la prédiction des futurs états, l'explication du passé du système ou l'optimisation du comportement d'un objet en particulier. Nous allons proposer une modélisation générale pour passer d'un modèle à une trajectoire dans un espace d'états. 
 
 
 \subsection{Le modèle d'états continus}
@@ -45,8 +124,9 @@ C'est le rôle d'une transformation $M_{it}$ qui est pour le moment une matrice 
 Elle s'interprète par analogie avec le tenseur métrique en relativité générale, qui définit la géométrie locale de l'espace et détermine comment une impulsion se traduit en mouvement selon la courbure de l'environnement.
 On a alors $$\mathcal{R}_{it} \Delta t = M_{it} \Delta E_{it}$$
 Cette forme est intéressante parce qu'elle donne une base pour arriver à une notion abstraite d'espace d'états. 
-$$\text{}$$
 
+\begin{table}[H]
+\center
 \begin{tabular}{|l|l|l|}
 	\hline 
 	Concept & Cas classique & Généralisation \\
@@ -62,6 +142,8 @@ $$\text{}$$
 	           & et position & \\
 	\hline 
 \end{tabular}
+\caption{Sommaire de la généralisation des concepts physiques}
+\end{table}
 $$\text{}$$
 Ainsi, le principe est de prendre un espace d'états, donc un espace vectoriel de dimension finie. 
 Les changements peuvent être typés de n'importe quelle classe, tant que l'on sait produire une résultante sous forme de vecteur. 
@@ -96,8 +178,9 @@ Pour le rendre opérationnel et traitable par un programme informatique, nous pr
 $$\text{}$$
 Voici donc un tableau récapitulatif expliquant comment le graphe est un cas particulier du modèle général :
 
- 
-\begin{tabular}{|l|l|l|}
+\begin{table}[H]
+\center
+\begin{tabular}{|l|l|}
 	\hline 
 	Version modèle & Version graphe \\
 	\hline 
@@ -114,12 +197,15 @@ Voici donc un tableau récapitulatif expliquant comment le graphe est un cas par
 	Matrice des états & Sensibilité aux événements \\
 	\hline
 \end{tabular}
-$$\text{}$$
+\caption{Passer du modèle général au cas discret}
+\end{table}
+
+
 Bien sûr, d'autres formes plus évoluées sont possibles: 
 \begin{itemize}
 	\item des liens qui sont enrichis de certaines caractéristiques (usure, par exemple). On peut les affubler d'un nombre d'événements maximum par unité de temps, ou une usure qui les désactive sous certaines conditions. 
 	\item des liens qui filtrent les événements parce qu'ils ne sont pas sensibles à cette forme d'interaction, ou qui en atténuent l'intensité au fur et à mesure qu'ils voyagent. On aurait alors une perte d'intensité en fonction d'une distance. 
 \end{itemize}
-	
+
 
 \end{document}
