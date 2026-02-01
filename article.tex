@@ -208,4 +208,19 @@ Bien sûr, d'autres formes plus évoluées sont possibles:
 \end{itemize}
 
 
+\subsection{Les mécanismes de rétroaction}
+
+Voyons plus en détail les équations de changement d'état et les possibilités de rétroaction. L'observateur a donc choisi $v$ axes d'analyse qui résument les états des acteurs ainsi que les caractéristiques des événements qui les modifient. Soient donc $\alpha_1, \ldots, \alpha_v$ ces axes, et $[s_{np}]_{1\le n,p\le v}$ la matrice de sensibilité de l'acteur $o_i$ à l'instant $t$. Celui ci reçoit des événements dont la résultante est $[r_{it}^j]_{1\le j \le v}$. Si la matrice de sensibilité n'évolue pas, la même résultante donnera la même variation d'états. C'est exactement ce qu'on attend d'un objet physique, et c'est d'ailleurs un fait fondamental : les lois physiques sont les mêmes au fil du temps et en tout point d'espace. Les systèmes sociaux ne suivent évidemment pas cette même logique : il y a adaptation progressive, donc une forme d'apprentissage au fil du temps pour un acteur donné. Il existe plusieurs façons de le modéliser (règles d'Oja ou de Hebb) mais l'on peut écrire, par exemple : 
+$$\displaystyle { S_{i,t+\Delta t} = S_{it} + \eta ( \Delta E_{it} \otimes \mathcal{R}_{it} ) \Delta t } $$
+Soient $\Delta S_{it} = [\sigma_{np}]_{1 \le n,p \le v}$, $\mathcal{R}_{it} = [r_n]_{1 \le n \le v}$ le vecteur colonne résultante et $\Delta E_{it} = [\epsilon_n]_{1 \le n \le v}$ le vecteur colonne variation d'état. Alors, pour $n$ et $p$ fixés, il vient 
+$$\sigma_{np} = \eta \times \epsilon_n  \times r_p \times \Delta t$$
+Fixons $n$ et $p$ pour traiter valeur à valeur. La formule s'explique ainsi : 
+\begin{enumerate}
+	\item la sensibilité $s_{np}$ de l'acteur sur la ligne $n$ et la colonne $p$ s'interprète par l'action de l'axe $p$ sur l'axe $n$. Si $n = p$, c'est simplement la valeur sur l'axe en question. 
+	\item sa variation $\sigma_{np}$ est ce qu'on va ajouter à $s_{np}$ pour obtenir la nouvelle matrice de sensibilité
+	\item une capacité globale d'apprentissage $\eta$. C'est un réel compris entre 0 et 1. Plus il est élevé, plus l'acteur va changer son comportement et être influencé par l'événement
+	\item $\epsilon_n$ qui est la variation d'état sur l'axe $n$. C'est bien une variation. En effet, si l'état ne change pas, il n'y a pas de raison de modifier la sensibilité aux événements, donc d'apprendre. 
+	\item $r_p$ qui est la résultante des événements sur l'axe $p$. Plus elle est forte sur cet axe, plus grande est l'impact sur $\sigma_{np}$
+\end{enumerate}
+
 \end{document}
