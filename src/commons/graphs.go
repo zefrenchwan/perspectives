@@ -2,6 +2,7 @@ package commons
 
 import (
 	"errors"
+	"iter"
 	"slices"
 	"time"
 )
@@ -29,7 +30,26 @@ func (g *graphElement) Id() string {
 
 // Graph represents the dynamic system of local events mappers.
 // It manages time, topology (connections), and event propagation.
-type Graph struct {
+type Graph interface {
+	// Set creates or updates a directed link between a source and a destination.
+	// If the nodes do not exist in the graph, they are automatically added.
+	//
+	// source: The node emitting events.
+	// destination: The node receiving events.
+	// latency: The time it takes for an event to travel from source to destination (must be > 0).
+	Set(source, destination EventMapper, latency time.Duration) error
+	// Neighbors returns the current neighbors of the source as a map of mapper and latency in between.
+	// It returns an iterable (maps may be too small)
+	Neighbors(source EventMapper) iter.Seq2[EventMapper, time.Duration]
+	// Step advances the simulation by a duration dt.
+	// It processes events chronologically to respect causality and propagation delays.
+	Step(dt time.Duration) error
+	// Emit schedules an external event to be processed by a specific mapper at a given time.
+	Emit(target EventMapper, event Event, at time.Time) error
+}
+
+// localGraph is the default implementation of the Graph interface.
+type localGraph struct {
 	// sharedTime is the current global clock of the simulation.
 	// It advances via the Step method.
 	sharedTime time.Time
@@ -38,8 +58,8 @@ type Graph struct {
 }
 
 // NewGraph creates a new empty graph initialized at a specific start time.
-func NewGraph(startTime time.Time) *Graph {
-	return &Graph{
+func NewGraph(startTime time.Time) Graph {
+	return &localGraph{
 		sharedTime: startTime,
 		elements:   make(map[string]*graphElement),
 	}
@@ -51,7 +71,7 @@ func NewGraph(startTime time.Time) *Graph {
 // source: The node emitting events.
 // destination: The node receiving events.
 // latency: The time it takes for an event to travel from source to destination (must be > 0).
-func (g *Graph) Set(source, destination EventMapper, latency time.Duration) error {
+func (g *localGraph) Set(source, destination EventMapper, latency time.Duration) error {
 	if latency <= 0 {
 		return errors.New("latency must be positive to respect causality")
 	}
@@ -91,9 +111,22 @@ func (g *Graph) Set(source, destination EventMapper, latency time.Duration) erro
 	return nil
 }
 
+// Neighbors returns the current neighbors of the source as an iter.Seq2 of EventMapper and latency.
+func (g *localGraph) Neighbors(source EventMapper) iter.Seq2[EventMapper, time.Duration] {
+	return func(yield func(EventMapper, time.Duration) bool) {
+		if link := g.elements[source.Id()]; link != nil {
+			for k, t := range link.successors {
+				if !yield(g.elements[k].mapper, t) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // Step advances the simulation by a duration dt.
 // It processes events chronologically to respect causality and propagation delays.
-func (g *Graph) Step(dt time.Duration) error {
+func (g *localGraph) Step(dt time.Duration) error {
 	if g == nil {
 		return nil
 	}
@@ -162,7 +195,7 @@ func (g *Graph) Step(dt time.Duration) error {
 }
 
 // Emit schedules an external event to be processed by a specific mapper at a given time.
-func (g *Graph) Emit(target EventMapper, event Event, at time.Time) error {
+func (g *localGraph) Emit(target EventMapper, event Event, at time.Time) error {
 	if g.elements == nil {
 		return errors.New("graph is empty")
 	}
