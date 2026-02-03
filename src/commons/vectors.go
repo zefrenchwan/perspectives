@@ -5,6 +5,9 @@ import (
 	"fmt"
 )
 
+// Vectorizer to go from any to a vector (as a column matrix)
+type Vectorizer func(any) (ColumnMatrix, error)
+
 // ColumnMatrix is a multi lines, single column, matrix
 type ColumnMatrix []float64
 
