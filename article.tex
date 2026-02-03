@@ -1,6 +1,6 @@
 \documentclass{article}
 
-\title{Moteur}
+\title{Vers un moteur de simulation sociale}
 \author{zefrenchwan}
 \date{version du \today{}}
 
@@ -218,9 +218,89 @@ Fixons $n$ et $p$ pour traiter valeur à valeur. La formule s'explique ainsi :
 \begin{enumerate}
 	\item la sensibilité $s_{np}$ de l'acteur sur la ligne $n$ et la colonne $p$ s'interprète par l'action de l'axe $p$ sur l'axe $n$. Si $n = p$, c'est simplement la valeur sur l'axe en question. 
 	\item sa variation $\sigma_{np}$ est ce qu'on va ajouter à $s_{np}$ pour obtenir la nouvelle matrice de sensibilité
-	\item une capacité globale d'apprentissage $\eta$. C'est un réel compris entre 0 et 1. Plus il est élevé, plus l'acteur va changer son comportement et être influencé par l'événement
+	\item une capacité globale d'apprentissage $\eta$. C'est un réel compris entre 0 et 1. Plus il est élevé, plus l'acteur va changer son comportement et être influencé par l'événement. Dans un système physique sans rétroaction, on aura $\eta = 0$. 
 	\item $\epsilon_n$ qui est la variation d'état sur l'axe $n$. C'est bien une variation. En effet, si l'état ne change pas, il n'y a pas de raison de modifier la sensibilité aux événements, donc d'apprendre. 
 	\item $r_p$ qui est la résultante des événements sur l'axe $p$. Plus elle est forte sur cet axe, plus grande est l'impact sur $\sigma_{np}$
 \end{enumerate}
+
+\section{Limites du modèle et prise en compte des facteurs sociaux}
+
+Le modèle précédent utilise des concepts physiques qu'il extrapole aux systèmes sociaux. Il souffre cependant de plusieurs points faibles majeurs que cette section propose de décrire et corriger : 
+\begin{itemize}
+	\item nous nous plaçons dans un contexte d'usage du modèle : l'observateur fournit lui même les axes. Il faudra questionner cet usage : un $v$ trop petit et l'on passe à côté de signaux subtils, et s'il est trop grand, il devient incalculable.
+	\item les systèmes sociaux ne sont pas aussi linéaires et simples que les équations de changement d'état et de rétroaction laissent penser. Il nous faudra proposer des variations d'état et des modalités d'apprentissage plus réalistes
+	\item la description physique vise à observer une dynamique d'états. Or, un acteur social n'est pas aussi observable : on ne connait pas son état avec une telle précision, on ne constate que ses interactions. Il faut donc revoir l'objectif de description de son état. 
+\end{itemize}
+
+\subsection{Les axes de modélisation ne sont pas évidents}
+
+Dans un système social, les interactions sont riches, et le procédé de vectorisation des états et des événements va les réduire à $v$ axes. Si $v$ est vraiment petit, le risque de perte d'information est réel. Par exemple, réduire une communication de crise aux axes "colère" et "peur" ne permettra pas la détection de signaux faibles tels que la désobéissance civile par exemple.
+
+De plus, si l'on prend des événements de type texte, passer d'un texte long à un vecteur est aisé, mais le retour du vecteur au texte pour la production de messages, en pratique quasiment infaisable. Une IA générative pourrait cependant être exploitée pour produire des messages textuels suivant un certain vecteur. 
+
+\subsection{Les systèmes sociaux ne sont pas linéaires}
+
+Les deux équations clé sont: 
+\begin{align*} 
+	\Delta E_{it} &=  S_{it} R_{it} \Delta t \\
+	\Delta S_{it} &= \eta ( \Delta E_{it} \otimes \mathcal{R}_{it} ) \Delta t
+\end{align*}
+
+Elles souffrent d'un problème majeur dès que l'on sort du cadre physique. En l'état, si on multiplie la résultante par $\lambda$, le $\Delta E_{it}$ l'est aussi, et le $\Delta S_{it}$ est alors multiplié par $\lambda^2$. Or, si l'on prend le cas de la diffusion de messages dans les réseaux sociaux, on obtiendrait que si un message est $\lambda$ fois plus intense, il produit un effet chez son lecteur $\lambda$ fois plus fort, et ceci pour tout $\lambda$. C'est bien sûr faux en pratique. il faut prendre en compte deux phénomènes: 
+\begin{itemize}
+	\item la saturation de l'utilisateur : au delà d'un certain niveau sur un axe donné (disons la violence ou la viralité), l'utilisateur va saturer et traiter le message comme une forme de spam. La variation d'état ne peut pas être simplement linéaire, il faut la corriger
+	\item l'apprentissage est aussi limité. Si la variation d'état est faible, la variation de la sensibilité peut être corrélée linéairement. Mais au delà d'une certaine intensité d'état (personne extrémiste) ou de variation demandée, il n'y a plus d'adaptation. 
+\end{itemize}
+$$\text{}$$
+Il faut donc apporter deux corrections au modèle dès lors qu'on quitte la pure simulation physique. Nous proposons donc ceci: 
+\begin{align*} 
+	\Delta E_{it} &= \sigma( S_{it} R_{it} \Delta t )\\
+	\Delta S_{it} &= \eta(\Delta E_{it}, \Delta t) \text{ } ( \Delta E_{it} \otimes \mathcal{R}_{it} ) \Delta t
+\end{align*}
+Avec : 
+\begin{itemize}
+	\item $\sigma$ une fonction d'ajustement de la variation d'état qui écrase les valeurs au delà d'un certain seuil. Une formule globale n'est pas le meilleur choix, car elle dépend souvent de la norme de $E_{it}$ ou sa variation. Elle est "trop brutale" au sens où elle impacte indifféremment des valeurs plausibles et des valeurs plus extrêmes. On utilisera plutôt une fonction vectorielle pour agir composante à composante : $\sigma = (\sigma_1, \ldots, \sigma_v)$. L'avantage est ce que si un axe $k$ a une valeur très élevée, la correction apportée ne se fera que sur $\sigma_k$.
+	\item $\eta$ qui devient une fonction et plus seulement un nombre. Celle ci a le même rôle : limiter l'adaptation à un seuil raisonnable et prévenir les effets de saturation
+\end{itemize}
+
+
+\begin{table}[H]
+	\center 
+	\begin{tabular}{|l|l|}
+		\hline 
+		Facteur correctif & Utilité dans le modèle social \\
+		\hline 
+		$\sigma$ & Contraint un état à varier dans un voisinage \\
+		 & raisonnable de son état courant \\
+		\hline 
+		$\eta$ variable & Contraint l'apprentissage à garder \\
+		 & la sensibilité dans un voisinage raisonnable \\
+		 & de sa valeur actuelle \\
+		\hline 
+	\end{tabular}
+	\caption{Utilité et interprétation des valeurs correctives}
+\end{table}
+
+\subsection{On ne connait pas l'état des acteurs}
+
+Si l'on reprend le modèle, on comprend que l'observateur fixe $v$ et ses axes de description de l'espace des états. Sur un système physique, en pratique, on connait les conditions de simulation, de sorte que : 
+\begin{itemize}
+	\item la description de l'état initial ne pose pas de difficulté particulière
+	\item les lois de transformation sont connues : la résultante suit une logique mathématique, la matrice $M_{it}$ sont dictées par le modèle
+	\item la question est donc plus le suivi de la trajectoire dans l'espace des états
+\end{itemize}
+$$\text{}$$
+Dans une modélisation sociale, la description des états et la sensibilité est difficile. Ce qu'on connait le plus certainement reste : 
+\begin{itemize}
+	\item les axes d'analyse, donc $\mathbb{R}^v$
+	\item la fonction de vectorisation de l'espace des événements vers $\mathbb{R}^v$ 
+	\item la fonction de vectorisation de l'espace des états des acteurs vers $\mathbb{R}^v$ 
+	\item pour chaque acteur indexé par $i \in I$, une série temporelle des événements entrants et sortants. On peut supposer qu'ils sont vectorisés, de sorte que l'on dispose des entrants $e^-$ et sortants $e^+$ dans $\mathbb{R}^v$ directement. Dans cette partie, on les notera $(e^{-}_{ik})_{1 \le k \le n}$ et $(e_{ik}^{+})_{1 \le k \le n}$. Dans la mesure où on calcule des résultantes, il y a autant d'entrants que de sortants, donc le $n$ est le même. Même si nous avons pris un indexage par un entier, on suppose disposer de la date exacte de collecte de la résultante. 
+\end{itemize}
+$$\text{}$$
+Dans ce contexte, on pense l'acteur comme une "boite noire" : on ne connait rien a priori de son état interne ou de sa sensibilité. Si l'on peut cependant avoir un modèle opérationnel, il faut lier ce qu'il exprime à ce qu'il sait, donc poser, par exemple, que les événements sortants sont fonction de son état courant et des événements entrants. Autrement dit, il parait raisonnable de prendre une fonction $\Gamma_{it}: \mathbb{R}^v \times \mathbb{R}^v \rightarrow \mathbb{R}^v$ (dépendante de l'acteur et potentiellement du temps) telle que $$e^{+}_{it} = \Gamma_{it}(E_{it}, e^{-}_{it})$$
+Il reste à poser des hypothèses qui rendent son usage plausible. Par exemple, une première approximation serait de décrire un événement sortant comme fonction de l'état courant ($A_{i}E_{it}$), de l'entrée reçue à ce moment là ($B_{it} e^{-}_{it}$) et d'un vecteur aléatoire de moyenne nulle (par exemple un bruit blanc gaussien). Ainsi, si on observe l'acteur $i$, on aurait pour tout $t$
+$$e^{+}_{it} = A_{i}E_{it} + B_{it}e^{-}_{it} + C_{it}$$ 
+Pour permettre de savoir comment l'acteur $i$ évolue dans le temps, on veut calculer la trajectoire de $E_{it}$ (comme fonction de $t$). Et pour que ce soit possible, on approxime $B_{it}$ comme une fonction de $B_i$ (matrice indépendante de $t$, dépendant de l'acteur $i$) et $e^{-}_{it}$. Une proposition peut être : $$\displaystyle{B_{it} = B_i \text{ }\frac{1}{1+ \lambda||e^{-}_{it}||}}$$ pour un certain paramètre d'amortissement $\lambda$. Plus l'événement entrant a une norme élevée, moins il est considéré comme pertinent et moins la réponse fournie en tiendra compte. Quant à $\lambda$, il est plus une constante technique pour ajuster la participation de $B_{it}$. Un retour critique de l'observateur est nécessaire : cette formule capture une forme de fatigue informationnelle mais est inadaptée quand l'événement est traumatique pour son acteur. Si par exemple, on applique l'outil à un contexte de crise (guerre), il faut adapter la formule pour ne prendre en compte que les événements les plus chargés émotionnellement. 
 
 \end{document}
