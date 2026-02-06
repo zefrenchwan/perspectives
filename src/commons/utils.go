@@ -2,10 +2,17 @@ package commons
 
 import (
 	"cmp"
+	"math"
 	"slices"
 
 	"github.com/google/uuid"
 )
+
+// equalsFloats compares two float64 values for equality within a small margin of error (EPSILON).
+// This is necessary because floating point arithmetic can introduce small precision errors.
+func equalsFloats(a, b float64) bool {
+	return math.Abs(a-b) < EPSILON
+}
 
 // NewId builds a new unique id.
 // Two different calls should return two different values.
