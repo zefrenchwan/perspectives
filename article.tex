@@ -13,7 +13,7 @@
 \begin{document}
 \maketitle
 \abstract{Nous avons chacun un point de vue sur notre système social, et nous passons notre temps à anticiper sa dynamique : ce qui sera fait, par qui, à quelle échéance. Cette capacité nous permet d'ajuster nos comportement au fur et à mesure, que ce soit tactiquement dans une situation donnée ou pour notre meilleur intérêt à plus long terme. La modélisation formelle d'un système social n'a rien de nouveau : elle est courante en politique (sondages, campagnes électorales), en marketing digital (maximiser l'impact d'une campagne) pour ne citer que celles ci. 	Cet article propose un outil de modélisation applicable sur les systèmes sociaux par analogie avec les  systèmes physiques. Après avoir reformulé les concepts de base de la mécanique Newtonienne, nous proposons une version discrète sous forme de graphes dynamiques. Pour prendre en compte une adaptation des acteurs sociaux, nous proposons un mécanisme de rétroaction. Cependant, il nous faut apporter un retour critique. Et il est simple : l'adaptation d'un modèle physique au social est ardue, avec des besoins d'ajustement dans le meilleur des cas. Nous proposons alors des pistes pour s'approcher de résultats réalistes. La conclusion ne sera pas une surprise : il faut multiplier les concessions et les artifices mathématiques (introduire des états moyens, du bruit au sens probabiliste). Et même dans ces cas là, reconnaissons qu'il s'agit plus d'une garantie d'efforts que de résultats.}
-%%\tableofcontents
+\tableofcontents
 \clearpage
 
 \section{Vers une modélisation des systèmes sociaux}
@@ -313,6 +313,39 @@ $$\text{ }$$
 A moins de forcer l'invariant, il n'y a pas de raison a priori que $S_t$ soit toujours une fonction directe de l'espérance (fut elle pondérée) des $s_{it}$. Pour le comprendre, fixons un temps $t > 0$. En passant à l'espérance dans la formule initiale, on a $$\mathbb{E}(\Delta E_{it}) = S_t \mathbb{E}(\mathcal{R}_{it}) \Delta t   + \mathbb{E}(s_{it} \mathcal{R}_{it}) \Delta t$$ 
 Le terme $S_t \mathbb{E}(\mathcal{R}_{it}) \Delta t$ représente la résultante moyenne appliquée à la sensibilité générale. C'est le terme le plus logique, alors que $\mathbb{E}(s_{it} \mathcal{R}_{it}) \Delta t$ représente une dépendance du champ à des variations individuelles qui ne se compensent pas. Au contraire, \textbf{si $I$ est de "petite taille", le système sera très impacté par des éléments ayant une très forte sensibilité sur certains axes}, transformant $\mathcal{R}_{it}$ en des valeurs très élevées de $s_{it} \mathcal{R}_{it}$. Si l'on définit un système isolé comme caractérisé par $\mathbb{E}(\mathcal{R}_{it}) = 0$, alors cette condition ne suffit pas pour que les variations d'états des objets se compensent. 
 
+
+Si l'écriture $S_{it} = S_t + s_{it}$ est une bonne base, elle est beaucoup trop générale en l'état. Il n'y a pas de raison a priori d'avoir $\mathbb{E}(s_{it}) = 0$ en général. Et même si c'était le cas, l'écart type serait probablement énorme. On peut alors s'inspirer de la logique des "small worlds" et de la segmentation. Dans un contexte social donné, on regroupe les acteurs, pas en tant que groupe uniforme unique (la société), mais en sous groupes beaucoup plus denses. Un petit monde se caractérise par une communication interne forte et peu de liens hors du groupe. Dès lors, à un moment donné, on décompose $I$ en $n$ sous groupes, et pour chacun d'eux, on postule qu'il est cohérent. Dit autrement, dans un groupe $G$, on a $\mathbb{E}(s_{it}) = 0$ et $\mathbb{E}(S_{t}) = \mu_G$. C'est alors la trajectoire locale, de chaque groupe, qu'il faut suivre.  
+
+
+Si l'on veut descendre ces informations au niveau personnel, on retrouve le concept marketing de \textbf{persona}. Une personne incarne une série de rôles au fur et à mesure de sa vie : étudiante, professionnelle de début de carrière, familiale, associative, etc. Ainsi, une personne se retrouve dans différents groupes. Sur un temps court, les groupes de référence sont une approximation suffisante : on définit un \textbf{noyau identitaire} permettant de réduire à quelques groupes les comportements d'une personne. Un modèle à facteurs (pondération par des poids) serait alors la piste la plus logique pour caractériser l'état de la personne (sur un temps court, là encore). 
+
+\subsection{Synthèse}
+
+Voici donc un résumé des éléments à corriger pour espérer passer d'un modèle physique à un outil social réaliste. La liste ne saurait bien sûr être exhaustive, elle liste les points identifiés  à date : 
+
+\begin{table}[H]
+\center 
+\begin{tabular}{|l|l|}
+\hline 
+Facteur & Rôle Social \\
+\hline 
+Embeddings (IA) &Traduire le langage humain en mathématiques. \\
+ & Ajoute la possibilité d'interpréter les messages  \\
+ & entrants et de produire des messages sortants \\
+ & adaptés (car générés avec un contexte) \\
+\hline 
+$\sigma$ (Ajustement) & Empêcher les réactions disproportionnées (saturation) \\
+\hline 
+$\eta$ variable & Modéliser la perte de plasticité mentale/apprentissage. \\
+\hline 
+$\lambda$ (Amortissement) & Modéliser la fatigue face au flux d'informations \\
+\hline 
+Segmentation  & Augmenter la cohérence locale au lieu de traiter un \\
+(Groupes) & système entier trop hétérogène donc plus imprévisible \\
+ \hline 
+\end{tabular}
+\caption{Corrections à apporter pour un meilleur usage du modèle}
+\end{table}
 
 
 \end{document}
