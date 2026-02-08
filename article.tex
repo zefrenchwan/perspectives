@@ -12,13 +12,13 @@
 
 \begin{document}
 \maketitle
-\abstract{Nous avons chacun un point de vue sur notre système social, et nous passons notre temps à anticiper sa dynamique : ce qui sera fait, par qui, à quelle échéance. Cette capacité nous permet d'ajuster nos comportement au fur et à mesure, que ce soit tactiquement dans une situation donnée ou pour notre meilleur intérêt à plus long terme. La modélisation formelle d'un système social n'a rien de nouveau : elle est courante en politique (sondages, campagnes électorales), en marketing digital (maximiser l'impact d'une campagne) pour ne citer que celles ci. 	Cet article propose un outil de modélisation applicable sur les systèmes sociaux par analogie avec les  systèmes physiques. Après avoir reformulé les concepts de base de la mécanique Newtonienne, nous proposons une version discrète sous forme de graphes dynamiques. Pour prendre en compte une adaptation des acteurs sociaux, nous proposons un mécanisme de rétroaction. Cependant, il nous faut apporter un retour critique. Et il est simple : l'adaptation d'un modèle physique au social est ardue, avec des besoins d'ajustement dans le meilleur des cas. Nous proposons alors des pistes pour s'approcher de résultats réalistes. La conclusion ne sera pas une surprise : il faut multiplier les concessions et les artifices mathématiques (introduire des états moyens, du bruit au sens probabiliste). Et même dans ces cas là, reconnaissons qu'il s'agit plus d'une garantie d'efforts que de résultats.}
+\abstract{Nous avons chacun un point de vue sur notre système social, et nous passons notre temps à anticiper sa dynamique : ce qui sera fait, par qui, à quelle échéance. Cette capacité nous permet d'ajuster nos comportements au fur et à mesure, que ce soit tactiquement dans une situation donnée ou pour notre meilleur intérêt à plus long terme. La modélisation formelle d'un système social n'a rien de nouveau : elle est courante en politique (sondages, campagnes électorales), en marketing digital (maximiser l'impact d'une campagne) pour ne citer que celles-ci. 	Cet article propose un outil de modélisation applicable sur les systèmes sociaux par analogie avec les  systèmes physiques. Son utilisation consiste à définir des axes d'analyse (rancoeur, colère, espoir par exemple) et à formaliser un espace d'états pour observer au mieux les acteurs sociaux concernés. En distinguant les contraintes du système social des réactions propres aux acteurs, nous définissons une trajectoire d'états qui réconcilie aspirations individuelles et contraintes systémiques. Nous proposons également une formalisation des mécanismes d'apprentissage de chaque acteur. Mais soyons honnêtes : nous proposons donc un outil que nous espérons utile tout en sachant pertinemment que le social ne se laisse pas enfermer dans des équations, si complexes soient elles. }
 \tableofcontents
 \clearpage
 
 \section{Vers une modélisation des systèmes sociaux}
 
-Dans sa définition la plus générale, un système social est un ensemble d'entités évoluant au sein d'une structure d'interactions. Une entité peut être un individu, un groupe ou une institution, caractérisée par une identité stable et une durée de vie finie. Contrairement à un objet physique inerte, l'entité sociale est un acteur : elle comprend le monde de manière partielle et agit en fonction de buts spécifiques. Dès lors, chaque acteur met en œuvre avec des stratégies. Ce qu'il comprend du système, notamment des autres acteurs, est fonction des faits qu'il connait mais aussi, et surtout, de son point de vue sur le système. Un même événement peut donc déclencher des réactions opposées selon le prisme idéologique de l'acteur qui le reçoit. Si l'on isole les concepts centraux, on a donc ceci : 
+Dans sa définition la plus générale, un système social est un ensemble d'entités évoluant au sein d'une structure d'interactions. Une entité peut être un individu, un groupe ou une institution, caractérisée par une identité stable et une durée de vie finie. Contrairement à un objet physique inerte, l'entité sociale est un acteur : elle comprend le monde de manière partielle et agit en fonction de buts spécifiques. Dès lors, chaque acteur met en œuvre des stratégies. Ce qu'il comprend du système, notamment des autres acteurs, est fonction des faits qu'il connait mais aussi, et surtout, de son point de vue sur le système. Un même événement peut donc déclencher des réactions opposées selon le prisme idéologique de l'acteur qui le reçoit. Si l'on isole les concepts centraux, on a donc ceci : 
 
 \begin{table}[H]
 \center
@@ -92,260 +92,156 @@ Prospectif & On exclut les états impossibles \\
 
 \section{Modèle de gestion d'états d'un système}
 
-Dans cette section, après une mise en garde nécessaire sur les limites de la modélisation, nous proposons une approche pour décrire mathématiquement la dynamique d'un système en général. Si nous avons en tête son applicabilité à un système social, la mécanique que nous proposons est en réalité plus générale. Nous allons donc nous placer du point de vue d'un observateur. Celui ci modélise une situation d'objets variant au sein d'un système. Ce dernier définit des contraintes, en tous cas des liens, entre les objets. La question peut être la prédiction des futurs états, l'explication du passé du système ou l'optimisation du comportement d'un objet en particulier. Nous allons proposer une modélisation générale pour passer d'un modèle à une trajectoire dans un espace d'états. 
+Soyons très concret : un observateur est en mesure d'observer un système et de capter des événements. Il applique un modèle sur ce qu'il observe. Il y a bien alors deux systèmes : ce qui existe en soi, et ce qui est modélisé. Dès lors, notons $(o_i)_{i \in I}$ les objets réels, observables (avec en général $I$ fini ou dénombrable). 
 
 
-\subsection{Le modèle d'états continus}
-
-Prenons un exemple classique : des objets physiques sont représentés comme des masses ponctuelles. 
-On se donne un repère $R$ dans un espace de dimension $N=3$ (hormis le temps).
-Pour chacune, des forces de gravitation s'appliquent, soumettant chacun à une résultante $\vec{F}$. 
-Dès lors, on applique la mécanique Newtonienne : $$\vec{F} = \frac{d\vec{P}}{dt}$$
-On peut réaliser une simulation physique de la manière suivante, en fixant un pas $\Delta t > 0$ : 
+Prenons un exemple des plus classiques, la mécanique Newtonienne : 
 \begin{enumerate}
-\item définir un instant initial $t_0$
-\item pour chaque élément $e$ du système, ajouter $e$ dans l'espace avec une position initiale et une quantité de mouvement 
-\item pour chaque pas de temps : calculer la force appliquée sur $e$, formant une résultante $R_e$, appliquer $\Delta \vec{P}_e = \vec{R_e} \Delta t$, et finalement mettre à jour la position et la quantité de mouvement de l'élément $e$ 
-\end{enumerate}
-
-Si l'on reprend la formalisation précédente, on peut garder la même logique générale, disons l'algorithme. 
-Cependant, on peut aussi écrire, dans un premier temps, $\Delta \vec{P}_e = I_N \vec{R_e} \Delta t$ avec $I_N$ la matrice identité. 
-Le changement est mathématiquement équivalent, mais il est le prélude à une notion plus avancée : avoir un terme dépendant du point d'espace où est un élément. 
-
- 
-Formellement, on peut alors passer à quelque chose de plus général. 
-On se donne un système physique qu'on décrit comme des objets $(o_i)_{i \in I}$ avec $I \neq \emptyset$. 
-Chaque objet $o_i$ est décrit via un état $E_i$ variable dans le temps. 
-Ainsi, au temps $t$, on a un vecteur $E_{it}$ dans un espace vectoriel de dimension $v$.
-Pour ce moment $t$, et tout couple $(i,j) \in I^2$, on a un vecteur d'interaction $c_{ij}^t$ dans cet espace. 
-Ainsi, pour un élément $o_i$ à un temps $t$, on a un ensemble de changements dont la résultante est $\mathcal{R}_{it}$ (qu'on avait noté $R_e$). 
-Reste à expliquer la variation d'état $\Delta E_{it}$, et pas seulement comme un $\mathcal{R}_{it} \Delta t$.
-C'est le rôle d'une transformation $M_{it}$ qui est pour le moment une matrice de taille $v \times v$. 
-Elle s'interprète par analogie avec le tenseur métrique en relativité générale, qui définit la géométrie locale de l'espace et détermine comment une impulsion se traduit en mouvement selon la courbure de l'environnement.
-On a alors $$\mathcal{R}_{it} \Delta t = M_{it} \Delta E_{it}$$
-Cette forme est intéressante parce qu'elle donne une base pour arriver à une notion abstraite d'espace d'états. 
-
-\begin{table}[H]
-\center
-\begin{tabular}{|l|l|l|}
-	\hline 
-	Concept & Cas classique & Généralisation \\
-	\hline 
-	\hline 
-	Changement & Force & Tout élément vectorisable \\
-	\hline 
-	Résultante & Somme des forces & Fonction de réduction \\
-	\hline 
-	Fonction locale & Géométrie locale & Matrice d'états \\
-	\hline 
-	Indicateur & Quantité de mouvement & État vectorisé \\
-	           & et position & \\
-	\hline 
-\end{tabular}
-\caption{Sommaire de la généralisation des concepts physiques}
-\end{table}
-$$\text{}$$
-Ainsi, le principe est de prendre un espace d'états, donc un espace vectoriel de dimension finie. 
-Les changements peuvent être typés de n'importe quelle classe, tant que l'on sait produire une résultante sous forme de vecteur. 
-Alors $\mathcal{R}_{it}$ est la résultante des changements subis par $o_i$ à $t$. 
-Pour lier les deux, la formule générale est $$R_{it} \Delta t = M_{it} \Delta E_{it}$$
-Avec $M_{it}$ une matrice (dépendant de l'état de $o_i$ et du temps $t$). 
-Celle ci s'interprète comme la prise en compte de l'état dans le changement. 
-Par exemple, s'il n'y a aucune transformation ($M_{it} = I_v$ la matrice identité), le changement d'état est exactement expliqué par le produit de la durée et de la résultante. 
-Les termes à gauche sont ce qui est relatif \`a la cause extérieure, les termes à droite sont ceux qui dépendent uniquement de l'état. Signalons au passage qu'il est tout à fait possible d'avoir une interaction réciproque de type : $$\Delta M_{it} = \Phi (\mathcal{R}_{it},E_{it}, \Delta t )$$
-En terme physique, il est plus intéressant de le formuler en terme de $$E_{i,t+dt} = E_{it} + \Delta E_{it} = E_{it} + \Delta t M^{-1}_{it} R_{it} $$ mais cela implique des conditions sur $M_{it}$, évidemment qu'elle soit inversible pour commencer. 
+	\item on choisit un repère, qui est la base de la description de l'observateur. On ajoute alors chaque élément dans ce repère avec un état initial $E_{i0}$. 
+	\item on fixe $t$ et on veut comprendre ou prédire l'observation de chaque élément du système en $t > 0$. En pratique, on aurait une version discrétisée des équations de la mécanique : au lieu de $dt$ instantané, on serait sur un pas de temps $\Delta t$. 
+	\item on calcule la résultante $\mathcal{R}_{it}$ qui s'applique à l'objet $i \in I$ au temps $t$. Il s'agit de synthétiser les interactions de chaque $o_j$ ($j \in I$, $j \neq i$) en un vecteur, puis d'en calculer la somme. De manière plus générale, $\mathcal{R}_{it}$ est la résultante des changements qu'il subit du système observé.
+	\item On applique l'équation $\mathcal{R}_{it} dt = d\vec{P}_i$ reliant la résultante à la quantité de mouvement $P_i$ de l'objet d'indice $i$. C'est là que le modèle transforme une cause extérieure en changement d'état (ici une variation de quantité de mouvement). Les invariants du modèle, à savoir le lien entre quantité de mouvement et position, permettent de conclure. On en déduit une variation de vitesse, puis un ajustement de la position, donc un nouvel état (dans l'espace des phases) $E_{it}$. 
+\end{enumerate}  
 $$\text{ }$$
-En terme de "mode d'emploi" du modèle: 
+Au delà des équations, c'est la méthode qui nous intéresse. Notre idée est d'extrapoler un modèle social à partir d'équations physiques. Nous distinguerons dans la suite les \textbf{acteurs sociaux} (ou simplement acteurs) qui sont spécifiquement dans le domaine social, des \textbf{objets} qui peuvent être des objets physiques comme des acteurs sociaux. Ceci posé, reprenons les notions clés que la physique nous apporte. Il nous faudra en particulier revenir sur: 
 \begin{enumerate}
-	\item l'observateur perçoit un système dynamique composé des objets $(o_i)_{i \in I}$. Il sait observer, pour son temps $t$ à lui, les interactions de $o_i$ vers $o_j$ pour tout couple $(i,j) \in I$. 
-	\item D'un point de vue formel, il connait donc $c_{ij}^t$ pour tout couple $(i,j) \in I^2$ et tout temps passé $t$. Chaque $c_{ij}^t$ est élément d'un ensemble $X$ dont la nature importe peu. 
-	\item l'observateur modélise l'état des objets observés et les changements dans un même espace vectoriel de dimension $v$. Il dispose donc de fonctions de vectorisation. D'abord, s'il observe un état de l'objet $o_i$ à $t$, il sait le vectoriser dans $\mathbb{R}^v$ sous la forme d'une matrice de taille $v \times v$. Il calcule alors $M_{it}$. De même, s'il observe les changements $c_{ij}^t$, il dispose d'une fonction $\Phi_{it} : X^I \rightarrow \mathbb{R}^v$ (qui peut dépendre de $i$ et $t$). Il calcule alors $R_{it} = \Phi_{it}((c_{ij}^t)_{j \in I}) \in \mathbb{R}^v$. Par exemple, si $I$ est fini, les $c_{ij}^t$ sont des vecteurs et $\Phi_{it} = \sum_{j \in I}$ devient indépendant du temps et de l'objet. 
-	\item il applique alors l'équation générale et trouve le $\Delta E_{it}$. Il peut appliquer une rétroaction sur la $M_{it}$ si son modèle l'exige. Enfin, il calcule le nouvel état. 
+	\item le choix des axes d'analyse pour comprendre comment passer à un espace d'états. Le but est de s'affranchir des spécificités du problème initial pour le poser en terme de pertinence sur un certain nombre d'axes
+	\item les variations d'états locales, pour passer de l'état à $t$ à celui pour le temps $t + dt$. Dans le cas physique, seule la résultante s'applique. Il nous faudra enrichir cette interprétation
+	\item la trajectoire dans un espace d'états, qui est une façon de reformuler comment un objet varie dans le temps suivant certains axes. 
 \end{enumerate}
 
-\subsection{Graphe d'états}
+\subsection{La modélisation par états}
 
-Le modèle précédent a pour vocation de poser une logique d'états expliqués par des changements traités par un objet. 
-Pour le rendre opérationnel et traitable par un programme informatique, nous proposons ici une implémentation basée sur un graphe dynamique. 
-
+L'observateur utilise un espace vectoriel pour modéliser les états des objets $o_i$. Ce point seul mérite qu'on s'y attarde. Dans un système mécanique, la question principale reste la prédiction de la trajectoire d'un objet au fil du temps. L'espace vectoriel en question ne pose pas spécialement de problème $\mathbb{R}^2$ pour les mouvements en deux dimensions, et $\mathbb{R}^3$ pour les mouvements en 3D (par définition). Dans un système social, définir ces axes d'analyse est une question tout à fait cruciale : des axes évidents donnent des informations triviales, et de trop nombreux axes induisent un temps de calcul rendant inopérantes les simulations. Mais dès que ces $v$ axes sont connus et "indépendants", ils induisent une base d'un espace vectoriel de dimension $v$. Donnons des exemples concrets: 
 \begin{itemize}
-	\item Les nœuds sont les objets à modéliser. Ils traitent des flux d'événements. Le graphe définit les objets (les noeuds) et les interactions autorisées (via les liens). Noeuds et liens peuvent avoir une durée de vie en dehors de laquelle ils n'opèrent tout simplement pas. 
-	\item les liens sont orientés et définissent que la destination reçoit des flux d'événements de la source. La transmission n'est pas instantanée et prend une certaine latence $\delta t > 0$. Introduire ce délai permet d'éviter des boucles et introduit une forme de causalité. Si l'on prend toujours $\delta t = 1$, on simule un graphe "au tour par tour".
-	\item chaque nœud reçoit un flux d'événements à un temps $t$. Le principe du modèle reste le même. Pour chacun d'eux : le flux entrant induit un changement d'état, ce nouvel état va être pris en compte pour produire un flux sortant en réponse, et cette réponse est envoyée aux suivants. Par exemple, si l'on formalise un réseau social dans lequel les utilisateurs s'échangent des messages, l'état peut représenter des caractéristiques telles que la tendance à partager du contenu (donc envoyer beaucoup d'événements), l'état émotionnel ou psychologique en fonction des caractéristiques des messages reçus. 
-	\item deux formules sont le cœur mathématique du modèle. Les événements traités à l'instant $t$ par $i$ produisent une résultante $R_{it}$. Une matrice de sensibilité aux événements est attachée à chaque nœud : on note $S_{it} = M^{-1}_{it}$. On calcule alors $\Delta E_{it} =  S_{it} R_{it} \Delta t$ qui explique la variation d'état suite à la collecte et au traitement des événements. On calcule alors la réponse à apporter avec le nouvel état (par exemple, prise en compte de l'état émotionnel dans la réponse à apporter). Puis on transmet les événements produits en réponse.
-	\item L'observateur peut alors dérouler une séquence d'événements observée en conditions réelles pour décrire l'état ou prévoir le comportement de chaque objet via le noeud correspondant. Il peut aussi, à l'inverse, chercher la séquence d'événements permettant d'orienter l'objet modélisé vers un certain état (comme par exemple dans un contexte de marketing digital).
-\end{itemize} 
-$$\text{}$$
-Voici donc un tableau récapitulatif expliquant comment le graphe est un cas particulier du modèle général :
-
-\begin{table}[H]
-\center
-\begin{tabular}{|l|l|}
-	\hline 
-	Version modèle & Version graphe \\
-	\hline 
-	Objet & Nœud \\
-	\hline 
-	Espace des objets & Graphe des objets \\
-	\hline 
-	État dans le modèle & État dans une implémentation \\
-	\hline 
-	Variation d'état & Variation d'état (iso) \\
-	\hline 
-	Résultante des changements & Réaction aux événements \\
-	\hline 
-	Matrice des états & Sensibilité aux événements \\
-	\hline
-\end{tabular}
-\caption{Passer du modèle général au cas discret}
-\end{table}
-
-
-Bien sûr, d'autres formes plus évoluées sont possibles: 
-\begin{itemize}
-	\item des liens qui sont enrichis de certaines caractéristiques (usure, par exemple). On peut les affubler d'un nombre d'événements maximum par unité de temps, ou une usure qui les désactive sous certaines conditions. 
-	\item des liens qui filtrent les événements parce qu'ils ne sont pas sensibles à cette forme d'interaction, ou qui en atténuent l'intensité au fur et à mesure qu'ils voyagent. On aurait alors une perte d'intensité en fonction d'une distance. 
+	\item opinions politiques : si un pays donné a $v$ partis en lice pour une élection politique à venir, il suffit d'attribuer à chaque axe un parti politique. Le nombre sur l'axe est donc l'adhésion aux idées du parti
+	\item marketing digital : si l'on segmente une offre sur $v$ produits, l'intérêt pour le produit devient un axe évident. 
+	\item physique : les objets sont décrits suivant $v$ axes. Par exemple, dans l'espace des phases, $v$ est le nombre de degrés de liberté qui définissent comment le système peut évoluer
 \end{itemize}
 
 
+On ne se place pas dans l'espace réel dans lequel les objets évoluent, mais bien dans l'espace des états que peuvent prendre les objets du système. Une fois cet espace fixé, disons $\mathbb{R}^v$, on positionne chaque objet $o_i$ à sa position initiale, et l'on s'intéresse à son évolution au fil du temps. Autrement dit, toute la question est de prédire avec plus ou moins de certitude la position de l'objet $o_i$ dans l'espace d'état, donc de trouver $E_{i,t+dt}$ en fonction des états précédents, idéalement uniquement à partir de $E_{it}$ seulement. En physique, la connaissance de l'état courant suffit (en tous cas en mécanique classique). Et dans ce cas, sans perte de généralité, il suffit de trouver $E_{i,t+dt} - E_{it} = dE_{it}$. 
+
+
+Pourquoi introduire un tel artifice mathématique ? D'abord, parce que les acteurs dans un même état agissent souvent de manière très proche. Il n'est pas nécessaire de traiter les évolutions au cas par cas, mais de prendre des groupes similaires et de regarder l'évolution de leurs états. Cela peut surprendre a priori. C'est pourtant une approximation fréquente en diplomatie : la connaissance de l'histoire permet de définir des tendances par analogie. Ensuite, l'outil est puissant pour modéliser notre propre incertitude. Si nous revenons aux limites de prédiction d'un modèle, on peut établir une correspondance mathématique : 
+\begin{enumerate}
+	\item dans le cas \textbf{déterministe}, $dE_{it}$ est parfaitement connu
+	\item dans le cas \textbf{probabiliste}, $dE_{it}$ suit une loi de probabilité
+	\item dans le cas \textbf{prospectif}, $dE_{it}$ forme un ensemble. En pratique, on discrétise le temps pour avoir, disons à $t+\Delta t$, un ensemble qui est celui des possibles. Par exemple un voisinage de rayon $r_t$ par rapport à la position à $E_{it}$. 
+\end{enumerate}
+
+\subsection{Modéliser les variations locales d'états}
+
+Un objet $o_i$ subit de la part des autres objets $(o_j)_{j \in I, j \ne i}$ un certain nombre d'interactions. A un temps $t$ fixé, l'observateur isole les changements $c_{ij}^t$ qui vont avoir un impact sur l'état de $o_i$ causé par l'objet $j \ne i$. Il calcule alors $\mathcal{R}_{it}$ la résultante en fonction des $c_{ij}^t$. Il n'est pas nécessaire d'ailleurs que les $c_{ij}^t$ soient pris dans le même espace vectoriel, il suffit de savoir calculer $\mathcal{R}_{it} = \Psi( (c_{ij}^t)_{j \in I, j \ne i})$. C'est un élément essentiel de la modélisation : \textbf{il suffit de savoir calculer la résultante comme un vecteur, la nature exacte des $c_{ij}^t$ n'a pas d'importance pour le modèle lui même}. 
+
+
+On interprète alors la résultante comme le changement extérieur qui s'applique sur l'objet $o_i$ à $t$. Voici des exemples de résultantes: 
+\begin{table}[H]
+	\center
+	\begin{tabular}{|l|l|}
+		\hline 
+		Contexte & Interprétation de la résultante \\
+		\hline 
+		Marketing & Publicités captées par l'acteur \\
+		& sur une période courte fixée \\
+		\hline 
+		Réseau social & Messages captés par l'acteur \\
+		& lors de sa session de navigation \\
+		\hline 
+		Politique & Informations délivrées lors de l'événement \\
+		& (meeting politique, émission spécifique ) \\
+		\hline
+	\end{tabular}
+	\caption{En fonction du contexte, exemples de résultantes}
+\end{table}
+
+
+Le cas physique est simple : $\mathcal{R}_{it} dt = dE_{it}$ pour tout $t$ et tout $i$. La connaissance des résultantes et de la position initiale de chaque objet suffit à supprimer toute incertitude (en théorie). De plus, sans résultante, la variation d'état est nulle, et l'objet continue sur une ligne droite à l'infini à vitesse constante. Si l'équation physique a le mérite de la simplicité, elle ne s'applique évidemment pas au social : 
+\begin{itemize}
+	\item en l'absence de pression extérieure, il n'y aurait pas de variation d'état. Ce n'est pas réaliste puisque les acteurs sociaux ont en général des buts et des stratégies. Nous allons introduire un terme additionnel, $\mathcal{B}_{it}$ qui est ce que veut faire l'acteur en l'absence de contrainte. On aurait alors $dE_{it} = \mathcal{B}_{it}dt$ en l'absence de toute action extérieure, c'est à dire que chaque acteur suit son plan si rien ne le change.
+	\item un acteur social est sensible à certains éléments plus qu'à d'autres. Par exemple, dans un espace d'états politiques, un acteur d'un parti sera beaucoup plus sensible aux arguments des partis proches qu'à ceux des partis qu'il déteste ou néglige. Si donc un acteur social reçoit une résultante $\mathcal{R}_{it}$, sa réaction doit tenir compte d'une sensibilité $\mathcal{S}_{it}$. C'est formellement une matrice carrée de taille $v \times v$.  Pour la comprendre, sur la ligne $n$ et la colonne $p$, on trouve l'impact qu'a l'axe $p$ sur l'axe $n$. Par exemple, si l'on prend une analyse de crise suivant les axes de rationalité (1), colère (2), peur (3) et espoir (4), le coefficient $s_{2,3}$ modélise l'impact de la peur sur la colère. Sur la diagonale ($n = p)$, on trouve l'impact de l'axe lui même (par exemple la pure colère). Si l'on peut exclure toute interdépendance des axes les uns avec les autres, il suffit de prendre $0$ sur tous les termes hors diagonale. De manière générale, des termes proches de $0$ marquent une indifférence, des termes élevés montrent une énorme sensibilité.
+\end{itemize}
+$$\text{ }$$
+Notons bien que cette formulation ne dépend que des acteurs et leur interaction. En sociologie, on parle d'\textbf{agency} : ce que ferait un acteur social de manière autonome, sans contrainte de la société. Notre formulation devient : 
+$$\mathcal{A}_{it} = \mathcal{S}_{it}\mathcal{R}_{it} + \mathcal{B}_{it}$$
+Avec $\mathcal{A}_{it}$ la réaction de l'acteur quand il est soumis à une pression locale $\mathcal{R}_{it}$ tout en suivant son but $\mathcal{B}_{it}$. 
+
+\subsection{Modéliser les trajectoires globales des acteurs}
+
+L'espace des états n'est pas un outil de modélisation passif. Dans un contexte social fixé, on a en général peu d'acteurs sociaux plongés dans un cadre mondial. On peut donc envisager un cadre invariant et fixé subi par les acteurs sociaux en première approximation. Or, ce cadre ne permet pas a priori la transition d'un état à un autre sans opposer une friction ou au contraire devenir la suite logique. Par exemple, si l'on modélise un paysage politique, passer d'un parti de droite modéré à une extrême gauche n'est pas chose aisée, il y a une opposition logique, une grande distance à franchir. En terme de modélisation, nous appliquons le principe suivant : \textbf{l'acteur propose, le système dispose}. Il faut donc inclure un terme correctif : 
+\begin{itemize}
+	\item qui modélise une forme de saturation. On s'attend à passer d'un état à un de ses voisinages sur un temps court, pas de sauter magiquement d'un état à un état très éloigné sur un temps très court. Ainsi, sur des variations raisonnables $dE_{it}$ est utilisé, mais si $dE_{it}$ prend des valeurs trop extrêmes, la correction ramène $dE_{it}$ à une valeur raisonnable. Très concrètement, une colère sociale, une envie d'acquérir un produit donné, ou l'appréciation d'un personnage public, ne peuvent pas devenir infinis.  
+	\item qui exclut ou en tous cas limite des transitions sur certains axes. C'est en quelque sorte le contexte local, ce que le système impose à tous les acteurs qui seraient dans cet état. Par exemple, l'accès à un emploi prestigieux peut être limité à certaines catégories sociales, toute chose égale par ailleurs. Cette limitation sociétale serait modélisée par une correction s'appliquant à tout $dE_{it}$ si l'axe spécifique de la catégorie sociale ne correspond pas aux catégories retenues pour l'accès au poste en question. On comprend alors que ce n'est pas l'acteur spécifiquement qui est concerné, mais c'est bien son état qui a créé cette différence.  
+\end{itemize}
+$$\text{}$$
+Le point clé est que \textbf{l'espace ne contient pas seulement des positions, il contient les règles de déplacement valides pour chaque position}. C'est donc un espace fonctionnel. Mais plutôt que de pousser encore plus loin le formalisme, donnons une version algorithmique. 
+
+
+On fixe $t$ et on suit une boucle pour chaque acteur (pour tout $i \in I$) :
+\begin{enumerate}
+	\item on calcule $\mathcal{R}_{it}$ et on récupère $\mathcal{S}_{it}$ et $\mathcal{B}_{it}$. La résultante dépend des acteurs (via les $c_{ij}^t $). La sensibilité et le but sont des propriétés intrinsèques dynamiques de l'acteur. 
+	\item on calcule ce que ferait l'acteur s'il n'était soumis à aucune contrainte, donc son "agency" : $\mathcal{A}_{it} = \mathcal{S}_{it} \mathcal{R}_{it} + \mathcal{B}_{it}$
+	\item à ce stade, on a à la fois l'état courant de l'acteur $E_{it}$, et son effort d'adaptation $A_{it}$. Cet état courant détermine une réaction du système qui s'applique à tous les acteurs ayant ce même état. Le fait que l'on boucle sur les acteurs ne doit pas faire oublier que c'est leur état et pas l'acteur qui induit une limitation $\mathbb{L}(E_{it})$ des états possibles.  Pour la position courante $E_{it}$, la position future corrigée par le système devient $\mathbb{L}(E_{it})A_{it}$. 
+	\item enfin, on applique une correction mathématique $\sigma$ pour éviter les valeurs aberrantes. Formellement, $\sigma$ est une fonction de $\mathbb{R}^v$ dans $\mathbb{R}^v$. En pratique, c'est une sigmoïde au sens mathématique : elle est à peu près linéaire pour des valeurs raisonnables, et écrase les valeurs trop extrêmes vers un résultat plausible. 
+\end{enumerate}
+
+Finalement, la formule complète devient : 
+$$ E_{i,t+dt} = E_{it} + \sigma (\mathbb{L}(E_{it}) (\mathcal{S}_{it} \mathcal{R}_{it} + \mathcal{B}_{it})) dt$$
+Le tableau suivant récapitule tous les symboles utilisés et leur interprétation : 
+\begin{table}[H]
+\center
+\begin{tabular}{|l|l|}
+\hline 
+Terme & Signification \\
+\hline 
+$v$ & Nombres d'axes choisis par l'observateur \\
+ & pour décrire fidèlement les acteurs observés \\
+\hline 
+$\mathbb{R}^v$ & espace des états possibles \\
+ & (un nombre par axe ) \\
+\hline 
+$E_{i,t+dt}$ & Prochain état de l'acteur prévu par le modèle \\
+\hline 
+$E_{it}$ & État de l'acteur (observé ou simulé) \\
+\hline 
+$dE_{it}$ & Mouvement réel de l'acteur corrigé par le système \\
+ & (et normalisé par $\sigma$) \\
+\hline 
+$dt$ & La durée durant laquelle s'applique le changement \\
+& (la simulation numérique prend un pas de temps $\Delta t$) \\ 
+\hline 
+$\sigma$ & correction mathématique pour exclure \\
+ & les valeurs extrêmes ou aberrantes \\
+\hline 
+$\mathbb{L}$ & Réaction du système aux mouvements des acteurs \\
+ & (s'applique à tous les acteurs de même état) \\
+\hline 
+$\mathcal{R}_{it}$ & Pression subie par l'acteur \\
+ & exercée par les acteurs voisins \\
+\hline 
+$\mathcal{S}_{it}$ & Sensibilité de l'acteur aux pressions extérieures \\
+\hline 
+$\mathcal{B}_{it}$ & Buts que l'acteur se donne sur son développement \\
+\hline 
+\end{tabular}
+\caption{Interprétation contextualisée des termes de l'équation}
+\end{table}
+
 \subsection{Les mécanismes de rétroaction}
 
-Voyons plus en détail les équations de changement d'état et les possibilités de rétroaction. L'observateur a donc choisi $v$ axes d'analyse qui résument les états des acteurs ainsi que les caractéristiques des événements qui les modifient. Soient donc $\alpha_1, \ldots, \alpha_v$ ces axes, et $[s_{np}]_{1\le n,p\le v}$ la matrice de sensibilité de l'acteur $o_i$ à l'instant $t$. Celui ci reçoit des événements dont la résultante est $[r_{it}^j]_{1\le j \le v}$. Si la matrice de sensibilité n'évolue pas, la même résultante donnera la même variation d'états. C'est exactement ce qu'on attend d'un objet physique, et c'est d'ailleurs un fait fondamental : les lois physiques sont les mêmes au fil du temps et en tout point d'espace. Les systèmes sociaux ne suivent évidemment pas cette même logique : il y a adaptation progressive, donc une forme d'apprentissage au fil du temps pour un acteur donné. Il existe plusieurs façons de le modéliser (règles d'Oja ou de Hebb) mais l'on peut écrire, par exemple : 
-$$\displaystyle { S_{i,t+\Delta t} = S_{it} + \eta ( \Delta E_{it} \otimes \mathcal{R}_{it} ) \Delta t } $$
-Soient $\Delta S_{it} = [\sigma_{np}]_{1 \le n,p \le v}$, $\mathcal{R}_{it} = [r_n]_{1 \le n \le v}$ le vecteur colonne résultante et $\Delta E_{it} = [\epsilon_n]_{1 \le n \le v}$ le vecteur colonne variation d'état. Alors, pour $n$ et $p$ fixés, il vient 
-$$\sigma_{np} = \eta \times \epsilon_n  \times r_p \times \Delta t$$
+Un acteur ne subit pas les changements sans réaction : il fait preuve d'adaptation. Au fur et à mesure qu'il évolue, ses réactions (au sens de $dE_{it}$) vont tenir compte de l'importance à traiter telle pression extérieure avec plus ou moins d'urgence ou d'importante. Formellement, c'est sa matrice de sensibilité qui va varier au fil du temps. Ainsi, si l'on inclut des mécanismes de rétroaction de l'acteur, ils portent sur $dS_{it}$. Mais de quoi dépend t'elle ? De la variation d'état $dE_{it}$ bien évidemment, mais aussi de $\mathcal{R}_it$ par construction. Autrement dit, l'apprentissage individuel s'écrit $$dS_{it} = \mathbb{A}(dE_{it},\mathcal{R}_{it})dt$$
+avec $\mathbb{A}$ une fonction d'apprentissage. Il existe plusieurs façons de la modéliser (règles d'Oja ou de Hebb) mais l'on peut écrire, par exemple : 
+$$\displaystyle { S_{i,t+dt} = S_{it} + \eta ( dE_{it} \otimes \mathcal{R}_{it} ) dt } $$
+Soient $dS_{it} = [\sigma_{np}]_{1 \le n,p \le v}$, $\mathcal{R}_{it} = [r_n]_{1 \le n \le v}$ le vecteur colonne résultante et $dE_{it} = [\epsilon_n]_{1 \le n \le v}$ le vecteur colonne variation d'état. Alors, pour $n$ et $p$ fixés, il vient 
+$$\sigma_{np} = \eta \times \epsilon_n  \times r_p \times dt$$
 Fixons $n$ et $p$ pour traiter valeur à valeur. La formule s'explique ainsi : 
 \begin{enumerate}
 	\item la sensibilité $s_{np}$ de l'acteur sur la ligne $n$ et la colonne $p$ s'interprète par l'action de l'axe $p$ sur l'axe $n$. Si $n = p$, c'est simplement la valeur sur l'axe en question. 
 	\item sa variation $\sigma_{np}$ est ce qu'on va ajouter à $s_{np}$ pour obtenir la nouvelle matrice de sensibilité
 	\item une capacité globale d'apprentissage $\eta$. C'est un réel compris entre 0 et 1. Plus il est élevé, plus l'acteur va changer son comportement et être influencé par l'événement. Dans un système physique sans rétroaction, on aura $\eta = 0$. 
 	\item $\epsilon_n$ qui est la variation d'état sur l'axe $n$. C'est bien une variation. En effet, si l'état ne change pas, il n'y a pas de raison de modifier la sensibilité aux événements, donc d'apprendre. 
-	\item $r_p$ qui est la résultante des événements sur l'axe $p$. Plus elle est forte sur cet axe, plus grande est l'impact sur $\sigma_{np}$
+	\item $r_p$ qui est la résultante des événements sur l'axe $p$. Plus elle est forte sur cet axe, plus grand est l'impact sur $\sigma_{np}$
 \end{enumerate}
-
-\section{Limites du modèle et prise en compte des facteurs sociaux}
-
-Le modèle précédent utilise des concepts physiques qu'il extrapole aux systèmes sociaux. Il souffre cependant de plusieurs points faibles majeurs que cette section propose de décrire et corriger : 
-\begin{itemize}
-	\item nous nous plaçons dans un contexte d'usage du modèle : l'observateur fournit lui même les axes. Il faudra questionner cet usage : un $v$ trop petit et l'on passe à côté de signaux subtils, et s'il est trop grand, il devient incalculable.
-	\item les systèmes sociaux ne sont pas aussi linéaires et simples que les équations de changement d'état et de rétroaction laissent penser. Il nous faudra proposer des variations d'état et des modalités d'apprentissage plus réalistes
-	\item la description physique vise à observer une dynamique d'états. Or, un acteur social n'est pas aussi observable : on ne connait pas son état avec une telle précision, on ne constate que ses interactions. Il faut donc revoir l'objectif de description de son état. 
-\end{itemize}
-
-\subsection{Les axes de modélisation ne sont pas évidents}
-
-Dans un système social, les interactions sont riches, et le procédé de vectorisation des états et des événements va les réduire à $v$ axes. Si $v$ est vraiment petit, le risque de perte d'information est réel. Par exemple, réduire une communication de crise aux axes "colère" et "peur" ne permettra pas la détection de signaux faibles tels que la désobéissance civile par exemple. De plus, si l'on prend des événements de type texte, passer d'un texte long à un vecteur est aisé, mais le retour du vecteur au texte pour la production de messages, en pratique quasiment infaisable. Une IA générative pourrait cependant être exploitée pour produire des messages textuels suivant un certain vecteur. 
-
-Si l'on fait la concession sur le contrôle humain des axes d'analyse, on peut les confier à une IA générative via les mécaniques d'\textbf{embedding} : les axes sont fixés par une IA. Dès lors, l'aller retour entre le texte et l'espace vectoriel est réglé par une IA générative. On peut d'ailleurs lui demander de traduire les événements dans un espace vectoriel de représentation humaine, celle ci validée par un utilisateur humain. 
-
-
-\subsection{Les systèmes sociaux ne sont pas linéaires}
-
-Les deux équations clé sont: 
-\begin{align*} 
-	\Delta E_{it} &=  S_{it} R_{it} \Delta t \\
-	\Delta S_{it} &= \eta ( \Delta E_{it} \otimes \mathcal{R}_{it} ) \Delta t
-\end{align*}
-
-Elles souffrent d'un problème majeur dès que l'on sort du cadre physique. En l'état, si on multiplie la résultante par $\lambda$, le $\Delta E_{it}$ l'est aussi, et le $\Delta S_{it}$ est alors multiplié par $\lambda^2$. Or, si l'on prend le cas de la diffusion de messages dans les réseaux sociaux, on obtiendrait que si un message est $\lambda$ fois plus intense, il produit un effet chez son lecteur $\lambda$ fois plus fort, et ceci pour tout $\lambda$. C'est bien sûr faux en pratique. il faut prendre en compte deux phénomènes: 
-\begin{itemize}
-	\item la saturation de l'utilisateur : au delà d'un certain niveau sur un axe donné (disons la violence ou la viralité), l'utilisateur va saturer et traiter le message comme une forme de spam. La variation d'état ne peut pas être simplement linéaire, il faut la corriger
-	\item l'apprentissage est aussi limité. Si la variation d'état est faible, la variation de la sensibilité peut être corrélée linéairement. Mais au delà d'une certaine intensité d'état (personne extrémiste) ou de variation demandée, il n'y a plus d'adaptation. 
-\end{itemize}
-$$\text{}$$
-Il faut donc apporter deux corrections au modèle dès lors qu'on quitte la pure simulation physique. Nous proposons donc ceci: 
-\begin{align*} 
-	\Delta E_{it} &= \sigma( S_{it} R_{it} \Delta t )\\
-	\Delta S_{it} &= \eta(\Delta E_{it}, \Delta t) \text{ } ( \Delta E_{it} \otimes \mathcal{R}_{it} ) \Delta t
-\end{align*}
-Avec : 
-\begin{itemize}
-	\item $\sigma$ une fonction d'ajustement de la variation d'état qui écrase les valeurs au delà d'un certain seuil. Une formule globale n'est pas le meilleur choix, car elle dépend souvent de la norme de $E_{it}$ ou sa variation. Elle est "trop brutale" au sens où elle impacte indifféremment des valeurs plausibles et des valeurs plus extrêmes. On utilisera plutôt une fonction vectorielle pour agir composante à composante : $\sigma = (\sigma_1, \ldots, \sigma_v)$. L'avantage est ce que si un axe $k$ a une valeur très élevée, la correction apportée ne se fera que sur $\sigma_k$.
-	\item $\eta$ qui devient une fonction et plus seulement un nombre. Celle ci a le même rôle : limiter l'adaptation à un seuil raisonnable et prévenir les effets de saturation
-\end{itemize}
-
-
-\begin{table}[H]
-	\center 
-	\begin{tabular}{|l|l|}
-		\hline 
-		Facteur correctif & Utilité dans le modèle social \\
-		\hline 
-		$\sigma$ & Contraint un état à varier dans un voisinage \\
-		 & raisonnable de son état courant \\
-		\hline 
-		$\eta$ variable & Contraint l'apprentissage à garder \\
-		 & la sensibilité dans un voisinage raisonnable \\
-		 & de sa valeur actuelle \\
-		\hline 
-	\end{tabular}
-	\caption{Utilité et interprétation des valeurs correctives}
-\end{table}
-
-\subsection{On ne connait pas l'état des acteurs}
-
-Si l'on reprend le modèle, on comprend que l'observateur fixe $v$ et ses axes de description de l'espace des états. Sur un système physique, en pratique, on connait les conditions de simulation, de sorte que : 
-\begin{itemize}
-	\item la description de l'état initial ne pose pas de difficulté particulière
-	\item les lois de transformation sont connues : la résultante suit une logique mathématique, la matrice $M_{it}$ sont dictées par le modèle
-	\item la question est donc plus le suivi de la trajectoire dans l'espace des états
-\end{itemize}
-$$\text{}$$
-Dans une modélisation sociale, la description des états et la sensibilité est difficile. Ce qu'on connait le plus certainement reste : 
-\begin{itemize}
-	\item les axes d'analyse, donc $\mathbb{R}^v$
-	\item la fonction de vectorisation de l'espace des événements vers $\mathbb{R}^v$ 
-	\item la fonction de vectorisation de l'espace des états des acteurs vers $\mathbb{R}^v$ 
-	\item pour chaque acteur indexé par $i \in I$, une série temporelle des événements entrants et sortants. On peut supposer qu'ils sont vectorisés, de sorte que l'on dispose des entrants $e^-$ et sortants $e^+$ dans $\mathbb{R}^v$ directement. Dans cette partie, on les notera $(e^{-}_{ik})_{1 \le k \le n}$ et $(e_{ik}^{+})_{1 \le k \le n}$. Dans la mesure où on calcule des résultantes, il y a autant d'entrants que de sortants, donc le $n$ est le même. Même si nous avons pris un indexage par un entier, on suppose disposer de la date exacte de collecte de la résultante. 
-\end{itemize}
-$$\text{}$$
-Dans ce contexte, on pense l'acteur comme une "boite noire" : on ne connait rien a priori de son état interne ou de sa sensibilité. Si l'on peut cependant avoir un modèle opérationnel, il faut lier ce qu'il exprime à ce qu'il sait, donc poser, par exemple, que les événements sortants sont fonction de son état courant et des événements entrants. Autrement dit, il parait raisonnable de prendre une fonction $\Gamma_{it}: \mathbb{R}^v \times \mathbb{R}^v \rightarrow \mathbb{R}^v$ (dépendante de l'acteur et potentiellement du temps) telle que $$e^{+}_{it} = \Gamma_{it}(E_{it}, e^{-}_{it})$$
-Il reste à poser des hypothèses qui rendent son usage plausible. Par exemple, une première approximation serait de décrire un événement sortant comme fonction de l'état courant ($A_{i}E_{it}$), de l'entrée reçue à ce moment là ($B_{it} e^{-}_{it}$) et d'un vecteur aléatoire de moyenne nulle (par exemple un bruit blanc gaussien). Ainsi, si on observe l'acteur $i$, on aurait pour tout $t$
-$$e^{+}_{it} = A_{i}E_{it} + B_{it}e^{-}_{it} + C_{it}$$ 
-Pour permettre de savoir comment l'acteur $i$ évolue dans le temps, on veut calculer la trajectoire de $E_{it}$ (comme fonction de $t$). Et pour que ce soit possible, on approxime $B_{it}$ comme une fonction de $B_i$ (matrice indépendante de $t$, dépendant de l'acteur $i$) et $e^{-}_{it}$. Une proposition peut être : $$\displaystyle{B_{it} = B_i \text{ }\frac{1}{1+ \lambda||e^{-}_{it}||}}$$ pour un certain paramètre d'amortissement $\lambda$. Plus l'événement entrant a une norme élevée, moins il est considéré comme pertinent et moins la réponse fournie en tiendra compte. Quant à $\lambda$, il est plus une constante technique pour ajuster la participation de $B_{it}$. Un retour critique de l'observateur est nécessaire : cette formule capture une forme de fatigue informationnelle mais est inadaptée quand l'événement est traumatique pour son acteur. Si par exemple, on applique l'outil à un contexte de crise (guerre), il faut adapter la formule pour ne prendre en compte que les événements les plus chargés émotionnellement. 
-
-
-\subsection{Suivre la trajectoire globale du système ?}
-
-Le champ tel qu'on l'a présenté a finalement été un moyen de déplacer les médiateurs de changement. Nous n'avons proposé qu'une capacité de l'observateur à calculer $R_it$ depuis les $c_{ij}^t$. Cependant, le champ lui même peut avoir une influence sur les états $E_{it}$ comme sur les sensibilités $S_{it}$. Une façon naturelle de le présenter serait d'inclure une sensibilité globale $S_t$, pour isoler les variations propres à chaque objet. Dès lors, il vient $S_{it} = S_{t} + s_{it}$, et donc, pour tout $i$, à $t$, $$\Delta E_{it} = (S_t + s_{it}) \mathcal{R}_{it} \Delta t$$ 
-A défaut de mieux, on peut prendre, au temps $0$ initial, que $S_0 = \mathbb{E}(S_{i0})$ pour initialiser le modèle. Mais dans le cas d'un graphe, il parait plus pertinent de prendre $$S_0 = \sum w_i S_{i0}$$ avec $\sum w_i = 1$ et les poids $w_i$ fonction par exemple de la centralité des objets qu'ils représentent. 
 $$\text{ }$$
-A moins de forcer l'invariant, il n'y a pas de raison a priori que $S_t$ soit toujours une fonction directe de l'espérance (fut elle pondérée) des $s_{it}$. Pour le comprendre, fixons un temps $t > 0$. En passant à l'espérance dans la formule initiale, on a $$\mathbb{E}(\Delta E_{it}) = S_t \mathbb{E}(\mathcal{R}_{it}) \Delta t   + \mathbb{E}(s_{it} \mathcal{R}_{it}) \Delta t$$ 
-Le terme $S_t \mathbb{E}(\mathcal{R}_{it}) \Delta t$ représente la résultante moyenne appliquée à la sensibilité générale. C'est le terme le plus logique, alors que $\mathbb{E}(s_{it} \mathcal{R}_{it}) \Delta t$ représente une dépendance du champ à des variations individuelles qui ne se compensent pas. Au contraire, \textbf{si $I$ est de "petite taille", le système sera très impacté par des éléments ayant une très forte sensibilité sur certains axes}, transformant $\mathcal{R}_{it}$ en des valeurs très élevées de $s_{it} \mathcal{R}_{it}$. Si l'on définit un système isolé comme caractérisé par $\mathbb{E}(\mathcal{R}_{it}) = 0$, alors cette condition ne suffit pas pour que les variations d'états des objets se compensent. 
-
-
-Si l'écriture $S_{it} = S_t + s_{it}$ est une bonne base, elle est beaucoup trop générale en l'état. Il n'y a pas de raison a priori d'avoir $\mathbb{E}(s_{it}) = 0$ en général. Et même si c'était le cas, l'écart type serait probablement énorme. On peut alors s'inspirer de la logique des "small worlds" et de la segmentation. Dans un contexte social donné, on regroupe les acteurs, pas en tant que groupe uniforme unique (la société), mais en sous groupes beaucoup plus denses. Un petit monde se caractérise par une communication interne forte et peu de liens hors du groupe. Dès lors, à un moment donné, on décompose $I$ en $n$ sous groupes, et pour chacun d'eux, on postule qu'il est cohérent. Dit autrement, dans un groupe $G$, on a $\mathbb{E}(s_{it}) = 0$ et $\mathbb{E}(S_{t}) = \mu_G$. C'est alors la trajectoire locale, de chaque groupe, qu'il faut suivre.  
-
-
-Si l'on veut descendre ces informations au niveau personnel, on retrouve le concept marketing de \textbf{persona}. Une personne incarne une série de rôles au fur et à mesure de sa vie : étudiante, professionnelle de début de carrière, familiale, associative, etc. Ainsi, une personne se retrouve dans différents groupes. Sur un temps court, les groupes de référence sont une approximation suffisante : on définit un \textbf{noyau identitaire} permettant de réduire à quelques groupes les comportements d'une personne. Un modèle à facteurs (pondération par des poids) serait alors la piste la plus logique pour caractériser l'état de la personne (sur un temps court, là encore). 
-
-\subsection{Synthèse}
-
-Voici donc un résumé des éléments à corriger pour espérer passer d'un modèle physique à un outil social réaliste. La liste ne saurait bien sûr être exhaustive, elle liste les points identifiés  à date : 
-
-\begin{table}[H]
-\center 
-\begin{tabular}{|l|l|}
-\hline 
-Facteur & Rôle Social \\
-\hline 
-Embeddings (IA) &Traduire le langage humain en mathématiques. \\
- & Ajoute la possibilité d'interpréter les messages  \\
- & entrants et de produire des messages sortants \\
- & adaptés (car générés avec un contexte) \\
-\hline 
-$\sigma$ (Ajustement) & Empêcher les réactions disproportionnées (saturation) \\
-\hline 
-$\eta$ variable & Modéliser la perte de plasticité mentale/apprentissage. \\
-\hline 
-$\lambda$ (Amortissement) & Modéliser la fatigue face au flux d'informations \\
-\hline 
-Segmentation  & Augmenter la cohérence locale au lieu de traiter un \\
-(Groupes) & système entier trop hétérogène donc plus imprévisible \\
- \hline 
-\end{tabular}
-\caption{Corrections à apporter pour un meilleur usage du modèle}
-\end{table}
-
-
+La dynamique de la société est un sujet qui mériterait un article à part et mobiliserait des connaissances que nous n'avons pas, en toute honnêteté. Nous ne pouvons donc qu'esquisser une idée : les variations du système social au temps $t$ sont liées à la série $(E_{it})_{i \in I}$. Autrement dit, il faudrait tenir compte de la "moyenne" des états des acteurs, et de la dispersion (écart type) des états des acteurs du système. Si celui ci devient trop grand, il y aurait peut être une organisation en sous systèmes plus homogènes ("small worlds"). 
 \end{document}

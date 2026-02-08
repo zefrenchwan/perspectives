@@ -13,8 +13,8 @@ type EventMapper interface {
 	OnEvents(events []Event) []Event
 }
 
-// functionaEventMapper implements EventMapper as a basic function
-type functionaEventMapper struct {
+// functionalEventMapper implements EventMapper as a basic function
+type functionalEventMapper struct {
 	// id of the mapper
 	id string
 	// processor is the decorated function
@@ -22,12 +22,12 @@ type functionaEventMapper struct {
 }
 
 // Id to implement Identifiable
-func (em *functionaEventMapper) Id() string {
+func (em *functionalEventMapper) Id() string {
 	return em.id
 }
 
 // OnEvents is indeed a function call
-func (em *functionaEventMapper) OnEvents(events []Event) []Event {
+func (em *functionalEventMapper) OnEvents(events []Event) []Event {
 	if em == nil || em.processor == nil {
 		return nil
 	}
@@ -37,7 +37,7 @@ func (em *functionaEventMapper) OnEvents(events []Event) []Event {
 
 // NewEventMapper return a new EventMapper decoring a function
 func NewEventMapper(mapper func([]Event) []Event) EventMapper {
-	result := new(functionaEventMapper)
+	result := new(functionalEventMapper)
 	result.id = NewId()
 	result.processor = mapper
 	return result
