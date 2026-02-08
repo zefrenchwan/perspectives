@@ -28,6 +28,9 @@ type ColumnMatrix interface {
 
 // SquareMatrix represents a square matrix (same number of rows and columns).
 type SquareMatrix interface {
+	// Add adds another SquareMatrix of the same size to this one.
+	// Returns the resulting SquareMatrix or an error if dimensions do not match.
+	Add(SquareMatrix) (SquareMatrix, error)
 	// Equals checks if this matrix is equal to another SquareMatrix.
 	// Returns true if both have the same size and contain the same values.
 	Equals(SquareMatrix) bool
@@ -141,6 +144,29 @@ type denseSquareMatrix [][]float64
 // Size returns the dimension (number of rows/columns) of the square matrix.
 func (s denseSquareMatrix) Size() int {
 	return len(s)
+}
+
+// Add adds another SquareMatrix to this one element-wise.
+// Returns the resulting SquareMatrix or an error if dimensions do not match.
+func (s denseSquareMatrix) Add(other SquareMatrix) (SquareMatrix, error) {
+	d := other.Export()
+	if len(s) != len(d) {
+		return nil, errors.New("dimensions are not equal")
+	}
+
+	size := len(s)
+	// Optimization: Allocate a single contiguous block for better cache locality
+	result := make(denseSquareMatrix, size)
+	data := make([]float64, size*size)
+
+	for i := 0; i < size; i++ {
+		result[i] = data[i*size : (i+1)*size]
+		for j := 0; j < size; j++ {
+			result[i][j] = s[i][j] + d[i][j]
+		}
+	}
+
+	return result, nil
 }
 
 // Multiply computes the product of this square matrix and a column vector.

@@ -128,6 +128,27 @@ func TestSquareMatrixMultiply(t *testing.T) {
 	}
 }
 
+func TestSquareMatrixAdd(t *testing.T) {
+	m1, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
+	m2, _ := commons.NewSquareMatrix(2, [][]float64{{5, 6}, {7, 8}})
+	expected, _ := commons.NewSquareMatrix(2, [][]float64{{6, 8}, {10, 12}})
+
+	if res, err := m1.Add(m2); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if !res.Equals(expected) {
+		t.Logf("Addition failed. Got %v, expected %v", res, expected)
+		t.Fail()
+	}
+
+	// Size mismatch
+	wrongSize, _ := commons.NewSquareMatrix(3, [][]float64{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}})
+	if _, err := m1.Add(wrongSize); err == nil {
+		t.Log("Size mismatch not detected")
+		t.Fail()
+	}
+}
+
 func TestSquareMatrixRow(t *testing.T) {
 	m, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
 
