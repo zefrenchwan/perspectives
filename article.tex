@@ -172,7 +172,7 @@ $$\mathcal{A}_{it} = \mathcal{S}_{it}\mathcal{R}_{it} + \mathcal{B}_{it}$$
 Avec $\mathcal{A}_{it}$ la réaction de l'acteur quand il est soumis à une pression locale $\mathcal{R}_{it}$ tout en suivant son but $\mathcal{B}_{it}$. 
 
 
-\subsection{Modéliser les trajectoires globales des acteurs}
+\subsection{Prise en compte des facteurs systémiques}
 
 L'espace des états n'est pas un outil de modélisation passif. Dans un contexte social fixé, on a en général peu d'acteurs sociaux plongés dans un cadre mondial. On peut donc envisager un cadre invariant et fixé subi par les acteurs sociaux en première approximation. Or, ce cadre ne permet pas a priori la transition d'un état à un autre sans opposer une friction ou au contraire devenir la suite logique. Par exemple, si l'on modélise un paysage politique, passer d'un parti de droite modéré à une extrême gauche n'est pas chose aisée, il y a une opposition logique, une grande distance à franchir. En terme de modélisation, nous appliquons le principe suivant : \textbf{l'acteur propose, le système dispose}. Il faut donc inclure un terme correctif : 
 \begin{itemize}
@@ -187,12 +187,12 @@ On fixe $t$ et on suit une boucle pour chaque acteur (pour tout $i \in I$) :
 \begin{enumerate}
 	\item on calcule $\mathcal{R}_{it}$ et on récupère $\mathcal{S}_{it}$ et $\mathcal{B}_{it}$. La résultante dépend des acteurs (via les $c_{ij}^t $). La sensibilité et le but sont des propriétés intrinsèques dynamiques de l'acteur. 
 	\item on calcule ce que ferait l'acteur s'il n'était soumis à aucune contrainte, donc son adaptation à la situation : $\mathcal{A}_{it} = \mathcal{S}_{it} \mathcal{R}_{it} + \mathcal{B}_{it}$
-	\item à ce stade, on a à la fois l'état courant de l'acteur $E_{it}$, et son effort d'adaptation $A_{it}$. Cet état courant détermine une réaction du système qui s'applique à tous les acteurs ayant ce même état. Le fait que l'on boucle sur les acteurs ne doit pas faire oublier que c'est leur état et pas l'acteur qui induit une limitation $\mathbb{L}(E_{it})$ des états possibles.  Pour la position courante $E_{it}$, la position future corrigée par le système devient $\mathbb{L}(E_{it})A_{it}$. 
+	\item à ce stade, on a à la fois l'état courant de l'acteur $E_{it}$, et son effort d'adaptation $A_{it}$. Cet état courant détermine une réaction du système qui s'applique à tous les acteurs ayant ce même état. Le fait que l'on boucle sur les acteurs ne doit pas faire oublier que c'est leur état et pas l'acteur qui induit une limitation $\mathbb{L}(E_{it})$ des états possibles.  Pour la position courante $E_{it}$, la position future corrigée par le système devient $\mathbb{L}(E_{it})(A_{it})$. \textbf{Attention, il s'agit d'une fonction et pas d'une multiplication de matrices}. Dans le cas particulier où $\mathbb{L}(E_{it}$ est une telle matrice (de taille $v \times v$), on notera $\mathbb{L}(E_{it})A_{it}$ (sans parenthèse).  
 	\item enfin, on applique une correction mathématique $\sigma$ pour éviter les valeurs aberrantes. Formellement, $\sigma$ est une fonction de $\mathbb{R}^v$ dans $\mathbb{R}^v$. En pratique, on applique une sigmoïde composante à composante. Chaque valeur se retrouve corrigée par une fonction à peu près linéaire pour des valeurs raisonnables, et écrasée les vers un résultat plausible pour les valeurs extrêmes. 
 \end{enumerate}
 
-Finalement, la formule complète devient : 
-$$ E_{i,t+dt} = E_{it} + \sigma (\mathbb{L}(E_{it}) (\mathcal{S}_{it} \mathcal{R}_{it} + \mathcal{B}_{it})) dt$$
+On peut alors regrouper la correction des états (limitation par le système) et la correction du modèle pour les valeurs aberrantes en notant $\Lambda(E_{it}) = \sigma \circ \mathbb{L}(E_{it})$. Finalement, la formule complète devient : 
+$$ E_{i,t+dt} = E_{it} + \Lambda(E_{it}) (\mathcal{S}_{it} \mathcal{R}_{it} + \mathcal{B}_{it}) dt$$
 Le tableau suivant récapitule tous les symboles utilisés et leur interprétation : 
 \begin{table}[H]
 \center
@@ -219,6 +219,10 @@ $dt$ & La durée durant laquelle s'applique le changement \\
 $\sigma$ & correction mathématique pour exclure \\
  & les valeurs extrêmes ou aberrantes \\
 \hline 
+$\Lambda = \sigma \circ \mathbb{L}$ & Fonction définie pour chaque état (pas que l'acteur) \\
+  & qui ajuste le comportement de l'acteur en fonction de  \\
+ & ce que le système permet (et une correction technique) \\
+\hline 
 $\mathbb{L}$ & Réaction du système aux mouvements des acteurs \\
  & (s'applique à tous les acteurs de même état) \\
 \hline 
@@ -233,17 +237,11 @@ $\mathcal{B}_{it}$ & Buts que l'acteur se donne sur son développement \\
 \end{table}
 
 \paragraph{Formalisation géométrique du système}
-Mathématiquement, l'espace social n'est pas un simple espace affine euclidien inerte. Il est structuré par des contraintes locales. Nous le modélisons comme une variété $\mathcal{M}$ munie d'un \textbf{champ de tenseurs de structure} $\mathbb{L}$.
-Pour tout état $E \in \mathcal{M}$, $\mathbb{L}(E)$ est un endomorphisme de l'espace tangent (une transformation linéaire des vecteurs vitesse, ici l'adaptation). Il agit comme une métrique de perméabilité sociale :
-\begin{itemize}
-	\item Si $\mathbb{L}(E)$ est l'identité, le mouvement est libre.
-	\item Si $\mathbb{L}(E)$ possède des valeurs propres nulles, certaines directions sociales sont verrouillées par le système.
-	\item Si $\mathbb{L}(E)$ déforme les vecteurs, le système "dévie" les intentions des acteurs vers des issues conformes à la structure sociale.
-\end{itemize}
+Mathématiquement, l'espace social n'est pas un simple espace affine euclidien inerte. Il est structuré par des contraintes locales. L'usage de variétés est possible, mais elle implique une linéarité qui n'est pas nécessairement souhaitée. A minima, l'espace social est un espace affine qui est muni, en chaque point $p$, d'une fonction $\Lambda_p : \mathbb{R}^v \rightarrow \mathbb{R}^v$. Il devient un espace fonctionnel transformant une impulsion en un vecteur autorisé. 
 
-\subsection{Les mécanismes de rétroaction}
+\subsection{Les mécanismes d'apprentissage}
 
-Un acteur ne subit pas les changements sans réaction : il fait preuve d'adaptation. Au fur et à mesure qu'il évolue, ses réactions (au sens de $dE_{it}$) vont tenir compte de l'importance à traiter telle pression extérieure avec plus ou moins d'urgence ou d'importante. Formellement, c'est sa matrice de sensibilité qui va varier au fil du temps. Ainsi, si l'on inclut des mécanismes de rétroaction de l'acteur, ils portent sur $dS_{it}$. Mais de quoi dépend t'elle ? De la variation d'état $dE_{it}$ bien évidemment, mais aussi de $\mathcal{R}_it$ par construction. Autrement dit, l'apprentissage individuel s'écrit $$dS_{it} = \mathbb{A}(dE_{it},\mathcal{R}_{it})dt$$
+Un acteur ne subit pas les changements sans réaction : il fait preuve d'adaptation. Au fur et à mesure qu'il évolue, ses réactions (au sens de $dE_{it}$) vont tenir compte de l'importance à traiter telle pression extérieure avec plus ou moins d'urgence ou d'importante. Formellement, c'est sa matrice de sensibilité qui va varier au fil du temps. Ainsi, si l'on inclut des mécanismes de rétroaction de l'acteur, ils portent sur $dS_{it}$. Mais de quoi dépend t'elle ? De la variation d'état $dE_{it}$ bien évidemment, mais aussi de $\mathcal{R}_{it}$ par construction. Autrement dit, l'apprentissage individuel s'écrit $$dS_{it} = \mathbb{A}(dE_{it},\mathcal{R}_{it})dt$$
 avec $\mathbb{A}$ une fonction d'apprentissage. Il existe plusieurs façons de la modéliser (règles d'Oja ou de Hebb) mais l'on peut écrire, par exemple : 
 $$\displaystyle { S_{i,t+dt} = S_{it} + \eta ( dE_{it} \otimes \mathcal{R}_{it} )} $$
 Soient $dS_{it} = [\theta_{np}]_{1 \le n,p \le v}$, $\mathcal{R}_{it} = [r_n]_{1 \le n \le v}$ le vecteur colonne résultante et $dE_{it} = [\epsilon_n]_{1 \le n \le v}$ le vecteur colonne variation d'état. Alors, pour $n$ et $p$ fixés, il vient 
@@ -256,6 +254,17 @@ Fixons $n$ et $p$ pour traiter valeur à valeur. La formule s'explique ainsi :
 	\item $\epsilon_n$ qui est la variation d'état sur l'axe $n$. C'est bien une variation. En effet, si l'état ne change pas, il n'y a pas de raison de modifier la sensibilité aux événements, donc d'apprendre. 
 	\item $r_p$ qui est la résultante des événements sur l'axe $p$. Plus elle est forte sur cet axe, plus grand est l'impact sur $\theta_{np}$
 \end{enumerate}
+
+\subsection{Trajectoires de groupes}
+
+La formule $ dE_{it} = \Lambda(E_{it}) (\mathcal{S}_{it} \mathcal{R}_{it} + \mathcal{B}_{it}) dt$ peut s'interpréter non plus dans l'absolu mais dans une logique de groupe. D'abord, si l'on définit un tel groupe comme une communauté partageant des valeurs et des objectifs communs. On peut alors écrire : 
+\begin{enumerate}
+	\item que le but $B_{it}$ est en fait centré sur le but du groupe. Autrement dit, le but est partagé et devient indépendant de son porteur. Ce n'est pas exact, bien sûr, mais disons que si $B_t$ désigne le but du groupe $G$ au temps $t$, on peut postuler que $$\mathbb{E}(B_{it})_{i \in G} = B_t$$ avec éventuellement l'introduction d'un bruit gaussien. Autrement dit, la moyenne des buts des acteurs du groupe est le but du groupe. 
+	\item que la pression intra groupe est forte, et probablement beaucoup plus forte qu'à l'échelle d'une société entière. On mettrait en place un idéal de groupe à un instant $t$ que chaque membre serait incité à atteindre. Dès lors, $\mathbb{L}(E_{it})$ serait une force de rappel ramenant d'autant plus fort les états les plus éloignés de l'idéal. Par construction même, l'écart type intra groupe des états serait évidemment petit. 
+\end{enumerate}
+
+Le principe est donc de dire que $\Lambda$ devient une correction dépendante d'un groupe de référence et pas seulement d'un système entier. Une hiérarchie des normes se met alors en place, permettant de prendre en compte d'abord le groupe auquel l'individu préfère appartenir. 
 $$\text{ }$$
-La dynamique de la société est un sujet qui mériterait un article à part et mobiliserait des connaissances que nous n'avons pas, en toute honnêteté. Nous ne pouvons donc qu'esquisser une idée : les variations du système social au temps $t$ sont liées à la série $(E_{it})_{i \in I}$. Autrement dit, il faudrait tenir compte de la "moyenne" des états des acteurs, et de la dispersion (écart type) des états des acteurs du système. Si celui ci devient trop grand, il y aurait peut être une organisation en sous systèmes plus homogènes ("small worlds"). 
+Une autre façon de penser les groupes serait de lier la déformation induite par $\Lambda$ à une forme de masse des individus de même état. Très simplement, plus il y a d'individus autour d'un état commun, plus cet état commun créé une courbure dans l'espace des états, plus il attire et plus il est difficile d'en sortir. Un état fortement partagé génère une gravité propre. Cette masse inertielle explique pourquoi les grands groupes survivent aux changements d'humeur individuels : pour déplacer le groupe, il ne faut plus seulement convaincre un individu, mais vaincre la courbure que le groupe impose à son propre espace. 
+
 \end{document}
