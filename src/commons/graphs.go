@@ -5,6 +5,7 @@ import (
 	"errors"
 	"iter"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ import (
 // Go's container/heap requires us to implement the heap.Interface.
 // This section defines the low-level structure that manages the "Time Horizon".
 // It acts as the engine allowing O(1) access to the next event and O(log N) insertions.
+// This structure is NOT thread-safe by itself; it relies on the Graph's mutex.
 // ============================================================================
 
 // activeNode represents a graph element scheduled for processing.
@@ -131,7 +133,15 @@ type Graph interface {
 }
 
 // localGraph is the optimized implementation of the Graph interface.
+// Architecture Note (Thread-Safety):
+// This structure is designed to be concurrently accessed. Multiple goroutines
+// can inject events (Emit) or read topology (Neighbors) safely while Step is running.
 type localGraph struct {
+	// mu is the global lock securing the state of the graph.
+	// We use an RWMutex to allow concurrent reads (like Neighbors snapshotting)
+	// when no mutation is occurring.
+	mu sync.RWMutex
+
 	// sharedTime is the current global clock of the simulation.
 	sharedTime time.Time
 
@@ -168,6 +178,7 @@ func NewGraph(startTime time.Time) Graph {
 // This method implements the "Decrease-Key" operation common in Dijkstra-like algorithms.
 // If a node receives an event earlier than its currently scheduled wake-up time,
 // we update its position in the heap to ensure it is processed sooner.
+// WARNING: The caller MUST hold the g.mu lock (Write Lock) before invoking this function.
 func (g *localGraph) scheduleNode(nodeId string, at time.Time) {
 	item, exists := g.lookup[nodeId]
 
@@ -198,6 +209,10 @@ func (g *localGraph) Set(source, destination EventMapper, latency time.Duration)
 		return errors.New("latency must be positive to respect causality")
 	}
 
+	// Acquire write lock to safely mutate the topology
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	// Lazy initialization check (safety)
 	if g.elements == nil {
 		g.elements = make(map[string]*graphElement)
@@ -226,16 +241,38 @@ func (g *localGraph) Set(source, destination EventMapper, latency time.Duration)
 }
 
 // Neighbors returns the current neighbors of the source.
+// Architecture Note (Deadlock Prevention):
+// We cannot hold a Read Lock during the 'yield' call. If the consumer of this iterator
+// attempts to call Emit() or Set() within the loop, it would request a Write Lock while
+// the Read Lock is still held, resulting in a classic deadlock.
+// Therefore, we take a rapid "snapshot" of the state, release the lock, and then yield.
 func (g *localGraph) Neighbors(source EventMapper) iter.Seq2[EventMapper, time.Duration] {
+	// 1. Acquire Read Lock for a safe snapshot
+	g.mu.RLock()
+
+	type neighbor struct {
+		mapper  EventMapper
+		latency time.Duration
+	}
+	var snapshot []neighbor
+
+	if link := g.elements[source.Id()]; link != nil {
+		for k, t := range link.successors {
+			// We assume destination exists if it is in successors map
+			if dest, ok := g.elements[k]; ok {
+				snapshot = append(snapshot, neighbor{mapper: dest.mapper, latency: t})
+			}
+		}
+	}
+
+	// 2. Release Lock immediately
+	g.mu.RUnlock()
+
+	// 3. Iterate over the isolated snapshot safely
 	return func(yield func(EventMapper, time.Duration) bool) {
-		if link := g.elements[source.Id()]; link != nil {
-			for k, t := range link.successors {
-				// We assume destination exists if it is in successors map
-				if dest, ok := g.elements[k]; ok {
-					if !yield(dest.mapper, t) {
-						return
-					}
-				}
+		for _, n := range snapshot {
+			if !yield(n.mapper, n.latency) {
+				return
 			}
 		}
 	}
@@ -244,6 +281,10 @@ func (g *localGraph) Neighbors(source EventMapper) iter.Seq2[EventMapper, time.D
 // Emit schedules an external event.
 // It acts as the "Interrupt Controller", injecting stimuli into the system.
 func (g *localGraph) Emit(target EventMapper, event Event, at time.Time) error {
+	// Acquire write lock as we are mutating node mailboxes and the heap
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	if g.elements == nil {
 		return errors.New("graph is empty")
 	}
@@ -258,6 +299,7 @@ func (g *localGraph) Emit(target EventMapper, event Event, at time.Time) error {
 	element.events[at] = append(element.events[at], event)
 
 	// 2. Scheduler Notification: Inform the heap that this node needs CPU time at 'at'.
+	// Lock is safely held here.
 	g.scheduleNode(targetId, at)
 
 	return nil
@@ -266,12 +308,22 @@ func (g *localGraph) Emit(target EventMapper, event Event, at time.Time) error {
 // Step advances the simulation by a duration dt.
 // Unlike a fixed time-step loop, this method "jumps" between active nodes
 // using the priority queue, ensuring we only burn cycles on nodes with actual work.
+//
+// Architecture Note (Concurrency):
+// The entire Step is executed under a Write Lock to preserve strict causal ordering.
+// This means EventMappers (OnEvents) are executed synchronously within the lock.
+// WARNING: An EventMapper MUST NOT call graph.Emit() or graph.Set() internally,
+// as Go mutexes are non-reentrant and this would cause an immediate deadlock.
 func (g *localGraph) Step(dt time.Duration) error {
-	if g == nil || len(g.elements) == 0 {
-		return nil
-	}
 	if dt <= 0 {
 		return errors.New("step duration must be positive")
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g == nil || len(g.elements) == 0 {
+		return nil
 	}
 
 	// The horizon defines the limit of our "Look-Ahead".
@@ -331,6 +383,7 @@ func (g *localGraph) Step(dt time.Duration) error {
 			inputEvents := element.events[t]
 
 			// Execute the business logic
+			// (Assuming OnEvents is a pure function or state mutator that does NOT call the Graph API)
 			outputEvents := element.mapper.OnEvents(inputEvents)
 
 			// Clean up processed state
