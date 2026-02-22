@@ -1,22 +1,22 @@
-package commons_test
+package maths_test
 
 import (
 	"testing"
 
-	"github.com/zefrenchwan/perspectives.git/commons"
+	"github.com/zefrenchwan/perspectives.git/maths"
 )
 
 func TestColumnMatrixAdd(t *testing.T) {
-	a := commons.NewColumnMatrix([]float64{1, 2, 3})
-	b := commons.NewColumnMatrix([]float64{3, 2, 1})
-	noMatch := commons.NewColumnMatrix([]float64{1, 2, 3, 4})
+	a := maths.NewColumnMatrix([]float64{1, 2, 3})
+	b := maths.NewColumnMatrix([]float64{3, 2, 1})
+	noMatch := maths.NewColumnMatrix([]float64{1, 2, 3, 4})
 
 	if _, err := noMatch.Add(a); err == nil {
 		t.Log("size mismatch not seen")
 		t.Fail()
 	}
 
-	expected := commons.NewColumnMatrix([]float64{4, 4, 4})
+	expected := maths.NewColumnMatrix([]float64{4, 4, 4})
 	if result, err := a.Add(b); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -27,15 +27,15 @@ func TestColumnMatrixAdd(t *testing.T) {
 }
 
 func TestColumnMatrixExternalProduct(t *testing.T) {
-	a := commons.NewColumnMatrix([]float64{1, 2})
-	b := commons.NewColumnMatrix([]float64{3, 4})
-	noMatch := commons.NewColumnMatrix([]float64{1, 2, 3})
+	a := maths.NewColumnMatrix([]float64{1, 2})
+	b := maths.NewColumnMatrix([]float64{3, 4})
+	noMatch := maths.NewColumnMatrix([]float64{1, 2, 3})
 
 	if _, err := a.ExternalProduct(noMatch); err == nil {
 		t.Log("size mismatch not seen")
 		t.Fail()
 	}
-	expected, _ := commons.NewSquareMatrix(2, [][]float64{{3, 4}, {6, 8}})
+	expected, _ := maths.NewSquareMatrix(2, [][]float64{{3, 4}, {6, 8}})
 	if result, err := a.ExternalProduct(b); err != nil {
 		t.Log(err)
 		t.Fail()
@@ -46,10 +46,10 @@ func TestColumnMatrixExternalProduct(t *testing.T) {
 }
 
 func TestColumnMatrixEquals(t *testing.T) {
-	a := commons.NewColumnMatrix([]float64{1, 2, 3})
-	b := commons.NewColumnMatrix([]float64{1, 2, 3})
-	c := commons.NewColumnMatrix([]float64{1, 2, 4})
-	d := commons.NewColumnMatrix([]float64{1, 2})
+	a := maths.NewColumnMatrix([]float64{1, 2, 3})
+	b := maths.NewColumnMatrix([]float64{1, 2, 3})
+	c := maths.NewColumnMatrix([]float64{1, 2, 4})
+	d := maths.NewColumnMatrix([]float64{1, 2})
 
 	if !a.Equals(b) {
 		t.Log("Equal matrices considered different")
@@ -66,24 +66,24 @@ func TestColumnMatrixEquals(t *testing.T) {
 }
 
 func TestNewSquareMatrix(t *testing.T) {
-	if _, err := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}}); err != nil {
+	if _, err := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}}); err != nil {
 		t.Log("Valid matrix creation failed")
 		t.Fail()
 	}
-	if _, err := commons.NewSquareMatrix(2, [][]float64{{1, 2}}); err == nil {
+	if _, err := maths.NewSquareMatrix(2, [][]float64{{1, 2}}); err == nil {
 		t.Log("Invalid matrix (missing row) creation succeeded")
 		t.Fail()
 	}
-	if _, err := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3}}); err == nil {
+	if _, err := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3}}); err == nil {
 		t.Log("Invalid matrix (short row) creation succeeded")
 		t.Fail()
 	}
 }
 
 func TestSquareMatrixEquals(t *testing.T) {
-	m1, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
-	m2, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
-	m3, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 5}})
+	m1, _ := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
+	m2, _ := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
+	m3, _ := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 5}})
 
 	if !m1.Equals(m2) {
 		t.Log("Equal matrices considered different")
@@ -97,8 +97,8 @@ func TestSquareMatrixEquals(t *testing.T) {
 
 func TestSquareMatrixMultiply(t *testing.T) {
 	// Identity matrix
-	id, _ := commons.NewSquareMatrix(2, [][]float64{{1, 0}, {0, 1}})
-	vec := commons.NewColumnMatrix([]float64{2, 3})
+	id, _ := maths.NewSquareMatrix(2, [][]float64{{1, 0}, {0, 1}})
+	vec := maths.NewColumnMatrix([]float64{2, 3})
 
 	if res, err := id.Multiply(vec); err != nil {
 		t.Log(err)
@@ -109,8 +109,8 @@ func TestSquareMatrixMultiply(t *testing.T) {
 	}
 
 	// Permutation
-	perm, _ := commons.NewSquareMatrix(2, [][]float64{{0, 1}, {1, 0}})
-	expected := commons.NewColumnMatrix([]float64{3, 2})
+	perm, _ := maths.NewSquareMatrix(2, [][]float64{{0, 1}, {1, 0}})
+	expected := maths.NewColumnMatrix([]float64{3, 2})
 
 	if res, err := perm.Multiply(vec); err != nil {
 		t.Log(err)
@@ -121,7 +121,7 @@ func TestSquareMatrixMultiply(t *testing.T) {
 	}
 
 	// Size mismatch
-	wrongVec := commons.NewColumnMatrix([]float64{1, 2, 3})
+	wrongVec := maths.NewColumnMatrix([]float64{1, 2, 3})
 	if _, err := id.Multiply(wrongVec); err == nil {
 		t.Log("Size mismatch not detected")
 		t.Fail()
@@ -129,9 +129,9 @@ func TestSquareMatrixMultiply(t *testing.T) {
 }
 
 func TestSquareMatrixAdd(t *testing.T) {
-	m1, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
-	m2, _ := commons.NewSquareMatrix(2, [][]float64{{5, 6}, {7, 8}})
-	expected, _ := commons.NewSquareMatrix(2, [][]float64{{6, 8}, {10, 12}})
+	m1, _ := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
+	m2, _ := maths.NewSquareMatrix(2, [][]float64{{5, 6}, {7, 8}})
+	expected, _ := maths.NewSquareMatrix(2, [][]float64{{6, 8}, {10, 12}})
 
 	if res, err := m1.Add(m2); err != nil {
 		t.Log(err)
@@ -142,7 +142,7 @@ func TestSquareMatrixAdd(t *testing.T) {
 	}
 
 	// Size mismatch
-	wrongSize, _ := commons.NewSquareMatrix(3, [][]float64{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}})
+	wrongSize, _ := maths.NewSquareMatrix(3, [][]float64{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}})
 	if _, err := m1.Add(wrongSize); err == nil {
 		t.Log("Size mismatch not detected")
 		t.Fail()
@@ -150,7 +150,7 @@ func TestSquareMatrixAdd(t *testing.T) {
 }
 
 func TestSquareMatrixRow(t *testing.T) {
-	m, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
+	m, _ := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
 
 	// Valid row
 	row0, err := m.Row(0)
@@ -185,7 +185,7 @@ func TestSquareMatrixRow(t *testing.T) {
 }
 
 func TestSquareMatrixColumn(t *testing.T) {
-	m, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
+	m, _ := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
 
 	// Valid column
 	col0, err := m.Column(0)
@@ -220,13 +220,13 @@ func TestSquareMatrixColumn(t *testing.T) {
 }
 
 func TestColumnMatrixSize(t *testing.T) {
-	c := commons.NewColumnMatrix([]float64{1, 2, 3})
+	c := maths.NewColumnMatrix([]float64{1, 2, 3})
 	if c.Size() != 3 {
 		t.Logf("Incorrect size for ColumnMatrix. Expected 3, got %d", c.Size())
 		t.Fail()
 	}
 
-	empty := commons.NewColumnMatrix([]float64{})
+	empty := maths.NewColumnMatrix([]float64{})
 	if empty.Size() != 0 {
 		t.Logf("Incorrect size for empty ColumnMatrix. Expected 0, got %d", empty.Size())
 		t.Fail()
@@ -234,7 +234,7 @@ func TestColumnMatrixSize(t *testing.T) {
 }
 
 func TestSquareMatrixSize(t *testing.T) {
-	m, _ := commons.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
+	m, _ := maths.NewSquareMatrix(2, [][]float64{{1, 2}, {3, 4}})
 	if m.Size() != 2 {
 		t.Logf("Incorrect size for SquareMatrix. Expected 2, got %d", m.Size())
 		t.Fail()
@@ -243,7 +243,7 @@ func TestSquareMatrixSize(t *testing.T) {
 
 func TestSquareMatrixExport(t *testing.T) {
 	data := [][]float64{{1, 2}, {3, 4}}
-	m, _ := commons.NewSquareMatrix(2, data)
+	m, _ := maths.NewSquareMatrix(2, data)
 	exported := m.Export()
 
 	if len(exported) != 2 {
@@ -262,7 +262,7 @@ func TestSquareMatrixExport(t *testing.T) {
 
 func TestColumnMatrixExport(t *testing.T) {
 	data := []float64{1, 2, 3}
-	c := commons.NewColumnMatrix(data)
+	c := maths.NewColumnMatrix(data)
 	exported := c.Export()
 
 	if len(exported) != 3 {

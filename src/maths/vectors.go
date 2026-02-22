@@ -1,4 +1,4 @@
-package commons
+package maths
 
 import (
 	"errors"
