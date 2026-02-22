@@ -1,6 +1,9 @@
 package maths
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 // Serie is a generic interface representing a sequence of floating-point numbers.
 // It supports basic operations for data manipulation, comparison, and slicing.
@@ -24,6 +27,8 @@ type Serie[F FloatNumber] interface {
 	// Cut creates a sub-series from the 'from' index to the 'to' index (inclusive).
 	// Returns an error if indices are out of bounds.
 	Cut(from, to int) (Serie[F], error)
+	// Indicators returns the mean and standard deviation of the series.
+	Indicators() (mean, stddev float64)
 }
 
 // localSerie is a memory-efficient implementation of the Serie interface.
@@ -163,6 +168,39 @@ func (l *localSerie[F]) Cut(from, to int) (Serie[F], error) {
 	return result, nil
 }
 
+// Indicators returns the mean and standard deviation of the series.
+// Note that it expects all values not to be Nan
+// Indicators returns the mean and standard deviation of the series.
+// Note that it expects all values not to be Nan
+func (l *localSerie[F]) Indicators() (mean, stddev float64) {
+	if l == nil || l.size == 0 {
+		return math.NaN(), math.NaN()
+	}
+
+	sum := 0.0
+	sumSquares := 0.0
+	remaining := l.size - len(l.values)
+	for _, value := range l.values {
+		v := float64(value)
+		sum += v
+		sumSquares += v * v
+	}
+
+	v := float64(l.defaultValue)
+	sum += float64(remaining) * v
+	sumSquares += float64(remaining) * v * v
+	s := float64(l.size)
+
+	mean = sum / s
+	variance := (sumSquares / s) - (mean * mean)
+	if variance < 0 {
+		variance = 0
+	}
+
+	stddev = math.Sqrt(variance)
+	return mean, stddev
+}
+
 // newLocalSerie is a private constructor that initializes the internal state.
 // Implementation choice: It automatically selects the appropriate epsilon-based
 // equality function based on the underlying type (float32 vs float64).
@@ -189,4 +227,9 @@ func newLocalSerie[F FloatNumber](size int, defaultValue F) *localSerie[F] {
 // NewSerie creates and returns a new Serie interface instance.
 func NewSerie[F FloatNumber](size int, defaultValue F) Serie[F] {
 	return newLocalSerie(size, defaultValue)
+}
+
+// NewEmptySerie returns a new empty serie with the default value to set
+func NewEmptySerie[F FloatNumber](defaultValue F) Serie[F] {
+	return NewSerie(0, defaultValue)
 }
