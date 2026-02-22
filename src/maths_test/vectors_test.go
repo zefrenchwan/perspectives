@@ -1,6 +1,7 @@
 package maths_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/maths"
@@ -40,6 +41,25 @@ func TestColumnMatrixExternalProduct(t *testing.T) {
 		t.Log(err)
 		t.Fail()
 	} else if !result.Equals(expected) {
+		t.Log(result)
+		t.Fail()
+	}
+}
+
+func TestColumnMatrixDotProduct(t *testing.T) {
+	a := maths.NewColumnMatrix([]float64{1, 2})
+	b := maths.NewColumnMatrix([]float64{3, 4})
+	noMatch := maths.NewColumnMatrix([]float64{1, 2, 3})
+
+	if _, err := a.DotProduct(noMatch); err == nil {
+		t.Log("size mismatch not seen")
+		t.Fail()
+	}
+	expected := 11.0
+	if result, err := a.DotProduct(b); err != nil {
+		t.Log(err)
+		t.Fail()
+	} else if math.Abs(expected-result) > 0.0001 {
 		t.Log(result)
 		t.Fail()
 	}

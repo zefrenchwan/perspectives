@@ -17,6 +17,9 @@ type ColumnMatrix interface {
 	// ExternalProduct computes the outer product of this vector and another ColumnMatrix.
 	// Returns the resulting SquareMatrix or an error if dimensions do not match.
 	ExternalProduct(ColumnMatrix) (SquareMatrix, error)
+	// DotProduct computes the dot product of this vector and another ColumnMatrix.
+	// Returns the resulting number or an error if dimensions do not match.
+	DotProduct(ColumnMatrix) (float64, error)
 	// Equals checks if this matrix is equal to another ColumnMatrix.
 	// Returns true if both have the same size and contain the same values.
 	Equals(ColumnMatrix) bool
@@ -74,6 +77,23 @@ func (c denseColumnMatrix) Add(d ColumnMatrix) (ColumnMatrix, error) {
 	result := make(denseColumnMatrix, len(c))
 	for index := 0; index < len(other); index++ {
 		result[index] = c[index] + other[index]
+	}
+
+	return result, nil
+}
+
+// DotProduct returns the scalar product of a column matrix with that same size.
+// Result is sum of c[index] * d[index] for index in range c.
+// Returns an error if the sizes of the two matrices do not match.
+func (c denseColumnMatrix) DotProduct(d ColumnMatrix) (float64, error) {
+	other := d.Export()
+	if len(c) != len(other) {
+		return 0.0, errors.New("dimensions are not equal")
+	}
+
+	result := 0.0
+	for index := 0; index < len(other); index++ {
+		result += c[index] * other[index]
 	}
 
 	return result, nil
