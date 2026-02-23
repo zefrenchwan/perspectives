@@ -168,31 +168,71 @@ func (l *localSerie[F]) Cut(from, to int) (Serie[F], error) {
 	return result, nil
 }
 
-// Indicators returns the mean and standard deviation of the series.
-// Note that it expects all values not to be Nan
-// Indicators returns the mean and standard deviation of the series.
-// Note that it expects all values not to be Nan
+// Indicators calculates and returns the population mean and standard deviation of the series.
+//
+// It expects that none of the values are NaN. To ensure numerical stability,
+// especially with large numbers or small variances, this implementation utilizes
+// Welford's online algorithm.
+//
+// Furthermore, to maintain the memory and CPU efficiency of the sparse series representation,
+// the algorithm is optimized to run in O(V) time, where V is the number of explicitly stored
+// values in the map. It achieves this by running the standard Welford update on the map values
+// first, followed by a single mathematical "batched" update (based on Welford's parallel formula)
+// to account for all the remaining implicit default values at once.
 func (l *localSerie[F]) Indicators() (mean, stddev float64) {
 	if l == nil || l.size == 0 {
 		return math.NaN(), math.NaN()
 	}
 
-	sum := 0.0
-	sumSquares := 0.0
-	remaining := l.size - len(l.values)
+	count := 0
+	mean = 0.0
+	M2 := 0.0 // Sum of squares of differences from the current mean
+
+	// 1. Standard Welford's algorithm for explicitly defined values in the sparse map.
 	for _, value := range l.values {
+		count++
 		v := float64(value)
-		sum += v
-		sumSquares += v * v
+		delta := v - mean
+		mean += delta / float64(count)
+		delta2 := v - mean
+		M2 += delta * delta2
 	}
 
-	v := float64(l.defaultValue)
-	sum += float64(remaining) * v
-	sumSquares += float64(remaining) * v * v
-	s := float64(l.size)
+	// 2. Batched Welford update for the remaining implicit default values.
+	// This avoids looping over potentially millions of default values,
+	// preserving the O(V) performance characteristic of the sparse series.
+	remaining := l.size - len(l.values)
+	if remaining > 0 {
+		v := float64(l.defaultValue)
+		if count == 0 {
+			// Fast path: if the series entirely consists of default values,
+			// the mean is exactly the default value and the variance is 0.
+			mean = v
+			// M2 remains 0.0
+		} else {
+			// Welford's parallel/merge formula:
+			// Safely merging a batch of 'k' identical elements (all equal to 'v')
+			// into an already processed distribution of size 'nA'.
+			k := float64(remaining)
+			nA := float64(count)
+			nNew := nA + k
 
-	mean = sum / s
-	variance := (sumSquares / s) - (mean * mean)
+			delta := v - mean
+
+			// Update the overall mean combining the existing set and the new batch
+			mean += delta * (k / nNew)
+
+			// Update the sum of squared differences
+			M2 += delta * delta * (nA * k / nNew)
+		}
+	}
+
+	// Calculate the population variance (M2 / N).
+	// Note: If sample variance were needed, the divisor would be (N - 1).
+	variance := M2 / float64(l.size)
+
+	// Safeguard against floating-point inaccuracies that could rarely produce
+	// an infinitesimally small negative variance (e.g., -1e-16).
 	if variance < 0 {
 		variance = 0
 	}

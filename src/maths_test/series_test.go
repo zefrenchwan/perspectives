@@ -1,6 +1,7 @@
 package maths_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/maths"
@@ -191,5 +192,51 @@ func TestSerie_SparseMemoryEfficiency(t *testing.T) {
 	// Ensure Size is still correct
 	if s.Size() != 100 {
 		t.Errorf("Size should remain 100, got %d", s.Size())
+	}
+}
+
+func TestSerie_Indicators(t *testing.T) {
+	// 1. Empty serie, expecting Nan
+	empty := maths.NewSerie(0, 0.0)
+	mean, stddev := empty.Indicators()
+	if !math.IsNaN(mean) || !math.IsNaN(stddev) {
+		t.Errorf("Expected NaN for empty series, got mean=%f, stddev=%f", mean, stddev)
+	}
+
+	// 2. Uniform serie, no variance
+	uniformValue := 10.5
+	uniform := maths.NewSerie(5, uniformValue)
+	mean, stddev = uniform.Indicators()
+	if mean != uniformValue {
+		t.Errorf("Expected mean %f, got %f", uniformValue, mean)
+	}
+	if stddev != 0.0 {
+		t.Errorf("Expected stddev 0.0, got %f", stddev)
+	}
+
+	// 3. (Sparse Data)
+	// Got : 2, 4, 4, 4, 5, 5, 7, 9 (Taille 8)
+	// Mean = 40 / 8 = 5.0
+	// Variance = 32 / 8 = 4.0
+	// Stddev = sqrt(4.0) = 2.0
+	defaultValue := 4.0
+	s := maths.NewSerie(8, defaultValue)
+
+	// Using defaultValue
+	s.Set(0, 2.0)
+	s.Set(4, 5.0)
+	s.Set(5, 5.0)
+	s.Set(6, 7.0)
+	s.Set(7, 9.0)
+
+	mean, stddev = s.Indicators()
+
+	// Using epsilon to avoid basic equality
+	epsilon := 1e-9
+	if math.Abs(mean-5.0) > epsilon {
+		t.Errorf("Expected mean 5.0, got %f", mean)
+	}
+	if math.Abs(stddev-2.0) > epsilon {
+		t.Errorf("Expected stddev 2.0, got %f", stddev)
 	}
 }
