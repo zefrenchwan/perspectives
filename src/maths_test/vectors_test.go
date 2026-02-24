@@ -65,6 +65,42 @@ func TestColumnMatrixDotProduct(t *testing.T) {
 	}
 }
 
+func TestNormColumnMatrix(t *testing.T) {
+	a := maths.NewColumnMatrix([]float64{1, 2, 3})
+	nulVector := maths.NewColumnMatrix([]float64{0, 0, 0})
+
+	if math.Abs(a.Norm()-14.0) >= 0.0001 {
+		t.Log("failed norm")
+		t.Fail()
+	}
+
+	if math.Abs(nulVector.Norm()-0.0) >= 0.0001 {
+		t.Log("failed norm")
+		t.Fail()
+	}
+}
+
+func TestScalarMultiplyColumnMatrix(t *testing.T) {
+	a := maths.NewColumnMatrix([]float64{1, 2, 3})
+	expectedNul := maths.NewColumnMatrix([]float64{0, 0, 0})
+	expectedValue := maths.NewColumnMatrix([]float64{10, 20, 30})
+
+	if !a.Multiply(1.0).Equals(a) {
+		t.Log("failed identity multiplication")
+		t.Fail()
+	}
+
+	if !a.Multiply(0.0).Equals(expectedNul) {
+		t.Log("failed 0 multiplication")
+		t.Fail()
+	}
+
+	if !a.Multiply(10.0).Equals(expectedValue) {
+		t.Log("failed scalar multiplication")
+		t.Fail()
+	}
+}
+
 func TestColumnMatrixEquals(t *testing.T) {
 	a := maths.NewColumnMatrix([]float64{1, 2, 3})
 	b := maths.NewColumnMatrix([]float64{1, 2, 3})

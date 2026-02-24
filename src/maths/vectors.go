@@ -3,6 +3,7 @@ package maths
 import (
 	"errors"
 	"fmt"
+	"math"
 )
 
 // Vectorizer is a function type that converts any input into a ColumnMatrix (vector).
@@ -20,6 +21,10 @@ type ColumnMatrix interface {
 	// DotProduct computes the dot product of this vector and another ColumnMatrix.
 	// Returns the resulting number or an error if dimensions do not match.
 	DotProduct(ColumnMatrix) (float64, error)
+	// Norm returns the norm of that vector, that is the sum of its squared components)
+	Norm() float64
+	// Multiply returns that vector multiplied by a scalar
+	Multiply(scalar float64) ColumnMatrix
 	// Equals checks if this matrix is equal to another ColumnMatrix.
 	// Returns true if both have the same size and contain the same values.
 	Equals(ColumnMatrix) bool
@@ -124,6 +129,26 @@ func (c denseColumnMatrix) ExternalProduct(other ColumnMatrix) (SquareMatrix, er
 	}
 
 	return result, nil
+}
+
+// Norm returns the norm of that vector, that is the sum of its squared components
+func (c denseColumnMatrix) Norm() float64 {
+	result := 0.0
+	for _, value := range c {
+		result += math.Pow(value, 2)
+	}
+
+	return result
+}
+
+// Multiply returns that vector multiplied by a scalar
+func (c denseColumnMatrix) Multiply(scalar float64) ColumnMatrix {
+	result := make([]float64, len(c))
+	for index := 0; index < len(c); index++ {
+		result[index] = c[index] * scalar
+	}
+
+	return denseColumnMatrix(result)
 }
 
 // Equals compares this matrix with another ColumnMatrix for equality.
