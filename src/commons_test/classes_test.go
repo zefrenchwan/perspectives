@@ -17,7 +17,9 @@ func TestIsDeclaredClasses(t *testing.T) {
 	}
 
 	trait := commons.NewTrait("Person")
-	if !commons.IsElementDeclaredInstance(trait, commons.CLASS_TRAIT) {
+	if trait == nil {
+		t.Errorf("Expected trait to be non-nil, got nil")
+	} else if !commons.IsElementDeclaredInstance(trait, commons.CLASS_TRAIT) {
 		t.Errorf("Expected trait to be declared as CLASS_TRAIT, got undeclared")
 	} else if commons.IsElementDeclaredInstance(trait, commons.CLASS_LINK) {
 		t.Errorf("Expected trait to not be declared as CLASS_LINK, got declared. Bad typing")
