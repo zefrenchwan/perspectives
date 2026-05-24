@@ -29,5 +29,4 @@ func TestTraits(t *testing.T) {
 	if len(trait.Attributes()) != 0 {
 		t.Errorf("Expected no attributes after removal, but found %d attributes", len(trait.Attributes()))
 	}
-
 }

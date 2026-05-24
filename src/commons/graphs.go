@@ -103,7 +103,7 @@ func (l *Link) Has(name string) ([]Linkable, bool) {
 	defer l.locks.RUnlock()
 
 	operands, ok := l.operands[name]
-	return operands, ok
+	return SliceCopy(operands), ok
 }
 
 // Add adds a new operand to the link with the given name.
@@ -138,7 +138,7 @@ func (l *Link) Remove(name string, op func(linkable Linkable) bool) {
 	l.operands[name] = newValues
 }
 
-// Operands return the role map directly
+// Operands return a copy of the role map
 func (l *Link) Operands() map[string][]Linkable {
 	if l == nil {
 		return nil
@@ -147,5 +147,10 @@ func (l *Link) Operands() map[string][]Linkable {
 	l.locks.RLock()
 	defer l.locks.RUnlock()
 
-	return l.operands
+	result := make(map[string][]Linkable)
+	for k, v := range l.operands {
+		result[k] = SliceCopy(v)
+	}
+
+	return result
 }

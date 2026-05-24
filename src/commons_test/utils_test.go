@@ -13,6 +13,16 @@ func (d DummyIdentifiable) Id() string { return d.id }
 
 func NewDummyIdentifiable(id string) DummyIdentifiable { return DummyIdentifiable{id: id} }
 
+func TestSliceCopy(t *testing.T) {
+	if commons.SliceCopy[int](nil) != nil {
+		t.Fail()
+	}
+
+	if !slices.Equal(commons.SliceCopy[int]([]int{1, 2, 3}), []int{1, 2, 3}) {
+		t.Fail()
+	}
+}
+
 func TestSliceReduce(t *testing.T) {
 	values := []int{0, 5, 10, 4, 15, 10, 10, 10}
 	expected := []int{0, 4, 5, 10, 15}

@@ -1,5 +1,7 @@
 package commons
 
+import "slices"
+
 // Class is the general definition of elements within the system.
 // It applies to any element that can be declared with a specific class.
 // Class is NOT a declaration type, but rather a categorization of elements.
@@ -8,6 +10,7 @@ type Class string
 
 const CLASS_TRAIT Class = "trait"
 const CLASS_LINK Class = "link"
+const CLASS_INSTANCE Class = "instance"
 
 // Element is a system entity.
 // For instance, traits, graphs, links, etc.
@@ -23,12 +26,5 @@ func IsElementDeclaredInstance(element Element, c Class) bool {
 	if element == nil {
 		return false
 	}
-
-	for _, declaringClass := range element.DeclaringClasses() {
-		if declaringClass == c {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(element.DeclaringClasses(), c)
 }

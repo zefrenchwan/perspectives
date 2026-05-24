@@ -13,6 +13,17 @@ func NewId() string {
 	return uuid.NewString()
 }
 
+// SliceCopy just copies a slice
+func SliceCopy[T any](original []T) []T {
+	if original == nil {
+		return nil
+	}
+
+	result := make([]T, len(original))
+	copy(result, original)
+	return result
+}
+
 // SliceReduce returns a copy of original with no duplicate, sorted.
 // Due to the order, it applies only to cmp.Ordered
 func SliceReduce[T cmp.Ordered](original []T) []T {
