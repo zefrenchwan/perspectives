@@ -2,6 +2,7 @@ package commons
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ type TemporalValues interface {
 }
 
 type Instance interface {
+	Element
 	Lifetime() Period
 	SetLifetime(Period)
 
@@ -31,7 +33,7 @@ type periodValue struct {
 
 type periodValues struct {
 	elements     []periodValue
-	declaredType PrimitiveType
+	declaredType reflect.Type
 }
 
 func (p *periodValues) At(t time.Time) (any, bool) {
@@ -58,24 +60,32 @@ func (p *periodValues) Range(yield func(p Period, v any) bool) {
 	}
 }
 
+func (p *periodValues) wouldAccept(value any) bool {
+	if p.declaredType == nil {
+		return true
+	}
+
+	return p.declaredType == reflect.TypeOf(value)
+}
+
 func (p *periodValues) Add(period Period, e any) error {
 	if p == nil || period.IsEmpty() {
 		return nil
 	} else if len(p.elements) == 0 {
 		p.elements = []periodValue{{validity: period, value: e}}
-		p.declaredType = GuessPrimitiveType(e)
+		p.declaredType = reflect.TypeOf(e)
 		return nil
 	}
 
-	newPrimitiveType := GuessPrimitiveType(e)
-	if !p.declaredType.EqualsPrimitiveType(newPrimitiveType) {
-		return fmt.Errorf("cannot add value with type %v to periodValues with declared type %v", GuessPrimitiveType(e), p.declaredType)
+	incomingType := reflect.TypeOf(e)
+	if p.declaredType != incomingType {
+		return fmt.Errorf("cannot add value with type %v to periodValues with declared type %v", incomingType, p.declaredType)
 	}
 
 	finalPeriod := period
 	newElements := make([]periodValue, 0, len(p.elements)+1)
 	for _, element := range p.elements {
-		if p.declaredType.EqualsPrimitive(element.value, e) {
+		if reflect.DeepEqual(element.value, e) {
 			finalPeriod = finalPeriod.Union(element.validity)
 		} else {
 			remaining := element.validity.Remove(period)
@@ -117,7 +127,6 @@ func (p *periodValues) copy() *periodValues {
 func newPeriodValues() *periodValues {
 	result := new(periodValues)
 	result.elements = make([]periodValue, 0)
-	result.declaredType = DefaultPrimitiveType()
 	return result
 }
 
@@ -132,7 +141,7 @@ func initPeriodValues(period Period, value any) *periodValues {
 		value:    value,
 	})
 
-	result.declaredType = GuessPrimitiveType(value)
+	result.declaredType = reflect.TypeOf(value)
 	return result
 }
 
@@ -196,17 +205,21 @@ func (t *temporalInstance) SetAttribute(name string, p Period, value any) error 
 	if t == nil {
 		return nil
 	}
+	if p.IsEmpty() {
+		return nil
+	}
 
 	t.locks.Lock()
 	defer t.locks.Unlock()
 
-	if previous, ok := t.attributes[name]; !ok {
+	if matchingAttribute, ok := t.attributes[name]; !ok {
 		t.attributes[name] = initPeriodValues(p, value)
+	} else if !matchingAttribute.wouldAccept(value) {
+		return fmt.Errorf("attribute %s does not accept type %T", name, value)
 	} else {
-		previous.declaredType = GuessPrimitiveType(value)
+		matchingAttribute.Add(p, value)
+		t.attributes[name] = matchingAttribute
 	}
-
-	t.attributes[name].Add(p, value)
 	return nil
 }
 
