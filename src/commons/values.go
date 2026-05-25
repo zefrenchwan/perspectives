@@ -1,5 +1,7 @@
 package commons
 
+import "reflect"
+
 type PrimitiveType string
 
 const (
@@ -11,7 +13,7 @@ const (
 )
 
 func (p PrimitiveType) EqualsPrimitive(a, b any) bool {
-	return a == b
+	return reflect.DeepEqual(a, b)
 }
 
 func (p PrimitiveType) Name() string {
