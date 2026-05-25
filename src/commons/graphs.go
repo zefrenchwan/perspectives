@@ -20,6 +20,7 @@ type Link struct {
 	id       string                // id of the link
 	name     string                // name of the link
 	operands map[string][]Linkable // operands of the link
+	validity Period                // moments the link is true
 }
 
 // NewLink creates a new empty link with provided name.
@@ -28,6 +29,7 @@ func NewLink(name string) *Link {
 		name:     name,
 		id:       uuid.NewString(),
 		operands: make(map[string][]Linkable),
+		validity: NewFullPeriod(),
 	}
 }
 
@@ -67,6 +69,23 @@ func (l *Link) Same(other Element) bool {
 // DeclaringClasses returns the classes that declare the link, obviously including CLASS_LINK itself
 func (l *Link) DeclaringClasses() []Class {
 	return []Class{CLASS_LINK}
+}
+
+// Validity returns the period the link is active
+func (l *Link) Validity() Period {
+	return l.validity.Copy()
+}
+
+// SetValidity sets the period the link is active
+func (l *Link) SetValidity(p Period) {
+	if l == nil {
+		return
+	}
+
+	l.locks.Lock()
+	defer l.locks.Unlock()
+
+	l.validity = p
 }
 
 // Roles return the roles of the link.

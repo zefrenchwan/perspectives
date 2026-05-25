@@ -28,6 +28,13 @@ type Period struct {
 	intervals []interval
 }
 
+// Copy returns a copy of the period
+func (p Period) Copy() Period {
+	newIntervals := make([]interval, len(p.intervals))
+	copy(newIntervals, p.intervals)
+	return Period{intervals: newIntervals}
+}
+
 // NewFullPeriod returns a period equivalent to ]-oo,+oo[
 func NewFullPeriod() Period {
 	value := newFullInterval()

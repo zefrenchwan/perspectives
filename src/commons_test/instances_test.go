@@ -20,15 +20,15 @@ func TestInstance(t *testing.T) {
 		t.Fail()
 	}
 
-	instance.SetAttribute("age", commons.NewFullPeriod(), 25)
+	instance.SetAttribute("size", commons.NewFullPeriod(), 175)
 	if description := instance.Description(); len(description) != 2 {
-		t.Log("expected name and age")
+		t.Log("expected name and size")
 		t.Fail()
 	} else if description["name"] != "string" {
 		t.Log("expected name to be a string")
 		t.Fail()
-	} else if description["age"] != "int" {
-		t.Log("expected age to be an int")
+	} else if description["size"] != "int" {
+		t.Log("expected size to be an int")
 		t.Fail()
 	}
 }
