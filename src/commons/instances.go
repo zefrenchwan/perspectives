@@ -281,7 +281,7 @@ func (t *temporalInstance) Attribute(name string) TemporalValues {
 
 // NewTemporalInstance creates a new temporal instance with default lifetime (full period).
 // A *temporalInstance is an instance, so you may use it as one
-func NewTemporalInstance() *temporalInstance {
+func NewTemporalInstance() Instance {
 	return &temporalInstance{
 		id:         uuid.NewString(),
 		attributes: make(map[string]*periodValues),

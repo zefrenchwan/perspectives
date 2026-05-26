@@ -11,6 +11,7 @@ type Class string
 const CLASS_TRAIT Class = "trait"
 const CLASS_LINK Class = "link"
 const CLASS_INSTANCE Class = "instance"
+const CLASS_VARIABLE Class = "variable"
 
 // Element is a system entity.
 // For instance, traits, graphs, links, etc.

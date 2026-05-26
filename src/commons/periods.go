@@ -179,8 +179,10 @@ func (p Period) Complement() Period {
 	var result []interval
 	var previousValue time.Time
 	var previousFinite, previousIncluded bool
+	// sort matters to manage holes
+	sortedIntervals := sortIntervals(p.intervals)
 	// using the "completing hole" method: find all intervals so that the union would make full
-	for index, value := range p.intervals {
+	for index, value := range sortedIntervals {
 		if value.isFull() {
 			return Period{}
 		}
