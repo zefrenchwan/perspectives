@@ -52,15 +52,7 @@ func (v *Variable) CanBeReplacedBy(element Element) bool {
 	if len(v.allowedTypes) == 0 {
 		return true
 	}
-
-	elementClasses := element.DeclaringClasses()
-	for _, allowed := range v.allowedTypes {
-		if slices.Contains(elementClasses, allowed) {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(v.allowedTypes, element.DeclaringClass())
 }
 
 // Same returns true if other is a variable with the same name
@@ -71,10 +63,14 @@ func (v *Variable) Same(other Element) bool {
 	if v == nil || other == nil {
 		return false
 	}
-	return v.Id() == other.Id()
+	if other.DeclaringClass() == CLASS_VARIABLE {
+		return v.Id() == other.Id()
+	}
+
+	return false
 }
 
-// DeclaringClasses returns that this is a variable
-func (v *Variable) DeclaringClasses() []Class {
-	return []Class{CLASS_VARIABLE}
+// DeclaringClass returns that this is a variable
+func (v *Variable) DeclaringClass() Class {
+	return CLASS_VARIABLE
 }

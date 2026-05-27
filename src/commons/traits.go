@@ -22,10 +22,10 @@ func (t *Trait) Name() string {
 	return t.name
 }
 
-// DeclaringClasses returns the classes that declare this trait.
+// DeclaringClass returns the class that declares this trait.
 // It is, at the very least, the CLASS_TRAIT class.
-func (t *Trait) DeclaringClasses() []Class {
-	return []Class{CLASS_TRAIT}
+func (t *Trait) DeclaringClass() Class {
+	return CLASS_TRAIT
 }
 
 // String returns a string representation of the trait to include its name

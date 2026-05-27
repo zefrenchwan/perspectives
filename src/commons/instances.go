@@ -199,9 +199,9 @@ func (t *temporalInstance) Same(other Element) bool {
 	return t.id == other.Id()
 }
 
-// DeclaringClasses declares that an instance's class is CLASS_INSTANCE
-func (t *temporalInstance) DeclaringClasses() []Class {
-	return []Class{CLASS_INSTANCE}
+// DeclaringClass declares that an instance's class is CLASS_INSTANCE
+func (t *temporalInstance) DeclaringClass() Class {
+	return CLASS_INSTANCE
 }
 
 // Lifetime returns the time span during which the instance exists

@@ -66,9 +66,9 @@ func (l *Link) Same(other Element) bool {
 	}
 }
 
-// DeclaringClasses returns the classes that declare the link, obviously including CLASS_LINK itself
-func (l *Link) DeclaringClasses() []Class {
-	return []Class{CLASS_LINK}
+// DeclaringClass returns the class that declares the link, obviously including CLASS_LINK itself
+func (l *Link) DeclaringClass() Class {
+	return CLASS_LINK
 }
 
 // Validity returns the period the link is active
