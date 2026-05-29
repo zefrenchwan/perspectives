@@ -178,21 +178,24 @@ func (l *Link) Has(name string) ([]Linkable, bool) {
 	l.locks.RLock()
 	defer l.locks.RUnlock()
 
-	operands, ok := l.operands[name]
-	return operands.copyValues(), ok
+	if operands, ok := l.operands[name]; ok {
+		return operands.copyValues(), ok
+	}
+
+	return nil, false
 }
 
 // Add adds a new operand to the link with the given name if order does not matter.
 // For instance, Likes(subject=[Jean],Object=[Pizza]).Add("Object", "Tiramisu")
 // will make Likes(subject=[Jean],Object=[Pizza, Tiramisu])
 func (l *Link) Add(name string, operand Linkable) {
-	l.addOperand(name, operand, true)
+	l.addOperand(name, operand, false)
 }
 
 // Append adds a new operand to the link with the given name if order DOES matter.
 // For instance, presidents of a country in order
 func (l *Link) Append(name string, operand Linkable) {
-	l.addOperand(name, operand, false)
+	l.addOperand(name, operand, true)
 }
 
 // addOperand adds a new operand to the link with the given name and sorting preference.
