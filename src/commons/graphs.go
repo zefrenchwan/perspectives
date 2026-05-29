@@ -3,8 +3,6 @@ package commons
 import (
 	"slices"
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 // Linkable represents an entity that can be linked in a graph.
@@ -17,7 +15,6 @@ type Linkable interface {
 // Link represents a link between nodes in a graph.
 type Link struct {
 	locks    sync.RWMutex          // locks manage the locks for goroutines
-	id       string                // id of the link
 	name     string                // name of the link
 	operands map[string][]Linkable // operands of the link
 	validity Period                // moments the link is true
@@ -27,16 +24,9 @@ type Link struct {
 func NewLink(name string) *Link {
 	return &Link{
 		name:     name,
-		id:       uuid.NewString(),
 		operands: make(map[string][]Linkable),
 		validity: NewFullPeriod(),
 	}
-}
-
-// Id returns the id of the link.
-// Name will not be unique, id is for sure
-func (l *Link) Id() string {
-	return l.id
 }
 
 // Name returns the name of the link.
@@ -49,21 +39,17 @@ func (l *Link) Name() string {
 }
 
 // Same returns true if the link is the same as the other linkable.
-// Same meaning : same structure, same type. If id are equals, they should be the same link
 func (l *Link) Same(other Element) bool {
 	if l == nil && other == nil {
 		return true
 	} else if l == nil || other == nil {
 		return false
-	} else if l.id == other.Id() {
-		return true
+	} else if !IsElementDeclaredInstance(other, l.DeclaringClass()) {
+		return false
 	}
 
-	if lo, ok := other.(Linkable); !ok {
-		return false
-	} else {
-		return l.id == lo.Id()
-	}
+	// TODO : implement it
+	return true
 }
 
 // DeclaringClass returns the class that declares the link, obviously including CLASS_LINK itself

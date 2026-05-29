@@ -12,11 +12,6 @@ type Trait struct {
 	attributes map[string]string // attributes of the trait, as name and type
 }
 
-// Id returns the name as the unique identifier of the trait
-func (t *Trait) Id() string {
-	return t.name
-}
-
 // Name returns the name of the trait
 func (t *Trait) Name() string {
 	return t.name

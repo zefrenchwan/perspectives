@@ -19,14 +19,6 @@ func NewVariable(name string, allowedTypes ...Class) *Variable {
 	}
 }
 
-// Id is the name
-func (v *Variable) Id() string {
-	if v == nil {
-		return ""
-	}
-	return v.name
-}
-
 // Name of the variable
 func (v *Variable) Name() string {
 	if v == nil {
@@ -63,8 +55,14 @@ func (v *Variable) Same(other Element) bool {
 	if v == nil || other == nil {
 		return false
 	}
-	if other.DeclaringClass() == CLASS_VARIABLE {
-		return v.Id() == other.Id()
+	if other.DeclaringClass() != CLASS_VARIABLE {
+		return false
+	}
+
+	if otherVar, ok := other.(*Variable); !ok {
+		return false
+	} else {
+		return v.name == otherVar.name
 	}
 
 	return false

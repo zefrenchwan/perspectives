@@ -24,7 +24,7 @@ type TemporalValues interface {
 // Lifetime defines the time span during which the instance exists.
 // Attributes are key-value pairs that can change over time.
 type Instance interface {
-	Element // Element of the model
+	IdentifiableElement // IdentifiableElement of the model : element with an unique id
 
 	Lifetime() Period   // Lifetime returns the time span during which the instance exists
 	SetLifetime(Period) // SetLifetime changes the time span during which the instance exists
@@ -196,7 +196,11 @@ func (t *temporalInstance) Same(other Element) bool {
 		return false
 	}
 
-	return t.id == other.Id()
+	if otherInstance, ok := other.(Instance); !ok {
+		return false
+	} else {
+		return t.Id() == otherInstance.Id()
+	}
 }
 
 // DeclaringClass declares that an instance's class is CLASS_INSTANCE
