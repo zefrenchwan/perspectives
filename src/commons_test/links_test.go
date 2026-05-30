@@ -181,7 +181,7 @@ func TestLink_ReplaceVariable_DeepTree(t *testing.T) {
 
 	root := commons.NewLink("ROOT", p).WithOperand("branch", []commons.Element{childLink})
 
-	newRoot := root.ReplaceVariable(*vTarget, replacement)
+	newRoot := root.ReplaceVariable(vTarget, replacement)
 
 	// Check that the replacement happened correctly
 	branch, _ := newRoot.Operand("branch")
@@ -211,7 +211,7 @@ func TestLink_ReplaceVariable_MultipleOccurrences(t *testing.T) {
 		WithOperand("left", []commons.Element{vTarget, commons.NewTrait("A"), vTarget}).
 		WithOperand("right", []commons.Element{vTarget})
 
-	newLink := link.ReplaceVariable(*vTarget, val)
+	newLink := link.ReplaceVariable(vTarget, val)
 
 	leftOps, _ := newLink.Operand("left")
 	if len(leftOps) != 3 || !leftOps[0].Same(val) || !leftOps[2].Same(val) {
@@ -234,7 +234,7 @@ func TestLink_ReplaceVariable_TypeConstraints(t *testing.T) {
 
 	// Scenario A: Attempt to replace with a Trait (Should fail / be ignored)
 	invalidReplacement := commons.NewTrait("JUST_A_TRAIT")
-	newLinkA := link.ReplaceVariable(*vConstrained, invalidReplacement)
+	newLinkA := link.ReplaceVariable(vConstrained, invalidReplacement)
 
 	opsA, _ := newLinkA.Operand("target")
 	if opsA[0].Same(invalidReplacement) {
@@ -243,7 +243,7 @@ func TestLink_ReplaceVariable_TypeConstraints(t *testing.T) {
 
 	// Scenario B: Attempt to replace with an Instance (Should succeed)
 	validReplacement := commons.NewTemporalInstance() // Implements CLASS_INSTANCE
-	newLinkB := link.ReplaceVariable(*vConstrained, validReplacement)
+	newLinkB := link.ReplaceVariable(vConstrained, validReplacement)
 
 	opsB, _ := newLinkB.Operand("target")
 	if !opsB[0].Same(validReplacement) {
@@ -263,7 +263,7 @@ func TestLink_ReplaceVariable_StructuralSharing(t *testing.T) {
 	root := commons.NewLink("ROOT", commons.NewFullPeriod()).
 		WithOperand("branch", []commons.Element{child})
 
-	newRoot := root.ReplaceVariable(*vMissing, val)
+	newRoot := root.ReplaceVariable(vMissing, val)
 
 	// Since "MISSING" doesn't exist in the graph, newRoot should be the exact same pointer as root.
 	ptrOld := reflect.ValueOf(root).Pointer()
@@ -287,7 +287,7 @@ func TestLink_ReplaceVariable_CyclePrevention(t *testing.T) {
 		WithOperand("loop", []commons.Element{cyclicObj, vTarget})
 
 	// If inStack map check is missing in ReplaceVariable, this will crash the test runner.
-	newLink := link.ReplaceVariable(*vTarget, val)
+	newLink := link.ReplaceVariable(vTarget, val)
 
 	// Check if the variable inside the cyclic graph was still replaced safely
 	ops, _ := newLink.Operand("loop")

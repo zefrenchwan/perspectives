@@ -9,35 +9,29 @@ type Variable struct {
 }
 
 // NewVariable creates an immutable variable with replacement constraints.
-func NewVariable(name string, allowedTypes ...Class) *Variable {
+func NewVariable(name string, allowedTypes ...Class) Variable {
 	constraints := make([]Class, len(allowedTypes))
 	copy(constraints, allowedTypes)
 
-	return &Variable{
+	return Variable{
 		name:         name,
 		allowedTypes: constraints,
 	}
 }
 
 // Name of the variable
-func (v *Variable) Name() string {
-	if v == nil {
-		return ""
-	}
+func (v Variable) Name() string {
 	return v.name
 }
 
 // AllowedTypes returns possible types for replacement
-func (v *Variable) AllowedTypes() []Class {
-	if v == nil {
-		return nil
-	}
+func (v Variable) AllowedTypes() []Class {
 	return slices.Clone(v.allowedTypes)
 }
 
 // CanBeReplacedBy checks if an element can replace this variable
-func (v *Variable) CanBeReplacedBy(element Element) bool {
-	if v == nil || element == nil {
+func (v Variable) CanBeReplacedBy(element Element) bool {
+	if element == nil {
 		return false
 	}
 
@@ -48,18 +42,15 @@ func (v *Variable) CanBeReplacedBy(element Element) bool {
 }
 
 // Same returns true if other is a variable with the same name
-func (v *Variable) Same(other Element) bool {
-	if v == nil && other == nil {
-		return true
-	}
-	if v == nil || other == nil {
+func (v Variable) Same(other Element) bool {
+	if other == nil {
 		return false
 	}
 	if other.DeclaringClass() != CLASS_VARIABLE {
 		return false
 	}
 
-	if otherVar, ok := other.(*Variable); !ok {
+	if otherVar, ok := other.(Variable); !ok {
 		return false
 	} else {
 		return v.name == otherVar.name
@@ -69,6 +60,6 @@ func (v *Variable) Same(other Element) bool {
 }
 
 // DeclaringClass returns that this is a variable
-func (v *Variable) DeclaringClass() Class {
+func (v Variable) DeclaringClass() Class {
 	return CLASS_VARIABLE
 }

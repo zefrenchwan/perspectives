@@ -412,7 +412,7 @@ func (l *baseLink) ReplaceVariable(variable Variable, value Element) Link {
 
 		// Scenario 1: The element is a Variable
 		if elem != nil && IsElementDeclaredInstance(elem, CLASS_VARIABLE) {
-			if elem.Same(&variable) {
+			if elem.Same(variable) {
 				// BUG FIX: We MUST verify if the value respects the AllowedTypes of the Variable.
 				if variable.CanBeReplacedBy(value) {
 					curr.currVals = append(curr.currVals, value)
