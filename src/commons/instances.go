@@ -283,12 +283,18 @@ func (t *temporalInstance) Attribute(name string) TemporalValues {
 	}
 }
 
-// NewTemporalInstance creates a new temporal instance with default lifetime (full period).
-// A *temporalInstance is an instance, so you may use it as one
-func NewTemporalInstance() Instance {
+// initTemporalInstance initializes a new temporal instance with the given initial ID.
+// Its use should be limited to data deserialization or under the hood constructions.
+func initTemporalInstance(initialId string) *temporalInstance {
 	return &temporalInstance{
-		id:         uuid.NewString(),
+		id:         initialId,
 		attributes: make(map[string]*periodValues),
 		lifetime:   NewFullPeriod(),
 	}
+}
+
+// NewTemporalInstance creates a new temporal instance with default lifetime (full period).
+// A *temporalInstance is an instance, so you may use it as one
+func NewTemporalInstance() Instance {
+	return initTemporalInstance(uuid.NewString())
 }

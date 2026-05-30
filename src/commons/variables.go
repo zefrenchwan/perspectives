@@ -10,12 +10,9 @@ type Variable struct {
 
 // NewVariable creates an immutable variable with replacement constraints.
 func NewVariable(name string, allowedTypes ...Class) Variable {
-	constraints := make([]Class, len(allowedTypes))
-	copy(constraints, allowedTypes)
-
 	return Variable{
 		name:         name,
-		allowedTypes: constraints,
+		allowedTypes: slices.Clone(allowedTypes),
 	}
 }
 
