@@ -2,18 +2,27 @@ package commons
 
 import (
 	"fmt"
-	"sync"
 )
 
-// Trait is the definition of a concept that can be instantiated into objects.
+// Trait is the immutable definition of a concept that can be instantiated into objects (instances of traits).
 type Trait struct {
 	name       string            // name of the trait, should be unique
-	locks      sync.RWMutex      // locks to manage concurrent access to attributes
 	attributes map[string]string // attributes of the trait, as name and type
+}
+
+// NewTrait creates a new trait with the given name
+func NewTrait(name string) *Trait {
+	return &Trait{
+		name:       name,
+		attributes: make(map[string]string),
+	}
 }
 
 // Name returns the name of the trait
 func (t *Trait) Name() string {
+	if t == nil {
+		return ""
+	}
 	return t.name
 }
 
@@ -25,6 +34,9 @@ func (t *Trait) DeclaringClass() Class {
 
 // String returns a string representation of the trait to include its name
 func (t *Trait) String() string {
+	if t == nil {
+		return "Trait{nil}"
+	}
 	return fmt.Sprintf("Trait{name: %s}", t.name)
 }
 
@@ -44,40 +56,67 @@ func (t *Trait) Same(other Element) bool {
 	return true
 }
 
-// WithAttribute sets an attribute for the trait with the given name and expected type.
-// To chain, return the trait instance
+// Attributes returns a copy of all attributes of the trait (key) and type (value)
+// A defensive copy is returned to enforce immutability.
+func (t *Trait) Attributes() map[string]string {
+	if t == nil || t.attributes == nil {
+		return nil
+	}
+
+	result := make(map[string]string, len(t.attributes))
+	for k, v := range t.attributes {
+		result[k] = v
+	}
+	return result
+}
+
+// WithAttribute returns a new Trait instance with the given attribute added or updated.
+// The original Trait remains unchanged.
 func (t *Trait) WithAttribute(name, expectedType string) *Trait {
+	if t == nil {
+		return nil
+	}
 	if name == "" || expectedType == "" {
 		return t
 	}
-	t.locks.Lock()
-	defer t.locks.Unlock()
-	t.attributes[name] = expectedType
-	return t
-}
 
-// RemoveAttribute removes an attribute from the trait with the given name
-func (t *Trait) RemoveAttribute(name string) {
-	if name == "" {
-		return
+	// Copy existing attributes
+	newAttributes := t.Attributes()
+	if newAttributes == nil {
+		newAttributes = make(map[string]string)
 	}
 
-	t.locks.Lock()
-	defer t.locks.Unlock()
-	delete(t.attributes, name)
-}
+	// Add/Update the new attribute
+	newAttributes[name] = expectedType
 
-// Attributes returns all attributes of the trait (key) and type (value)
-func (t *Trait) Attributes() map[string]string {
-	t.locks.RLock()
-	defer t.locks.RUnlock()
-	return t.attributes
-}
-
-// NewTrait creates a new trait with the given name
-func NewTrait(name string) *Trait {
 	return &Trait{
-		attributes: make(map[string]string),
-		name:       name,
+		name:       t.name,
+		attributes: newAttributes,
+	}
+}
+
+// WithoutAttribute returns a new Trait instance without the given attribute.
+// If the attribute does not exist, it returns the current Trait instance.
+func (t *Trait) WithoutAttribute(name string) *Trait {
+	if t == nil || name == "" {
+		return t
+	}
+
+	// Fast return if the attribute is not present (avoids useless allocation)
+	if _, exists := t.attributes[name]; !exists {
+		return t
+	}
+
+	// Copy all attributes except the one to remove
+	newAttributes := make(map[string]string, len(t.attributes)-1)
+	for k, v := range t.attributes {
+		if k != name {
+			newAttributes[k] = v
+		}
+	}
+
+	return &Trait{
+		name:       t.name,
+		attributes: newAttributes,
 	}
 }

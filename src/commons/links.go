@@ -1,256 +1,467 @@
 package commons
 
 import (
+	"reflect"
 	"slices"
-	"sync"
 )
 
-// Linkable represents an entity that can be linked in a graph.
-// A link, especially, is linkable.
-// It means that it is possible to use links as operands
-type Linkable interface {
-	Element
+// Link is a relation between elements.
+// Think of it as a node in a graph that connects to other elements (Traits, Variables, or nested Links).
+type Link interface {
+	Element // Inherits Same(Element) and DeclaringClass()
+
+	// --- READ OPERATIONS : State queries ---
+
+	// Name returns the name of the link. For instance, in Loves(subject=John, object=Pizza) => "Loves"
+	Name() string
+	// Validity returns the time period during which this link is considered true/active.
+	Validity() Period
+	// Operands returns all operand keys (the names of the relationships, e.g., "subject", "object") deterministically sorted.
+	Operands() []string
+	// Operand returns the slice of Elements associated with the given operand name.
+	// It returns a boolean indicating if the operand key exists.
+	Operand(name string) ([]Element, bool)
+
+	// --- FUNCTIONAL MUTATIONS : Copy-on-write operations ---
+	// Since Links are immutable, these methods never modify the current instance.
+	// They return a newly allocated Link with the requested changes.
+
+	// WithValidity returns a copy of the link with the new validity period.
+	WithValidity(p Period) Link
+
+	// WithOperand returns a copy of the link with the given operand forced (overwrites previous values).
+	WithOperand(name string, operands []Element) Link
+
+	// WithAppended returns a copy of the link with a new element added to the specified operand.
+	WithAppended(name string, operand Element) Link
+
+	// Without returns a copy of the link, filtering out operand values that match the condition.
+	// For instance, Loves(John, [Pizza, Salad]) => Without("object", isPizza) => Loves(John, [Salad])
+	Without(name string, op func(linkable Element) bool) Link
+
+	// ReplaceVariable traverses the graph and replaces occurrences of a specific Variable with a new Element.
+	ReplaceVariable(variable Variable, value Element) Link
 }
 
-// linkOperand represents a collection of linkable values that can be sorted or not.
-type linkOperand struct {
-	values []Linkable // values as the raw values, duplicates are possible
-	sorted bool       // sorted is true for lists, false for sets
+// baseLink is the immutable implementation of the Link interface.
+// Explanation:  Immutability provides native thread-safety. We don't need sync.RWMutex
+// because once created, a baseLink's internal state can never be altered.
+type baseLink struct {
+	name     string
+	validity Period
+	operands map[string][]Element
 }
 
-// addValue adds a new value to the operand collection, updating the sorted flag if necessary.
-// It does nothing if value is nil, not even changing the sorted value.
-func (op *linkOperand) addValue(value Linkable, sorted bool) {
-	if value == nil {
-		return
-	}
-
-	op.values = append(op.values, value)
-	op.sorted = sorted
-}
-
-// copyValues returns a copy of the operand values (not values, just the slice)
-func (op *linkOperand) copyValues() []Linkable {
-	return slices.Clone(op.values)
-}
-
-// remove removes all values from the operand collection that satisfy the given predicate.
-func (op *linkOperand) remove(predicate func(Linkable) bool) {
-	result := make([]Linkable, 0)
-	for _, value := range op.values {
-		if !predicate(value) {
-			result = append(result, value)
-		}
-	}
-	op.values = result
-}
-
-// size returns the number of values in the operand collection.
-func (op *linkOperand) size() int {
-	if op == nil {
-		return 0
-	}
-
-	return len(op.values)
-}
-
-// newLinkOperand creates a new link operand with an empty slice and sorted set to false.
-func newLinkOperand() *linkOperand {
-	return &linkOperand{
-		values: make([]Linkable, 0),
-		sorted: false,
-	}
-}
-
-// Link represents a link between nodes in a graph.
-type Link struct {
-	locks    sync.RWMutex            // locks manage the locks for goroutines
-	name     string                  // name of the link
-	operands map[string]*linkOperand // operands of the link
-	validity Period                  // moments the link is true
-}
-
-// NewLink creates a new empty link with provided name.
-func NewLink(name string) *Link {
-	return &Link{
+// NewLink creates a new immutable Link instance.
+func NewLink(name string, validity Period) Link {
+	return &baseLink{
 		name:     name,
-		operands: make(map[string]*linkOperand),
-		validity: NewFullPeriod(),
+		validity: validity,
+		operands: make(map[string][]Element),
 	}
 }
 
-// Name returns the name of the link.
-func (l *Link) Name() string {
-	if l == nil {
-		return ""
-	}
+// ============================================================================
+// READ METHODS
+// ============================================================================
 
-	return l.name
-}
-
-// Same returns true if the link is the same as the other linkable.
-func (l *Link) Same(other Element) bool {
-	if l == nil && other == nil {
-		return true
-	} else if l == nil || other == nil {
-		return false
-	} else if !IsElementDeclaredInstance(other, l.DeclaringClass()) {
-		return false
-	}
-
-	otherLink, ok := other.(*Link)
-	if !ok {
-		return false
-	}
-	// at this point, both are links.
-
-	l.locks.RLock()
-	otherLink.locks.RLock()
-	defer l.locks.RUnlock()
-	defer otherLink.locks.RUnlock()
-
-	current := l
-	matchingCurrent := otherLink
-
-	if l.name != otherLink.name {
-		return false
-	} else if len(current.operands) != len(matchingCurrent.operands) {
-		return false
-	}
-
-	// todo : end it
-	return true
-
-}
-
-// DeclaringClass returns the class that declares the link, obviously including CLASS_LINK itself
-func (l *Link) DeclaringClass() Class {
+func (l *baseLink) DeclaringClass() Class {
 	return CLASS_LINK
 }
 
-// Validity returns the period the link is active
-func (l *Link) Validity() Period {
-	return l.validity.Copy()
-}
-
-// SetValidity sets the period the link is active
-func (l *Link) SetValidity(p Period) {
+func (l *baseLink) Name() string {
 	if l == nil {
-		return
+		return ""
 	}
-
-	l.locks.Lock()
-	defer l.locks.Unlock()
-
-	l.validity = p
+	return l.name
 }
 
-// Roles return the roles of the link.
-// Result is sorted alphabetically
-// For instance, Likes(subject=[Jean],Object=[Pizza]).Roles() will return ["object", "subject"]
-func (l *Link) Roles() []string {
+func (l *baseLink) Validity() Period {
 	if l == nil {
+		return NewEmptyPeriod()
+	}
+	return l.validity
+}
+
+// Operands returns a deterministically sorted list of operand keys.
+// Explanation:  Sorting is crucial here. If we need to serialize the graph or compare
+// two links, iterating over map keys without sorting leads to random orders in Go,
+// which would break equality algorithms.
+func (l *baseLink) Operands() []string {
+	if l == nil || l.operands == nil {
 		return nil
 	}
-
-	l.locks.RLock()
-	defer l.locks.RUnlock()
-
-	size := len(l.operands)
-	result := make([]string, size)
-	index := 0
-	for role := range l.operands {
-		result[index] = role
-		index++
+	keys := make([]string, 0, len(l.operands))
+	for k := range l.operands {
+		keys = append(keys, k)
 	}
-
-	slices.Sort(result)
-	return result
+	slices.Sort(keys) // Guarantee stable order
+	return keys
 }
 
-// Has returns true and related value if the link has an operand with the given name.
-// Otherwise, it returns nil, false.
-func (l *Link) Has(name string) ([]Linkable, bool) {
-	if l == nil {
+// Operand returns the elements associated with a specific operand name.
+// Explanation:  It returns a defensive copy (SliceCopy) to prevent external code from
+// mutating the internal slice. If we returned the raw slice, a user could do:
+// `ops, _ := myLink.Operand("key"); ops[0] = somethingElse`, destroying immutability.
+func (l *baseLink) Operand(name string) ([]Element, bool) {
+	if l == nil || l.operands == nil {
 		return nil, false
 	}
-
-	l.locks.RLock()
-	defer l.locks.RUnlock()
-
-	if operands, ok := l.operands[name]; ok {
-		return operands.copyValues(), ok
+	vals, exists := l.operands[name]
+	if !exists {
+		return nil, false
 	}
-
-	return nil, false
+	return SliceCopy(vals), true // Defensive copy
 }
 
-// Add adds a new operand to the link with the given name if order does not matter.
-// For instance, Likes(subject=[Jean],Object=[Pizza]).Add("Object", "Tiramisu")
-// will make Likes(subject=[Jean],Object=[Pizza, Tiramisu])
-func (l *Link) Add(name string, operand Linkable) {
-	l.addOperand(name, operand, false)
-}
+// ============================================================================
+// MUTATION METHODS (FUNCTIONAL / COPY-ON-WRITE)
+// ============================================================================
 
-// Append adds a new operand to the link with the given name if order DOES matter.
-// For instance, presidents of a country in order
-func (l *Link) Append(name string, operand Linkable) {
-	l.addOperand(name, operand, true)
-}
-
-// addOperand adds a new operand to the link with the given name and sorting preference.
-// if value is nil, it does nothing, not even changing the sorted value.
-func (l *Link) addOperand(name string, operand Linkable, sorted bool) {
-	if l == nil || operand == nil {
-		return
+// copyMap is an internal utility to shallow-copy the operands map.
+// Explanation:  This implements "Structural Sharing". We duplicate the map itself,
+// but the underlying slices (and their elements) are shared in memory.
+// This saves significant CPU and RAM when mutating large graphs.
+func (l *baseLink) copyMap() map[string][]Element {
+	res := make(map[string][]Element, len(l.operands))
+	for k, v := range l.operands {
+		res[k] = v // Slices are referenced, not deep-copied here
 	}
+	return res
+}
 
-	l.locks.Lock()
-	defer l.locks.Unlock()
+func (l *baseLink) WithValidity(p Period) Link {
+	if l == nil {
+		return nil
+	}
+	return &baseLink{
+		name:     l.name,
+		validity: p,
+		operands: l.operands, // Safe to share the map (read-only usage in new instance)
+	}
+}
 
-	if previous, ok := l.operands[name]; ok && previous != nil {
-		previous.addValue(operand, sorted)
-		l.operands[name] = previous
+func (l *baseLink) WithOperand(name string, operands []Element) Link {
+	if l == nil {
+		return nil
+	}
+	newOps := l.copyMap()
+	if len(operands) == 0 {
+		delete(newOps, name) // Clean up empty keys to keep the map tidy
 	} else {
-		current := newLinkOperand()
-		current.addValue(operand, sorted)
-		l.operands[name] = current
+		newOps[name] = SliceCopy(operands) // Prevent external slice mutation
+	}
+
+	return &baseLink{
+		name:     l.name,
+		validity: l.validity,
+		operands: newOps,
 	}
 }
 
-// Remove for a given role, specific values by predicate.
-// If the predicate matches all values, the role is removed from the link.
-func (l *Link) Remove(name string, op func(linkable Linkable) bool) {
-	if l == nil || op == nil {
-		return
+func (l *baseLink) WithAppended(name string, operand Element) Link {
+	if l == nil || operand == nil {
+		return l
+	}
+	newOps := l.copyMap()
+	oldSlice := newOps[name]
+
+	// Allocate a new slice with exactly the required capacity to avoid hidden re-allocations.
+	newSlice := make([]Element, len(oldSlice), len(oldSlice)+1)
+	copy(newSlice, oldSlice)
+	newSlice = append(newSlice, operand)
+
+	newOps[name] = newSlice
+
+	return &baseLink{
+		name:     l.name,
+		validity: l.validity,
+		operands: newOps,
+	}
+}
+
+func (l *baseLink) Without(name string, op func(linkable Element) bool) Link {
+	if l == nil || l.operands == nil {
+		return l
+	}
+	oldSlice, exists := l.operands[name]
+	if !exists {
+		return l // Fast exit: no changes needed, reuse current instance
 	}
 
-	l.locks.Lock()
-	defer l.locks.Unlock()
-
-	if operand, ok := l.operands[name]; ok {
-		operand.remove(op)
-		if operand.size() != 0 {
-			l.operands[name] = operand
-		} else {
-			delete(l.operands, name)
+	var newSlice []Element
+	for _, el := range oldSlice {
+		// If op() returns false, it means we want to KEEP the element
+		if !op(el) {
+			newSlice = append(newSlice, el)
 		}
 	}
+
+	// Optimization: If nothing was removed, return the current instance.
+	// This avoids useless memory allocations.
+	if len(newSlice) == len(oldSlice) {
+		return l
+	}
+
+	newOps := l.copyMap()
+	if len(newSlice) == 0 {
+		delete(newOps, name)
+	} else {
+		newOps[name] = newSlice
+	}
+
+	return &baseLink{
+		name:     l.name,
+		validity: l.validity,
+		operands: newOps,
+	}
 }
 
-// Operands return a copy of the role map
-func (l *Link) Operands() map[string][]Linkable {
+// ============================================================================
+// NON-RECURSIVE GRAPH ALGORITHMS
+// ============================================================================
+
+// Same checks for deep equality between two Links.
+// Explanation:  This uses an iterative Breadth-First Search (BFS) using a Queue.
+// Why BFS? Because if the top-level validity or names differ, we exit immediately
+// (early return) without wasting time exploring deep sub-graphs.
+// We also track visited nodes to prevent Infinite Loops if the user created a cycle.
+func (l *baseLink) Same(other Element) bool {
+	if l == nil && other == nil {
+		return true
+	}
+	if l == nil || other == nil {
+		return false
+	}
+
+	type pair struct {
+		a Element
+		b Element
+	}
+
+	queue := []pair{{l, other}}
+
+	// Cycle detection: track pairs of memory addresses we have already compared.
+	// If we see the same pair again, we can assume they are equal in this path.
+	visited := make(map[[2]uintptr]bool)
+
+	for len(queue) > 0 {
+		curr := queue[0]
+		queue = queue[1:]
+		a, b := curr.a, curr.b
+
+		if a == nil && b == nil {
+			continue
+		}
+		if a == nil || b == nil {
+			return false
+		}
+		if a.DeclaringClass() != b.DeclaringClass() {
+			return false
+		}
+
+		// Check if we are comparing two links (which can contain cycles)
+		if IsElementDeclaredInstance(a, CLASS_LINK) {
+			linkA, _ := a.(Link)
+			linkB, _ := b.(Link)
+
+			// Get pointer addresses for cycle detection
+			ptrA := reflect.ValueOf(linkA).Pointer()
+			ptrB := reflect.ValueOf(linkB).Pointer()
+			memPair := [2]uintptr{ptrA, ptrB}
+
+			if visited[memPair] {
+				continue // We have already verified this exact pair, break the cycle.
+			}
+			visited[memPair] = true
+
+			// 1. Fast checks: Name and Validity
+			if linkA.Name() != linkB.Name() {
+				return false
+			}
+			if !linkA.Validity().Equals(linkB.Validity()) {
+				return false
+			}
+
+			// 2. Structural checks: Operand keys
+			opsA := linkA.Operands()
+			opsB := linkB.Operands()
+			if len(opsA) != len(opsB) {
+				return false
+			}
+
+			// 3. Queue children for the next BFS iterations
+			for _, opName := range opsA {
+				elsA, _ := linkA.Operand(opName)
+				elsB, okB := linkB.Operand(opName)
+
+				if !okB || len(elsA) != len(elsB) {
+					return false
+				}
+				for i := range elsA {
+					queue = append(queue, pair{elsA[i], elsB[i]})
+				}
+			}
+		} else {
+			// Base case: For instances, traits, or variables, defer to their native Same()
+			if !a.Same(b) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ReplaceVariable finds a target Variable and replaces it with a new Element.
+// Explanation:  Since Links are immutable, substituting a deep leaf requires rebuilding all
+// parent nodes up to the root (Bottom-Up reconstruction).
+// We use an iterative Depth-First Search (DFS) with a custom Call Stack (LIFO)
+// to prevent Stack Overflows on huge graphs.
+// It also implements Structural Sharing and Cycle Prevention.
+func (l *baseLink) ReplaceVariable(variable Variable, value Element) Link {
 	if l == nil {
 		return nil
 	}
 
-	l.locks.RLock()
-	defer l.locks.RUnlock()
-
-	result := make(map[string][]Linkable)
-	for k, v := range l.operands {
-		result[k] = v.copyValues()
+	// Frame simulates a function call context in the Go runtime.
+	type frame struct {
+		link       Link                 // The Link currently being processed
+		keys       []string             // All operand keys of this link
+		keyIdx     int                  // Current position in the 'keys' slice
+		valIdx     int                  // Current position in the current key's elements
+		newOps     map[string][]Element // The reconstructed map for the new link
+		currVals   []Element            // The reconstructed elements for the current key
+		hasChanges bool                 // Flags if ANY child actually changed (for Structural Sharing)
 	}
 
-	return result
+	stack := []*frame{{
+		link:   l,
+		keys:   l.Operands(),
+		newOps: make(map[string][]Element),
+	}}
+
+	// Cycle Prevention and DAG Optimization
+	memo := make(map[uintptr]Link)    // Maps old Link pointer -> new processed Link
+	inStack := make(map[uintptr]bool) // Tracks links currently in the processing stack
+
+	// Mark root as currently processing
+	inStack[reflect.ValueOf(l).Pointer()] = true
+
+	var result Element
+
+	for len(stack) > 0 {
+		curr := stack[len(stack)-1]
+
+		// Condition A: Have we finished iterating over all keys in this Link?
+		if curr.keyIdx >= len(curr.keys) {
+			var resultLink Link
+
+			// OPTIMIZATION (Structural Sharing): If no variables were replaced in this branch,
+			// do NOT allocate a new map/link. Just reuse the original pointer.
+			if !curr.hasChanges {
+				resultLink = curr.link
+			} else {
+				resultLink = &baseLink{
+					name:     curr.link.Name(),
+					validity: curr.link.Validity(),
+					operands: curr.newOps,
+				}
+			}
+
+			// Pop the current frame
+			stack = stack[:len(stack)-1]
+			ptr := reflect.ValueOf(curr.link).Pointer()
+
+			// Update tracking maps
+			delete(inStack, ptr)
+			memo[ptr] = resultLink
+
+			// If there is a parent Link waiting above us, append our newly built link to it
+			if len(stack) > 0 {
+				parent := stack[len(stack)-1]
+				parent.currVals = append(parent.currVals, resultLink)
+
+				// If the child was reconstructed (changed), the parent is also considered changed.
+				if resultLink != curr.link {
+					parent.hasChanges = true
+				}
+			} else {
+				// We reached the root
+				result = resultLink
+			}
+			continue
+		}
+
+		key := curr.keys[curr.keyIdx]
+		vals, _ := curr.link.Operand(key)
+
+		// Condition B: Have we finished iterating over all elements of the current key?
+		if curr.valIdx >= len(vals) {
+			if len(curr.currVals) > 0 {
+				curr.newOps[key] = curr.currVals
+			}
+			curr.currVals = nil
+			curr.keyIdx++
+			curr.valIdx = 0
+			continue
+		}
+
+		// Condition C: Process the current Element
+		elem := vals[curr.valIdx]
+		curr.valIdx++
+
+		// Scenario 1: The element is a Variable
+		if elem != nil && IsElementDeclaredInstance(elem, CLASS_VARIABLE) {
+			if elem.Same(&variable) {
+				// BUG FIX: We MUST verify if the value respects the AllowedTypes of the Variable.
+				if variable.CanBeReplacedBy(value) {
+					curr.currVals = append(curr.currVals, value)
+					curr.hasChanges = true
+				} else {
+					// Explanation:  If the constraint fails, we safely ignore the replacement
+					// and keep the original variable to prevent corrupting the graph logic.
+					curr.currVals = append(curr.currVals, elem)
+				}
+				continue
+			}
+		}
+
+		// Scenario 2: The element is a nested Link (Dive deeper)
+		if elem != nil && IsElementDeclaredInstance(elem, CLASS_LINK) {
+			if childLink, ok := elem.(Link); ok {
+				ptr := reflect.ValueOf(childLink).Pointer()
+
+				// Check for Cycles
+				if inStack[ptr] {
+					// Explanation:  You cannot deep-copy a cyclic graph immutably bottom-up without infinite recursion.
+					// If we detect a cycle, we break it by keeping the original reference.
+					curr.currVals = append(curr.currVals, childLink)
+					continue
+				}
+
+				// Check for DAG Memoization (already processed sub-graph)
+				if cachedLink, exists := memo[ptr]; exists {
+					curr.currVals = append(curr.currVals, cachedLink)
+					if cachedLink != childLink {
+						curr.hasChanges = true
+					}
+					continue
+				}
+
+				// Push a new frame to process this child
+				inStack[ptr] = true
+				stack = append(stack, &frame{
+					link:   childLink,
+					keys:   childLink.Operands(),
+					newOps: make(map[string][]Element),
+				})
+				continue
+			}
+		}
+
+		// Scenario 3: Terminal element (Instance, Trait, or un-matching Variable)
+		curr.currVals = append(curr.currVals, elem)
+	}
+
+	return result.(Link)
 }

@@ -14,12 +14,12 @@ func TestTraits(t *testing.T) {
 		t.Errorf("Expected trait to be declared as CLASS_TRAIT, got undeclared")
 	}
 
-	trait.WithAttribute("age", "int")
+	trait = trait.WithAttribute("age", "int")
 	if trait.Attributes()["age"] != "int" {
 		t.Errorf("Expected attribute 'age' to have type 'int', got '%s'", trait.Attributes()["age"])
 	}
 
-	trait.RemoveAttribute("age")
+	trait = trait.WithoutAttribute("age")
 	if _, ok := trait.Attributes()["age"]; ok {
 		t.Errorf("Expected attribute 'age' to be removed, but it still exists")
 	}
