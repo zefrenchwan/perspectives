@@ -20,3 +20,15 @@ For instance, Paul, Marie and John are objects of the trait PERSON, and they are
 Another example is the link composition. 
 For instance, Knows(subject=Paul, object=Likes(subject=Marie,object=John)) 
 Paul's lifetime is an interval `[ now() - 18 years, +oo[` and this link FRIEND_OF has a lifetime too, for instance `[now() - 3 years, +oo[`. 
+
+### Example : knowledge representation
+
+Link:Works(Subject:TraitWorker, Object:TraitJob)
+
+### Example : inheritance tree
+
+Link:Extends(Trait:Dessert, Trait:Food)
+
+### Example : knowledge management 
+
+Link:Knows(subject=Paul, object=Likes(subject=Marie,object=John))
