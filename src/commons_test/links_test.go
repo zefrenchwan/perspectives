@@ -1,7 +1,6 @@
 package commons_test
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -166,132 +165,33 @@ func TestLink_Same_CyclePrevention(t *testing.T) {
 	}
 }
 
-// ============================================================================
-// TEST SUITE 3: VARIABLE REPLACEMENT & DAG OPTIMIZATION
-// ============================================================================
+// ========================================================================
+// TEST SUITE 3 : VISITING
+// ========================================================================
 
-func TestLink_ReplaceVariable_DeepTree(t *testing.T) {
-	// Objective: Verify that a variable is correctly identified and replaced deep inside a graph.
-	p := commons.NewFullPeriod()
-	vTarget := commons.NewVariable("TARGET")
-	replacement := commons.NewTrait("REPLACED")
-
-	childLink := commons.NewLink("CHILD", p).
-		WithOperand("items", []commons.Element{commons.NewTrait("A"), vTarget, commons.NewTrait("B")})
-
-	root := commons.NewLink("ROOT", p).WithOperand("branch", []commons.Element{childLink})
-
-	newRoot := root.ReplaceVariable(vTarget, replacement)
-
-	// Check that the replacement happened correctly
-	branch, _ := newRoot.Operand("branch")
-	newChild := branch[0].(commons.Link)
-	items, _ := newChild.Operand("items")
-
-	if !items[1].Same(replacement) {
-		t.Errorf("ReplaceVariable failed to insert replacement deep in the tree")
+func TestLink_Visits(t *testing.T) {
+	counter := 0
+	counterVisits := func(link commons.Link) {
+		counter++
 	}
 
-	// Verify original tree remains uncorrupted
-	oldBranch, _ := root.Operand("branch")
-	oldChild := oldBranch[0].(commons.Link)
-	oldItems, _ := oldChild.Operand("items")
-	if !oldItems[1].Same(vTarget) {
-		t.Errorf("CRITICAL: Original tree was mutated during ReplaceVariable!")
-	}
-}
+	x := commons.NewVariable("X", commons.CLASS_INSTANCE)
+	y := commons.NewVariable("Y", commons.CLASS_TRAIT)
+	z := commons.NewVariable("Z", commons.CLASS_TRAIT)
+	left := commons.NewLink("instance", commons.NewFullPeriod()).
+		WithOperand("subject", []commons.Element{x}).
+		WithOperand("object", []commons.Element{y})
 
-func TestLink_ReplaceVariable_MultipleOccurrences(t *testing.T) {
-	// Objective: Verify that if a variable appears multiple times across different operands,
-	// all instances are correctly replaced.
-	vTarget := commons.NewVariable("X")
-	val := commons.NewTrait("NEW_VAL")
+	right := commons.NewLink("extends", commons.NewFullPeriod()).
+		WithOperand("subject", []commons.Element{y}).
+		WithOperand("object", []commons.Element{z})
 
-	link := commons.NewLink("ROOT", commons.NewFullPeriod()).
-		WithOperand("left", []commons.Element{vTarget, commons.NewTrait("A"), vTarget}).
-		WithOperand("right", []commons.Element{vTarget})
+	conclusion := commons.NewLink("implies", commons.NewFullPeriod()).
+		WithOperand("premises", []commons.Element{left}).
+		WithOperand("conclusion", []commons.Element{right})
 
-	newLink := link.ReplaceVariable(vTarget, val)
-
-	leftOps, _ := newLink.Operand("left")
-	if len(leftOps) != 3 || !leftOps[0].Same(val) || !leftOps[2].Same(val) {
-		t.Errorf("Failed to replace multiple occurrences in the same operand")
-	}
-
-	rightOps, _ := newLink.Operand("right")
-	if len(rightOps) != 1 || !rightOps[0].Same(val) {
-		t.Errorf("Failed to replace occurrence in a different operand")
-	}
-}
-
-func TestLink_ReplaceVariable_TypeConstraints(t *testing.T) {
-	// Objective: Verify that CanBeReplacedBy is respected.
-	// We create a variable that ONLY accepts CLASS_INSTANCE elements.
-	vConstrained := commons.NewVariable("STRICT_VAR", commons.CLASS_INSTANCE)
-
-	link := commons.NewLink("ROOT", commons.NewFullPeriod()).
-		WithOperand("target", []commons.Element{vConstrained})
-
-	// Scenario A: Attempt to replace with a Trait (Should fail / be ignored)
-	invalidReplacement := commons.NewTrait("JUST_A_TRAIT")
-	newLinkA := link.ReplaceVariable(vConstrained, invalidReplacement)
-
-	opsA, _ := newLinkA.Operand("target")
-	if opsA[0].Same(invalidReplacement) {
-		t.Errorf("ReplaceVariable bypassed CanBeReplacedBy() constraint! Trait was injected instead of Instance.")
-	}
-
-	// Scenario B: Attempt to replace with an Instance (Should succeed)
-	validReplacement := commons.NewTemporalInstance() // Implements CLASS_INSTANCE
-	newLinkB := link.ReplaceVariable(vConstrained, validReplacement)
-
-	opsB, _ := newLinkB.Operand("target")
-	if !opsB[0].Same(validReplacement) {
-		t.Errorf("ReplaceVariable blocked a valid replacement matching the type constraints.")
-	}
-}
-
-func TestLink_ReplaceVariable_StructuralSharing(t *testing.T) {
-	// Objective: Prove that if no replacement actually occurs in a sub-graph,
-	// ReplaceVariable reuses the exact same memory pointer to save allocations.
-	vMissing := commons.NewVariable("MISSING")
-	val := commons.NewTrait("VAL")
-
-	child := commons.NewLink("CHILD", commons.NewFullPeriod()).
-		WithOperand("leaf", []commons.Element{commons.NewTrait("A")})
-
-	root := commons.NewLink("ROOT", commons.NewFullPeriod()).
-		WithOperand("branch", []commons.Element{child})
-
-	newRoot := root.ReplaceVariable(vMissing, val)
-
-	// Since "MISSING" doesn't exist in the graph, newRoot should be the exact same pointer as root.
-	ptrOld := reflect.ValueOf(root).Pointer()
-	ptrNew := reflect.ValueOf(newRoot).Pointer()
-
-	if ptrOld != ptrNew {
-		t.Errorf("Structural Sharing optimization failed: tree was rebuilt even though no variables were replaced.")
-	}
-}
-
-func TestLink_ReplaceVariable_CyclePrevention(t *testing.T) {
-	// Objective: Prove that DFS correctly identifies a cycle and breaks it
-	// instead of crashing into an infinite recursion (OOM).
-	vTarget := commons.NewVariable("TARGET")
-	val := commons.NewTrait("VAL")
-
-	cyclicObj := &cyclicMockElement{id: "mock1"}
-	cyclicObj.self = cyclicObj // Cycle
-
-	link := commons.NewLink("ROOT", commons.NewFullPeriod()).
-		WithOperand("loop", []commons.Element{cyclicObj, vTarget})
-
-	// If inStack map check is missing in ReplaceVariable, this will crash the test runner.
-	newLink := link.ReplaceVariable(vTarget, val)
-
-	// Check if the variable inside the cyclic graph was still replaced safely
-	ops, _ := newLink.Operand("loop")
-	if len(ops) != 2 || !ops[1].Same(val) {
-		t.Errorf("Cycle prevention triggered, but sibling variable was not replaced correctly")
+	commons.VisitLink(conclusion, counterVisits)
+	if counter != 3 {
+		t.Errorf("Expected 3 visits, got %d", counter)
 	}
 }

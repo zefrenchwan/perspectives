@@ -60,3 +60,7 @@ func (v Variable) Same(other Element) bool {
 func (v Variable) DeclaringClass() Class {
 	return CLASS_VARIABLE
 }
+
+// Substitution represents the captured bindings between a Variable in the pattern
+// and an actual Element in the target graph.
+type Substitution map[string]Element

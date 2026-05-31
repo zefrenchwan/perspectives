@@ -2,44 +2,74 @@ package commons_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-func TestLinkVariableReplace(t *testing.T) {
-	variable := commons.NewVariable("X", commons.CLASS_TRAIT)
-	trait := commons.NewTrait("Trait")
+func TestVariableReplacement(t *testing.T) {
 	instance := commons.NewTemporalInstance()
+	trait := commons.NewTrait("trait")
 
-	if !variable.CanBeReplacedBy(trait) {
-		t.Errorf("Variable cannot be replaced by trait")
-		return
-	} else if variable.CanBeReplacedBy(instance) {
-		t.Errorf("Variable cannot be replaced by instance")
-		return
+	if variable := commons.NewVariable("x"); !variable.CanBeReplacedBy(instance) {
+		t.Errorf("Variable %s with no constraint should be replaced by instance", variable.Name())
+	} else if !variable.CanBeReplacedBy(trait) {
+		t.Errorf("Variable %s with no constraint should be replaced by trait", variable.Name())
 	}
 
-	rule := commons.NewLink("equals", commons.NewFullPeriod()).
-		WithOperand("subject", []commons.Element{variable}).
-		WithOperand("object", []commons.Element{variable})
-	link := rule.ReplaceVariable(variable, trait)
-	if link == nil {
-		t.Errorf("Expected non-nil link after replacement, got nil")
+	if variable := commons.NewVariable("y", commons.CLASS_INSTANCE); !variable.CanBeReplacedBy(instance) {
+		t.Errorf("Variable %s with constraint should be replaced by instance", variable.Name())
+	} else if variable.CanBeReplacedBy(trait) {
+		t.Errorf("Variable %s with constraint should not be replaced by trait", variable.Name())
+	}
+}
+
+func TestVariableMatching(t *testing.T) {
+	a, b := commons.NewTemporalInstance(), commons.NewTemporalInstance()
+	varA, varB := commons.NewVariable("varA"), commons.NewVariable("varB")
+
+	link := commons.NewLink("same", commons.NewFullPeriod()).
+		WithOperand("subject", []commons.Element{a}).
+		WithOperand("object", []commons.Element{b})
+
+	if !link.Same(link) {
+		t.Errorf("Link should be same as itself")
+	} else if sub, ok := commons.Match(link, link); !ok {
+		t.Errorf("Link should match itself")
+	} else if len(sub) != 0 {
+		t.Errorf("Link should match itself with no substitutions")
 	}
 
-	if values, found := link.Operand("subject"); !found {
-		t.Errorf("Expected 'subject' operand to be present after replacement")
-	} else if len(values) != 1 {
-		t.Errorf("Expected 'subject' operand to have one value, got %d", len(values))
-	} else if value := values[0]; !value.Same(trait) {
-		t.Errorf("Expected 'subject' operand to be replaced with trait, got %v", value)
+	notMatchingName := commons.NewLink("not same name", commons.NewFullPeriod()).
+		WithOperand("subject", []commons.Element{varA}).
+		WithOperand("object", []commons.Element{varB})
+	if _, ok := commons.Match(notMatchingName, link); ok {
+		t.Errorf("Link with different name should not match")
 	}
 
-	if values, found := link.Operand("object"); !found {
-		t.Errorf("Expected 'object' operand to be present after replacement")
-	} else if len(values) != 1 {
-		t.Errorf("Expected 'objectt' operand to have one value, got %d", len(values))
-	} else if value := values[0]; !value.Same(trait) {
-		t.Errorf("Expected 'object' operand to be replaced with trait, got %v", value)
+	notMatchingPeriod := commons.NewLink("same", commons.NewPeriodSince(time.Now(), true)).
+		WithOperand("subject", []commons.Element{varA}).
+		WithOperand("object", []commons.Element{varB})
+	if _, ok := commons.Match(notMatchingPeriod, link); ok {
+		t.Errorf("Link with different period should not match")
+	}
+
+	notMatchingStructure := commons.NewLink("same", commons.NewFullPeriod()).
+		WithOperand("subject", []commons.Element{varA})
+	if _, ok := commons.Match(notMatchingStructure, link); ok {
+		t.Errorf("Link with different structure should not match")
+	}
+
+	matching := commons.NewLink("same", commons.NewFullPeriod()).
+		WithOperand("subject", []commons.Element{varA}).
+		WithOperand("object", []commons.Element{varB})
+	if sub, ok := commons.Match(matching, link); !ok {
+		t.Errorf("Link with same structure should match")
+	} else if len(sub) != 2 {
+		t.Errorf("substitution should be varA => a, varB => b")
+	} else if !sub["varA"].Same(a) {
+		t.Errorf("substitution should be varA => a, varB => b")
+	} else if !sub["varB"].Same(b) {
+		t.Errorf("substitution should be varA => a, varB => b")
 	}
 }
