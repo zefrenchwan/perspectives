@@ -1,4 +1,4 @@
-package objects_test_test
+package objects_test
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	values := objects.NewTemporalIntValues()
+	values := objects.NewTemporalValues()
 	if !values.IsEmpty() {
 		t.Errorf("Expected values to be empty, got %v", values)
 	}
@@ -31,7 +31,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	values := objects.NewTemporalIntValues()
+	values := objects.NewTemporalValues()
 	values.Add(periods.NewFullPeriod(), 10)
 	values.Remove(periods.NewFullPeriod())
 	if !values.IsEmpty() {
@@ -47,7 +47,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestCut(t *testing.T) {
-	values := objects.NewTemporalIntValues()
+	values := objects.NewTemporalValues()
 	values.Add(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
@@ -63,7 +63,7 @@ func TestCut(t *testing.T) {
 }
 
 func TestRange(t *testing.T) {
-	values := objects.NewTemporalIntValues()
+	values := objects.NewTemporalValues()
 	values.Add(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
