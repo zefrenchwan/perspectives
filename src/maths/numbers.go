@@ -1,21 +1,13 @@
 package maths
 
+import "github.com/zefrenchwan/perspectives.git/configuration"
+
 // FloatNumber defines a type constraint for generic functions.
 // The tilde (~) symbol ensures that the interface matches not just float32 and float64,
 // but also any custom types derived from them (e.g., type MyFloat float64).
 type FloatNumber interface {
 	~float64 | ~float32
 }
-
-// These constants define the precision thresholds for comparisons.
-// Since floating-point arithmetic can result in tiny rounding errors (e.g., 0.1 + 0.2 != 0.3),
-// we check if the difference between two numbers is smaller than an "Epsilon."
-const (
-	// SHORT_EPSILON is used for float32, which has about 7 decimal digits of precision.
-	SHORT_EPSILON = 1e-5
-	// LONG_EPSILON is used for float64, which has about 15-17 decimal digits of precision.
-	LONG_EPSILON = 1e-9
-)
 
 // isFloat64 is a helper function that uses type assertion to determine
 // if the generic value passed is specifically a float64.
@@ -48,9 +40,9 @@ func equalsFloats[F FloatNumber](a, b F) bool {
 // It calculates the absolute difference between 'a' and 'b' manually.
 func equalsFloat32[F FloatNumber](a, b F) bool {
 	if a < b {
-		return b-a < SHORT_EPSILON
+		return b-a < configuration.SHORT_EPSILON
 	} else {
-		return a-b < SHORT_EPSILON
+		return a-b < configuration.SHORT_EPSILON
 	}
 }
 
@@ -58,8 +50,8 @@ func equalsFloat32[F FloatNumber](a, b F) bool {
 // It provides a much stricter check than the float32 version.
 func equalsFloat64[F FloatNumber](a, b F) bool {
 	if a < b {
-		return b-a < LONG_EPSILON
+		return b-a < configuration.LONG_EPSILON
 	} else {
-		return a-b < LONG_EPSILON
+		return a-b < configuration.LONG_EPSILON
 	}
 }

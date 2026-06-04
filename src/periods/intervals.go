@@ -1,10 +1,12 @@
-package commons
+package periods
 
 import (
 	"errors"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/zefrenchwan/perspectives.git/configuration"
 )
 
 const INTERVAL_BOUNDARY_LEFT = "]"
@@ -44,14 +46,14 @@ func buildInterval(empty, minFinite, maxFinite bool, min, max time.Time, minIn, 
 	var left, right time.Time
 	var leftIn, rightIn bool
 	if minFinite {
-		left = min.Truncate(TIME_PRECISION)
+		left = min.Truncate(configuration.TIME_PRECISION)
 		leftIn = minIn
 	} else {
 		leftIn = false
 	}
 
 	if maxFinite {
-		right = max.Truncate(TIME_PRECISION)
+		right = max.Truncate(configuration.TIME_PRECISION)
 		rightIn = maxIn
 	} else {
 		rightIn = false
@@ -85,7 +87,7 @@ func newIntervalSince(leftLimit time.Time, leftIn bool) interval {
 		rightFinite:  false,
 		leftFinite:   true,
 		leftIncluded: leftIn,
-		leftMoment:   leftLimit.Truncate(TIME_PRECISION),
+		leftMoment:   leftLimit.Truncate(configuration.TIME_PRECISION),
 	}
 
 }
@@ -97,15 +99,15 @@ func newIntervalUntil(rightLimit time.Time, rightIn bool) interval {
 		leftFinite:    false,
 		rightFinite:   true,
 		rightIncluded: rightIn,
-		rightMoment:   rightLimit.Truncate(TIME_PRECISION),
+		rightMoment:   rightLimit.Truncate(configuration.TIME_PRECISION),
 	}
 }
 
 // newIntervalDuring returns the interval (min,max) or empty when result is mathematically empty.
 // If min > max, for instance, result is mathematically empty and so is result of the function
 func newIntervalDuring(min, max time.Time, minIncluded, maxIncluded bool) interval {
-	left := min.Truncate(TIME_PRECISION)
-	right := max.Truncate(TIME_PRECISION)
+	left := min.Truncate(configuration.TIME_PRECISION)
+	right := max.Truncate(configuration.TIME_PRECISION)
 	comparison := left.Compare(right)
 	switch {
 	case comparison > 0:
@@ -119,8 +121,8 @@ func newIntervalDuring(min, max time.Time, minIncluded, maxIncluded bool) interv
 			rightFinite:   true,
 			leftIncluded:  minIncluded,
 			rightIncluded: maxIncluded,
-			leftMoment:    min.Truncate(TIME_PRECISION),
-			rightMoment:   max.Truncate(TIME_PRECISION),
+			leftMoment:    min.Truncate(configuration.TIME_PRECISION),
+			rightMoment:   max.Truncate(configuration.TIME_PRECISION),
 		}
 	}
 }
@@ -433,7 +435,7 @@ func intervalFromString(rawData string) (interval, error) {
 
 	// parse values if any
 	if !leftInfinite {
-		value, errLV := time.Parse(TIME_FORMAT, leftPart)
+		value, errLV := time.Parse(configuration.TIME_FORMAT, leftPart)
 		if errLV != nil {
 			return empty, errLV
 		} else {
@@ -442,7 +444,7 @@ func intervalFromString(rawData string) (interval, error) {
 	}
 
 	if !rightInfinite {
-		value, errRV := time.Parse(TIME_FORMAT, rightPart)
+		value, errRV := time.Parse(configuration.TIME_FORMAT, rightPart)
 		if errRV != nil {
 			return empty, errRV
 		} else {
@@ -482,7 +484,7 @@ func (i interval) toString() string {
 			result = INTERVAL_BOUNDARY_LEFT
 		}
 
-		result = result + i.leftMoment.Format(TIME_FORMAT)
+		result = result + i.leftMoment.Format(configuration.TIME_FORMAT)
 	} else {
 		result = INTERVAL_BOUNDARY_LEFT + INTERVAL_VALUE_LEFT_INFINITY
 	}
@@ -490,7 +492,7 @@ func (i interval) toString() string {
 	result = result + INTERVAL_PARTS_SEPARATOR
 
 	if i.rightFinite {
-		result = result + i.rightMoment.Format(TIME_FORMAT)
+		result = result + i.rightMoment.Format(configuration.TIME_FORMAT)
 		if i.rightIncluded {
 			result = result + INTERVAL_BOUNDARY_LEFT
 		} else {

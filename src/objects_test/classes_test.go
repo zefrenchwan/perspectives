@@ -1,18 +1,18 @@
-package commons_test
+package objects_test_test
 
 import (
 	"testing"
 
-	"github.com/zefrenchwan/perspectives.git/commons"
+	"github.com/zefrenchwan/perspectives.git/objects"
 )
 
 func TestIsDeclaredClasses(t *testing.T) {
-	trait := commons.NewTrait("Person")
+	trait := objects.NewTrait("Person")
 	if trait == nil {
 		t.Errorf("Expected trait to be non-nil, got nil")
-	} else if !commons.IsElementDeclaredInstance(trait, commons.CLASS_TRAIT) {
+	} else if !objects.IsElementDeclaredInstance(trait, objects.CLASS_TRAIT) {
 		t.Errorf("Expected trait to be declared as CLASS_TRAIT, got undeclared")
-	} else if commons.IsElementDeclaredInstance(trait, commons.CLASS_LINK) {
+	} else if objects.IsElementDeclaredInstance(trait, objects.CLASS_LINK) {
 		t.Errorf("Expected trait to not be declared as CLASS_LINK, got declared. Bad typing")
 	}
 }

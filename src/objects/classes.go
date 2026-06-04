@@ -1,4 +1,4 @@
-package commons
+package objects
 
 // Class is the general definition of elements within the system.
 // It applies to any element that can be declared with a specific class.
@@ -11,8 +11,7 @@ const CLASS_LINK Class = "link"
 const CLASS_INSTANCE Class = "instance"
 const CLASS_VARIABLE Class = "variable"
 
-// Element is a system entity.
-// For instance, traits, graphs, links, etc.
+// Element is a system entity : for instance, traits, instances, links, etc.
 type Element interface {
 	Same(other Element) bool // Same checks if two elements are functionally equivalent
 	DeclaringClass() Class   // DeclaringClass returns the class for that element.

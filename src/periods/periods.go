@@ -1,4 +1,4 @@
-package commons
+package periods
 
 import (
 	"errors"

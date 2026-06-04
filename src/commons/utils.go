@@ -88,7 +88,7 @@ func SliceCommonElement[T comparable](first, second []T) bool {
 	return false
 }
 
-// SliceCommonElement returns true if there is a common element in the slices based on a equals test
+// SliceCommonElementFunc returns true if there is a common element in the slices based on a given equal test
 func SliceCommonElementFunc[T any](first, second []T, equalsFunc func(a, b T) bool) bool {
 	for _, source := range first {
 		if slices.ContainsFunc(second, func(val T) bool { return equalsFunc(val, source) }) {
@@ -128,7 +128,7 @@ func MapsReverseFind[T comparable](mapping map[T][]T, value T) []T {
 	return result
 }
 
-// SlicesContainsAll returns true if other is included in base based on an equals function.
+// SlicesContainsAllFunc returns true if other is included in base based on an equals function.
 // In other words, it returns true if base contains other as a set based on equality.
 func SlicesContainsAllFunc[T any](base []T, other []T, equals func(a, b T) bool) bool {
 	if len(other) == 0 {
