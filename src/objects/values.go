@@ -11,7 +11,8 @@ import (
 // TemporalValues represents a collection of values with associated time periods.
 // It uses "any" to store any type of values per period.
 type TemporalValues interface {
-	// Same returns true if content is the same as another TemporalValues
+	// Same returns true if content is the same as another TemporalValues.
+	// It means : same periods, same values
 	Same(other TemporalValues) bool
 	// IsEmpty checks if the TemporalValues collection is empty (no value on a non empty period)
 	IsEmpty() bool
@@ -51,6 +52,7 @@ type valuesHandler struct {
 	values []valueNode
 }
 
+// Same returns true if the two temporal values have the same values at the same periods and same id
 func (vh *valuesHandler) Same(other TemporalValues) bool {
 	if vh == nil && other == nil {
 		return true
@@ -62,9 +64,26 @@ func (vh *valuesHandler) Same(other TemporalValues) bool {
 		return true
 	}
 
-	// TODO : implement this
+	counter := 0
+	for period, value := range other.Range {
+		counter++
+		found := false
+		// find matching element if any
+		for _, matching := range vh.values {
+			if period.Equals(matching.matchingPeriod) {
+				found = true
+				if !reflect.DeepEqual(matching.value, value) {
+					return false
+				}
+			}
+		}
 
-	return true
+		if !found {
+			return false
+		}
+	}
+
+	return counter == len(vh.values)
 }
 
 // IsEmpty checks if the valuesHandler contains any values
