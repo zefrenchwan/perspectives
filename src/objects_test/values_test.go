@@ -14,17 +14,17 @@ func TestAdd(t *testing.T) {
 		t.Errorf("Expected values to be empty, got %v", values)
 	}
 
-	values.Add(periods.NewFullPeriod(), 10)
+	values = values.Add(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
 	}
 
-	values.Add(periods.NewFullPeriod(), 20)
+	values = values.Add(periods.NewFullPeriod(), 20)
 	if res, found := values.At(time.Now()); !found || res != 20 {
 		t.Errorf("Expected value at current time to be 20, got %v", res)
 	}
 
-	values.Clear()
+	values = values.Remove(periods.NewFullPeriod())
 	if !values.IsEmpty() {
 		t.Errorf("Expected values to be empty, got %v", values)
 	}
@@ -32,23 +32,25 @@ func TestAdd(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	values := objects.NewTemporalValues()
-	values.Add(periods.NewFullPeriod(), 10)
-	values.Remove(periods.NewFullPeriod())
+	values = values.Add(periods.NewFullPeriod(), 10)
+	values = values.Remove(periods.NewFullPeriod())
 	if !values.IsEmpty() {
 		t.Errorf("Expected values to be empty, got %v", values)
 	}
 
-	values.Add(periods.NewFullPeriod(), 50)
-	values.Remove(periods.NewPeriodUntil(time.Now().Add(24*time.Hour), false))
+	values = values.Add(periods.NewFullPeriod(), 50)
+	values = values.Remove(periods.NewPeriodUntil(time.Now().Add(24*time.Hour), false))
 	if _, found := values.At(time.Now()); found {
 		t.Errorf("values without period should start in 24 hours, cannot have value now")
+	} else if value, found := values.At(time.Now().Add(48 * time.Hour)); !found || value != 50 {
+		t.Errorf("Expected value at 48 hours to be 50, got %v", value)
 	}
 
 }
 
 func TestCut(t *testing.T) {
 	values := objects.NewTemporalValues()
-	values.Add(periods.NewFullPeriod(), 10)
+	values = values.Add(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
 	}
@@ -64,7 +66,7 @@ func TestCut(t *testing.T) {
 
 func TestRange(t *testing.T) {
 	values := objects.NewTemporalValues()
-	values.Add(periods.NewFullPeriod(), 10)
+	values = values.Add(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
 	}
