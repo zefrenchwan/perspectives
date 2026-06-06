@@ -243,7 +243,7 @@ func (vh *valuesHandler) DataType() string {
 		} else {
 			currentType = reflect.TypeOf(element.value).String()
 		}
-		
+
 		if isFirst {
 			commonType = currentType
 			isFirst = false
@@ -318,9 +318,11 @@ func (b *baseContent) Activity() periods.Period {
 
 // WithActivity returns a new content with the specified activity period
 func (b *baseContent) WithActivity(period periods.Period) Content {
+	valuesCopy := make(map[string]TemporalValues)
+	maps.Copy(valuesCopy, b.values)
 	return &baseContent{
 		activity: period,
-		values:   b.values,
+		values:   valuesCopy,
 	}
 }
 

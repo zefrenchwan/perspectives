@@ -1,6 +1,6 @@
 # perspectives
 
-Copyright zefrenchwan, 2025
+Copyright zefrenchwan, 2025-2026. 
 MIT license
 
 ## What is it ? 
@@ -35,4 +35,9 @@ Link:Extends(Trait:Dessert, Trait:Food)
 
 Link:Knows(subject=Paul, object=Likes(subject=Marie,object=John))
 
-### Events change states, elements are immutable 
+### Events create new versions of contents, elements are immutable 
+
+Immutability applies to traits and values. 
+Values are regrouped to a content as a historized state. 
+For instance, Paul's content is a set of historized values that are valid during his lifetime : 
+its student id applied when Paul was a student, and so on. 
