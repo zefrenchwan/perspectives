@@ -10,6 +10,8 @@ import (
 
 // TemporalValues represents a collection of values with associated time periods.
 // It uses "any" to store any type of values per period.
+// IMPLEMENTATION NOTE : it is, by design, immutable.
+// All methods return a copy of the original object.
 type TemporalValues interface {
 	// Validity returns the period the values are set for.
 	// Basically, it is empty for nil or empty, the union of periods for values otherwise
@@ -19,12 +21,12 @@ type TemporalValues interface {
 	Same(other TemporalValues) bool
 	// IsEmpty checks if the TemporalValues collection is empty (no value on a non empty period)
 	IsEmpty() bool
-	// Add a value for a given period
-	Add(period periods.Period, value any) TemporalValues
+	// WithValueDuring creates a copy by adding a value for a given period
+	WithValueDuring(period periods.Period, value any) TemporalValues
 	// At retrieves the value at a specific moment in time, if any
 	At(moment time.Time) (any, bool)
-	// Remove removes all values for a given period
-	Remove(period periods.Period) TemporalValues
+	// WithoutValidity creates a copy with all values for a given period removed
+	WithoutValidity(period periods.Period) TemporalValues
 	// Cut returns a new TemporalValues collection containing only values within the specified period
 	Cut(period periods.Period) TemporalValues
 	// Range iterates over all values in the TemporalValues collection, yielding each period and value to a provided function
@@ -37,30 +39,42 @@ type TemporalValues interface {
 }
 
 // Content is the historized state of an instance.
+// IMPLEMENTATION NOTE : it is, by design, immutable.
+// All methods return a copy of the original object.
+// Second important note : ACTIVITY AND ATTRIBUTES VALIDITY ARE STRICTLY SEPARATED !!
+// It means that it is possible to have attributes valid during full period, and the content valid during a finite period.
+// Why ? To manage activity extention without losing information.
+// To reduce attributes validity to real content lifetime, use Cut.
+// For instance: content.Cut(content.Activity())
 type Content interface {
 	// Same tests if other is the same as the current content (same values, same activity, same description)
 	Same(other Content) bool
 	// Activity returns the period during which the content is valid
 	Activity() periods.Period
-	// Add a value for an attribute during a given period
-	Add(attribute string, period periods.Period, value any) Content
+	// WithActivity creates a copy with that activity period
+	WithActivity(period periods.Period) Content
+	// WithAttributeDuring creates a copy that contains a value for an attribute during a given period
+	WithAttributeDuring(attribute string, period periods.Period, value any) Content
 	// Description returns the metadata of the content : attributes and their types
 	Description() map[string]string
 	// Values returns the collection of TemporalValues, which are the values with their respective matching periods
 	Values() map[string]TemporalValues
 	// Value returns the TemporalValues associated with the given attribute, or false if not found
 	Value(string) (TemporalValues, bool)
-	// Remove removes all values for an attribute during a given period.
+	// WithoutAttributeDuring creates a copy with all values removed for an attribute during a given period.
 	// If period completely covers all existing values, the attribute is removed
-	Remove(attribute string, period periods.Period) Content
+	WithoutAttributeDuring(attribute string, period periods.Period) Content
 	// Cut returns a new Content containing only values within the specified period.
 	// Note that it cuts the full content : active period and attributes !
-	// If the period does not overlap with any existing values, returns an empty content
+	// If the period does not overlap with any existing values, returns an empty content.
 	Cut(period periods.Period) Content
 	// At returns the content at a given time, as a map of attributes and values.
 	// Only values with a matching period containing the given time are included.
 	// If content does not exist at the given time, returns an empty map and false
 	At(time time.Time) (map[string]any, bool)
+	// Matches returns the period, if any, the trait matches current content definition.
+	// If no period matches, returns false
+	Matches(Trait) (periods.Period, bool)
 }
 
 // =========================================================================
@@ -135,8 +149,8 @@ func (vh *valuesHandler) Validity() periods.Period {
 	return validity
 }
 
-// Add adds a new value with a specific matchingPeriod to the valuesHandler
-func (vh *valuesHandler) Add(p periods.Period, v any) TemporalValues {
+// WithValueDuring adds a new value to a copy during a given period
+func (vh *valuesHandler) WithValueDuring(p periods.Period, v any) TemporalValues {
 	matchingPeriodValue := p
 	for _, element := range vh.values {
 		if reflect.DeepEqual(element.value, v) {
@@ -171,8 +185,9 @@ func (vh *valuesHandler) At(moment time.Time) (any, bool) {
 	return nil, false
 }
 
-// Remove removes the given period from the values handler, if the period is empty or the handler is empty, it does nothing.
-func (vh *valuesHandler) Remove(period periods.Period) TemporalValues {
+// WithoutValidity returns a copy without the given period.
+// If the period is empty or the handler is empty, it does nothing.
+func (vh *valuesHandler) WithoutValidity(period periods.Period) TemporalValues {
 	if len(vh.values) == 0 {
 		return &valuesHandler{}
 	} else if period.IsEmpty() {
@@ -222,8 +237,13 @@ func (vh *valuesHandler) DataType() string {
 	isFirst := true
 
 	for _, element := range vh.values {
-		currentType := reflect.TypeOf(element.value).String()
-
+		var currentType string
+		if element.value == nil {
+			currentType = "nil"
+		} else {
+			currentType = reflect.TypeOf(element.value).String()
+		}
+		
 		if isFirst {
 			commonType = currentType
 			isFirst = false
@@ -296,6 +316,14 @@ func (b *baseContent) Activity() periods.Period {
 	return b.activity
 }
 
+// WithActivity returns a new content with the specified activity period
+func (b *baseContent) WithActivity(period periods.Period) Content {
+	return &baseContent{
+		activity: period,
+		values:   b.values,
+	}
+}
+
 // Description returns a map of attribute names to their data types
 func (b *baseContent) Description() map[string]string {
 	result := make(map[string]string)
@@ -318,9 +346,9 @@ func (b *baseContent) Value(attribute string) (TemporalValues, bool) {
 	return value, found
 }
 
-// Add adds a new temporal value to the content for the given attribute and period, returning a new Content instance.
+// WithAttributeDuring makes a copy with a new temporal value to the content for the given attribute and period.
 // It basically looks for the previous values for the given attribute, and uses the temporal values handler to add the new value.
-func (b *baseContent) Add(attribute string, period periods.Period, value any) Content {
+func (b *baseContent) WithAttributeDuring(attribute string, period periods.Period, value any) Content {
 	if b == nil {
 		return nil
 	}
@@ -332,7 +360,7 @@ func (b *baseContent) Add(attribute string, period periods.Period, value any) Co
 		values = buildTemporalValues(period, value)
 		valuesMap[attribute] = values
 	} else {
-		valuesMap[attribute] = values.Add(period, value)
+		valuesMap[attribute] = values.WithValueDuring(period, value)
 	}
 
 	return &baseContent{
@@ -341,9 +369,9 @@ func (b *baseContent) Add(attribute string, period periods.Period, value any) Co
 	}
 }
 
-// Remove reduces the attribute values to exclude a period.
+// WithoutAttributeDuring produces a copy without values during a given period for an attribute.
 // If all values are excluded, the attribute itself is removed.
-func (b *baseContent) Remove(attribute string, period periods.Period) Content {
+func (b *baseContent) WithoutAttributeDuring(attribute string, period periods.Period) Content {
 	if b == nil {
 		return nil
 	}
@@ -354,7 +382,7 @@ func (b *baseContent) Remove(attribute string, period periods.Period) Content {
 	} else {
 		newValues := make(map[string]TemporalValues)
 		maps.Copy(newValues, b.values)
-		newValue := values.Remove(period)
+		newValue := values.WithoutValidity(period)
 		if !newValue.IsEmpty() {
 			newValues[attribute] = newValue
 		} else {
@@ -416,6 +444,31 @@ func (b *baseContent) At(moment time.Time) (map[string]any, bool) {
 	}
 
 	return result, true
+}
+
+// Matches tests if content matches a given trait and returns the matching period.
+// For instance, a content has a name, an age and, during 5 years, a student id.
+// Trait student may match on name and student id, but during 5 years only.
+func (b *baseContent) Matches(trait Trait) (periods.Period, bool) {
+	if b == nil {
+		return periods.NewEmptyPeriod(), false
+	}
+
+	matchingPeriod := b.activity
+	for attribute, attributeType := range trait.Attributes() {
+		// early test : leave when no match
+		if matchingPeriod.IsEmpty() {
+			return periods.NewEmptyPeriod(), false
+		} else if matchingAttribute, exists := b.values[attribute]; !exists {
+			return periods.NewEmptyPeriod(), false
+		} else if attributeType != matchingAttribute.DataType() {
+			return periods.NewEmptyPeriod(), false
+		} else {
+			matchingPeriod = matchingPeriod.Intersection(matchingAttribute.Validity())
+		}
+	}
+
+	return matchingPeriod, !matchingPeriod.IsEmpty()
 }
 
 // NewContent returns a new empty content. Default lifetime is full period.

@@ -14,17 +14,17 @@ func TestTemporalValuesAdd(t *testing.T) {
 		t.Errorf("Expected values to be empty, got %v", values)
 	}
 
-	values = values.Add(periods.NewFullPeriod(), 10)
+	values = values.WithValueDuring(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
 	}
 
-	values = values.Add(periods.NewFullPeriod(), 20)
+	values = values.WithValueDuring(periods.NewFullPeriod(), 20)
 	if res, found := values.At(time.Now()); !found || res != 20 {
 		t.Errorf("Expected value at current time to be 20, got %v", res)
 	}
 
-	values = values.Remove(periods.NewFullPeriod())
+	values = values.WithoutValidity(periods.NewFullPeriod())
 	if !values.IsEmpty() {
 		t.Errorf("Expected values to be empty, got %v", values)
 	}
@@ -32,14 +32,14 @@ func TestTemporalValuesAdd(t *testing.T) {
 
 func TestTemporalValuesRemove(t *testing.T) {
 	values := objects.NewTemporalValues()
-	values = values.Add(periods.NewFullPeriod(), 10)
-	values = values.Remove(periods.NewFullPeriod())
+	values = values.WithValueDuring(periods.NewFullPeriod(), 10)
+	values = values.WithoutValidity(periods.NewFullPeriod())
 	if !values.IsEmpty() {
 		t.Errorf("Expected values to be empty, got %v", values)
 	}
 
-	values = values.Add(periods.NewFullPeriod(), 50)
-	values = values.Remove(periods.NewPeriodUntil(time.Now().Add(24*time.Hour), false))
+	values = values.WithValueDuring(periods.NewFullPeriod(), 50)
+	values = values.WithoutValidity(periods.NewPeriodUntil(time.Now().Add(24*time.Hour), false))
 	if _, found := values.At(time.Now()); found {
 		t.Errorf("values without period should start in 24 hours, cannot have value now")
 	} else if value, found := values.At(time.Now().Add(48 * time.Hour)); !found || value != 50 {
@@ -50,7 +50,7 @@ func TestTemporalValuesRemove(t *testing.T) {
 
 func TestTemporalValuesCut(t *testing.T) {
 	values := objects.NewTemporalValues()
-	values = values.Add(periods.NewFullPeriod(), 10)
+	values = values.WithValueDuring(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
 	}
@@ -66,7 +66,7 @@ func TestTemporalValuesCut(t *testing.T) {
 
 func TestTemporalValuesRange(t *testing.T) {
 	values := objects.NewTemporalValues()
-	values = values.Add(periods.NewFullPeriod(), 10)
+	values = values.WithValueDuring(periods.NewFullPeriod(), 10)
 	if res, found := values.At(time.Now()); !found || res != 10 {
 		t.Errorf("Expected value at current time to be 10, got %v", res)
 	}
@@ -93,17 +93,17 @@ func TestTemporalValuesDataTypes(t *testing.T) {
 		t.Errorf("Expected new values to have no data type, got %v", values.DataType())
 	}
 
-	values = values.Add(periods.NewFullPeriod(), 10)
+	values = values.WithValueDuring(periods.NewFullPeriod(), 10)
 	if values.DataType() != "int" {
 		t.Errorf("Expected data type to be int after adding int value, got %v", values.DataType())
 	}
 
-	values = values.Add(periods.NewFullPeriod(), "twenty ! Happy birthday my friend !!!")
+	values = values.WithValueDuring(periods.NewFullPeriod(), "twenty ! Happy birthday my friend !!!")
 	if values.DataType() != "string" {
 		t.Errorf("Expected data type to be string (not any) because full period changed it all, got %v", values.DataType())
 	}
 
-	values = values.Add(periods.NewPeriodSince(time.Now(), false), 50)
+	values = values.WithValueDuring(periods.NewPeriodSince(time.Now(), false), 50)
 	if values.DataType() != "any" {
 		t.Errorf("Expected data type to be any because int and string coexist, got %v", values.DataType())
 	}
@@ -111,7 +111,7 @@ func TestTemporalValuesDataTypes(t *testing.T) {
 
 func TestContentAdd(t *testing.T) {
 	content := objects.NewContent()
-	content = content.Add("age", periods.NewFullPeriod(), 20)
+	content = content.WithAttributeDuring("age", periods.NewFullPeriod(), 20)
 	if _, found := content.Value("not existing"); found {
 		t.Errorf("Expected 'not existing' value to not be found")
 	} else if temporalValue, found := content.Value("age"); !found {
@@ -131,9 +131,9 @@ func TestContentAt(t *testing.T) {
 	now := time.Now()
 	before := now.Add(-time.Hour)
 	after := now.Add(time.Hour)
-	content = content.Add("age", periods.NewPeriodSince(now, false), 20)
-	content = content.Add("name", periods.NewFullPeriod(), "John Doe")
-	content = content.Add("address", periods.NewPeriodUntil(now, true), "123 Main St")
+	content = content.WithAttributeDuring("age", periods.NewPeriodSince(now, false), 20)
+	content = content.WithAttributeDuring("name", periods.NewFullPeriod(), "John Doe")
+	content = content.WithAttributeDuring("address", periods.NewPeriodUntil(now, true), "123 Main St")
 
 	if valuesBefore, hasBefore := content.At(before); !hasBefore {
 		t.Errorf("Expected 'before' period to have values, got none")
@@ -163,11 +163,11 @@ func TestContentRemove(t *testing.T) {
 	before := now.Add(-time.Hour)
 	after := now.Add(time.Hour)
 
-	content = content.Add("age", periods.NewPeriodSince(before, false), 20)
-	content = content.Add("name", periods.NewFullPeriod(), "John Doe")
-	content = content.Add("address", periods.NewPeriodSince(after, true), "123 Main St")
+	content = content.WithAttributeDuring("age", periods.NewPeriodSince(before, false), 20)
+	content = content.WithAttributeDuring("name", periods.NewFullPeriod(), "John Doe")
+	content = content.WithAttributeDuring("address", periods.NewPeriodSince(after, true), "123 Main St")
 
-	content = content.Remove("age", periods.NewPeriodUntil(now, false))
+	content = content.WithoutAttributeDuring("age", periods.NewPeriodUntil(now, false))
 	if values, has := content.Value("age"); !has {
 		t.Errorf("Expected 'age' value to be valid between before and now, but was removed entirely")
 	} else if values.Validity().Equals(periods.NewFinitePeriod(before, after, false, true)) {
@@ -181,8 +181,8 @@ func TestContentCut(t *testing.T) {
 	before := now.Add(-time.Hour)
 	after := now.Add(time.Hour)
 
-	content = content.Add("age", periods.NewFullPeriod(), 20)
-	content = content.Add("name", periods.NewFullPeriod(), "John Doe")
+	content = content.WithAttributeDuring("age", periods.NewFullPeriod(), 20)
+	content = content.WithAttributeDuring("name", periods.NewFullPeriod(), "John Doe")
 
 	cutPeriod := periods.NewFinitePeriod(before, after, true, true)
 	cutContent := content.Cut(cutPeriod)
@@ -206,9 +206,9 @@ func TestContentCut(t *testing.T) {
 
 func TestContentDescription(t *testing.T) {
 	content := objects.NewContent()
-	content = content.Add("age", periods.NewFullPeriod(), 20)
-	content = content.Add("name", periods.NewFullPeriod(), "John Doe")
-	content = content.Add("weight", periods.NewFullPeriod(), 75.5)
+	content = content.WithAttributeDuring("age", periods.NewFullPeriod(), 20)
+	content = content.WithAttributeDuring("name", periods.NewFullPeriod(), "John Doe")
+	content = content.WithAttributeDuring("weight", periods.NewFullPeriod(), 75.5)
 
 	desc := content.Description()
 	expected := map[string]string{
@@ -233,8 +233,8 @@ func TestContentSame(t *testing.T) {
 	before := now.Add(-time.Hour)
 	after := now.Add(time.Hour)
 
-	c1 := objects.NewContent().Add("age", periods.NewFullPeriod(), 25)
-	c2 := objects.NewContent().Add("age", periods.NewFullPeriod(), 25)
+	c1 := objects.NewContent().WithAttributeDuring("age", periods.NewFullPeriod(), 25)
+	c2 := objects.NewContent().WithAttributeDuring("age", periods.NewFullPeriod(), 25)
 
 	if !c1.Same(c2) {
 		t.Errorf("Expected identical content to be the same")
@@ -245,8 +245,37 @@ func TestContentSame(t *testing.T) {
 		t.Errorf("Expected content with different activity periods to not be the same")
 	}
 
-	c4 := c1.Add("name", periods.NewFullPeriod(), "Alice")
+	c4 := c1.WithAttributeDuring("name", periods.NewFullPeriod(), "Alice")
 	if c1.Same(c4) {
 		t.Errorf("Expected content with different attributes to not be the same")
+	}
+}
+
+func TestContentMatches(t *testing.T) {
+	now := time.Now().Truncate(24 * time.Hour)
+	before := now.AddDate(-4, 0, 0)
+	after := now.AddDate(1, 0, 0)
+
+	// case 1 : match attribute
+	attrPeriod := periods.NewFinitePeriod(before, after, true, true)
+	trait := objects.NewTrait("student").WithAttribute("student id", "string")
+	content := objects.NewContent().
+		WithActivity(periods.NewFullPeriod()).
+		WithAttributeDuring("student id", attrPeriod, "12345")
+
+	if period, matches := content.Matches(trait); !matches {
+		t.Errorf("Expected content to match trait")
+	} else if !period.Equals(attrPeriod) {
+		t.Errorf("Expected matching period to be full period intersect attribute period, got %v", period)
+	}
+
+	// case 2 : no match because of dates
+	trait = objects.NewTrait("student").WithAttribute("student id", "string")
+	content = objects.NewContent().
+		WithActivity(periods.NewPeriodSince(after.AddDate(0, 0, 1), true)).
+		WithAttributeDuring("student id", attrPeriod, "12345")
+
+	if _, matches := content.Matches(trait); matches {
+		t.Errorf("Expected content to not match trait because of dates")
 	}
 }

@@ -1,4 +1,4 @@
-package objects_test_test
+package objects_test
 
 import (
 	"testing"
