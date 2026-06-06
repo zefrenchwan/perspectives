@@ -28,3 +28,42 @@ func TestTraits(t *testing.T) {
 		t.Errorf("Expected no attributes after removal, but found %d attributes", len(trait.Attributes()))
 	}
 }
+
+func TestTraitSame(t *testing.T) {
+	t1 := objects.NewTrait("person")
+	t2 := objects.NewTrait("person")
+	t3 := objects.NewTrait("animal")
+
+	if !t1.Same(t2) {
+		t.Errorf("Expected trait %v and %v to be same", t1, t2)
+	}
+
+	if t1.Same(t3) {
+		t.Errorf("Expected trait %v and %v to be different", t1, t3)
+	}
+
+	if t1.Same(nil) {
+		t.Errorf("Expected trait %v and nil to be different", t1)
+	}
+
+	v := objects.NewVariable("x")
+	if t1.Same(v) {
+		t.Errorf("Expected trait %v and variable %v to be different", t1, v)
+	}
+
+	t4 := objects.NewTrait("person").WithAttribute("age", "int")
+	t5 := objects.NewTrait("person").WithAttribute("age", "int")
+	t6 := objects.NewTrait("person").WithAttribute("age", "string")
+
+	if !t4.Same(t5) {
+		t.Errorf("Expected traits with same name and attributes to be same")
+	}
+
+	if t4.Same(t6) {
+		t.Errorf("Expected traits with same name but different attributes to be different")
+	}
+
+	if t1.Same(t4) {
+		t.Errorf("Expected trait without attribute and trait with attribute to be different")
+	}
+}

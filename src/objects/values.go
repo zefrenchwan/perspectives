@@ -1,7 +1,6 @@
 package objects
 
 import (
-	"fmt"
 	"maps"
 	"reflect"
 	"time"
@@ -12,6 +11,9 @@ import (
 // TemporalValues represents a collection of values with associated time periods.
 // It uses "any" to store any type of values per period.
 type TemporalValues interface {
+	// Validity returns the period the values are set for.
+	// Basically, it is empty for nil or empty, the union of periods for values otherwise
+	Validity() periods.Period
 	// Same returns true if content is the same as another TemporalValues.
 	// It means : same periods, same values
 	Same(other TemporalValues) bool
@@ -53,6 +55,7 @@ type Content interface {
 	Remove(attribute string, period periods.Period) Content
 	// Cut returns a new Content containing only values within the specified period.
 	// Note that it cuts the full content : active period and attributes !
+	// If the period does not overlap with any existing values, returns an empty content
 	Cut(period periods.Period) Content
 	// At returns the content at a given time, as a map of attributes and values.
 	// Only values with a matching period containing the given time are included.
@@ -116,6 +119,20 @@ func (vh *valuesHandler) Same(other TemporalValues) bool {
 // IsEmpty checks if the valuesHandler contains any values
 func (vh *valuesHandler) IsEmpty() bool {
 	return vh == nil || len(vh.values) == 0
+}
+
+// Validity returns the union of periods for which values are set
+func (vh *valuesHandler) Validity() periods.Period {
+	if vh == nil || len(vh.values) == 0 {
+		return periods.NewEmptyPeriod()
+	}
+
+	validity := periods.NewEmptyPeriod()
+	for _, element := range vh.values {
+		validity = validity.Union(element.matchingPeriod)
+	}
+
+	return validity
 }
 
 // Add adds a new value with a specific matchingPeriod to the valuesHandler
@@ -205,7 +222,7 @@ func (vh *valuesHandler) DataType() string {
 	isFirst := true
 
 	for _, element := range vh.values {
-		currentType := fmt.Sprintf("%T", element.value)
+		currentType := reflect.TypeOf(element.value).String()
 
 		if isFirst {
 			commonType = currentType
@@ -253,7 +270,7 @@ func (b *baseContent) Same(other Content) bool {
 		return false
 	}
 
-	if b.activity.Equals(other.Activity()) {
+	if !b.activity.Equals(other.Activity()) {
 		return false
 	}
 
@@ -354,16 +371,19 @@ func (b *baseContent) Remove(attribute string, period periods.Period) Content {
 
 // Cut reduces the content to only include values within the specified period.
 // It means reducing the content's lifetime, and the attributes values to those that are active within the given period.
-// If content is not active at all during that period, it returns nil
+// If content is not active at all during that period, it returns an empty content
 func (b *baseContent) Cut(period periods.Period) Content {
-	if b == nil || period.IsEmpty() {
+	if b == nil {
 		// cut on empty => no possible match
 		return nil
+	}
+	if period.IsEmpty() {
+		return &baseContent{activity: periods.NewEmptyPeriod()}
 	}
 
 	remainingActivity := period.Intersection(b.activity)
 	if remainingActivity.IsEmpty() {
-		return nil
+		return &baseContent{activity: periods.NewEmptyPeriod()}
 	}
 
 	valuesMap := make(map[string]TemporalValues)
