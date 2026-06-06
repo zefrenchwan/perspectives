@@ -79,3 +79,32 @@ func TestRange(t *testing.T) {
 		}
 	}
 }
+
+func TestRangeEmpty(t *testing.T) {
+	values := objects.NewTemporalValues()
+	for period, value := range values.Range {
+		t.Errorf("Expected no values in empty range, got period %v with value %v", period, value)
+	}
+}
+
+func TestDataTypes(t *testing.T) {
+	values := objects.NewTemporalValues()
+	if values.DataType() != "" {
+		t.Errorf("Expected new values to have no data type, got %v", values.DataType())
+	}
+
+	values = values.Add(periods.NewFullPeriod(), 10)
+	if values.DataType() != "int" {
+		t.Errorf("Expected data type to be int after adding int value, got %v", values.DataType())
+	}
+
+	values = values.Add(periods.NewFullPeriod(), "twenty ! Happy birthday my friend !!!")
+	if values.DataType() != "string" {
+		t.Errorf("Expected data type to be string (not any) because full period changed it all, got %v", values.DataType())
+	}
+
+	values = values.Add(periods.NewPeriodSince(time.Now(), false), 50)
+	if values.DataType() != "any" {
+		t.Errorf("Expected data type to be any because int and string coexist, got %v", values.DataType())
+	}
+}

@@ -275,3 +275,12 @@ func TestPeriodFiniteBoundaries(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPeriodRemoveFromEmpty(t *testing.T) {
+	p := periods.NewEmptyPeriod()
+	res := p.Remove(periods.NewFullPeriod())
+	if !res.Equals(p) {
+		t.Logf("failed to remove from empty period, got %s", res.AsRawString())
+		t.Fail()
+	}
+}

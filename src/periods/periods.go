@@ -219,7 +219,7 @@ func (p Period) Complement() Period {
 // Remove a period from another
 func (p Period) Remove(other Period) Period {
 	if len(p.intervals) == 0 {
-		return other
+		return p
 	} else if len(other.intervals) == 0 {
 		return p
 	}

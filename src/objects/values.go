@@ -2,6 +2,7 @@ package objects
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"time"
 
@@ -31,6 +32,32 @@ type TemporalValues interface {
 	// For instance, if all values are integers, it will return "int". If there are both integers and strings, it will return "any".
 	// Special case for empty collection: returns ""
 	DataType() string
+}
+
+// Content is the historized state of an instance.
+type Content interface {
+	// Same tests if other is the same as the current content (same values, same activity, same description)
+	Same(other Content) bool
+	// Activity returns the period during which the content is valid
+	Activity() periods.Period
+	// Add a value for an attribute during a given period
+	Add(attribute string, period periods.Period, value any) Content
+	// Description returns the metadata of the content : attributes and their types
+	Description() map[string]string
+	// Values returns the collection of TemporalValues, which are the values with their respective matching periods
+	Values() map[string]TemporalValues
+	// Value returns the TemporalValues associated with the given attribute, or false if not found
+	Value(string) (TemporalValues, bool)
+	// Remove removes all values for an attribute during a given period.
+	// If period completely covers all existing values, the attribute is removed
+	Remove(attribute string, period periods.Period) Content
+	// Cut returns a new Content containing only values within the specified period.
+	// Note that it cuts the full content : active period and attributes !
+	Cut(period periods.Period) Content
+	// At returns the content at a given time, as a map of attributes and values.
+	// Only values with a matching period containing the given time are included.
+	// If content does not exist at the given time, returns an empty map and false
+	At(time time.Time) (map[string]any, bool)
 }
 
 // =========================================================================
@@ -88,7 +115,7 @@ func (vh *valuesHandler) Same(other TemporalValues) bool {
 
 // IsEmpty checks if the valuesHandler contains any values
 func (vh *valuesHandler) IsEmpty() bool {
-	return len(vh.values) == 0
+	return vh == nil || len(vh.values) == 0
 }
 
 // Add adds a new value with a specific matchingPeriod to the valuesHandler
@@ -129,8 +156,10 @@ func (vh *valuesHandler) At(moment time.Time) (any, bool) {
 
 // Remove removes the given period from the values handler, if the period is empty or the handler is empty, it does nothing.
 func (vh *valuesHandler) Remove(period periods.Period) TemporalValues {
-	if period.IsEmpty() || len(vh.values) == 0 {
+	if len(vh.values) == 0 {
 		return &valuesHandler{}
+	} else if period.IsEmpty() {
+		return vh
 	}
 
 	result := make([]valueNode, 0, len(vh.values))
@@ -192,6 +221,187 @@ func (vh *valuesHandler) DataType() string {
 	return commonType
 }
 
+// buildTemporalValues creates a new TemporalValues instance with a single value for the given period.
+func buildTemporalValues(period periods.Period, value interface{}) TemporalValues {
+	return &valuesHandler{
+		values: []valueNode{{matchingPeriod: period, value: value}},
+	}
+}
+
+// NewTemporalValues creates a new TemporalValues instance with no values.
 func NewTemporalValues() TemporalValues {
 	return &valuesHandler{}
+}
+
+// =========================================================================
+// CONTENT IMPLEMENTATION
+// =========================================================================
+
+// baseContent is the in memory representation of a content
+type baseContent struct {
+	// activity defines when content is valid and related instance was alive / active.
+	activity periods.Period
+	// values are the temporal values associated with their attributes names
+	values map[string]TemporalValues
+}
+
+// Same returns true if the content is the same as the other content : same period, same values
+func (b *baseContent) Same(other Content) bool {
+	if b == nil && other == nil {
+		return true
+	} else if b == nil || other == nil {
+		return false
+	}
+
+	if b.activity.Equals(other.Activity()) {
+		return false
+	}
+
+	counter := 0
+	for name, content := range other.Values() {
+		counter++
+		if matching, found := b.values[name]; !found {
+			return false
+		} else if !matching.Same(content) {
+			return false
+		}
+	}
+
+	if len(b.values) != counter {
+		return false
+	}
+
+	return true
+}
+
+// Activity returns the period during which the content is valid
+func (b *baseContent) Activity() periods.Period {
+	return b.activity
+}
+
+// Description returns a map of attribute names to their data types
+func (b *baseContent) Description() map[string]string {
+	result := make(map[string]string)
+	for attribute, content := range b.values {
+		result[attribute] = content.DataType()
+	}
+	return result
+}
+
+// Values returns a copy of the temporal values associated with their attributes names
+func (b *baseContent) Values() map[string]TemporalValues {
+	result := make(map[string]TemporalValues)
+	maps.Copy(result, b.values)
+	return result
+}
+
+// Value returns the temporal values associated with the given attribute name, if it exists
+func (b *baseContent) Value(attribute string) (TemporalValues, bool) {
+	value, found := b.values[attribute]
+	return value, found
+}
+
+// Add adds a new temporal value to the content for the given attribute and period, returning a new Content instance.
+// It basically looks for the previous values for the given attribute, and uses the temporal values handler to add the new value.
+func (b *baseContent) Add(attribute string, period periods.Period, value any) Content {
+	if b == nil {
+		return nil
+	}
+
+	valuesMap := make(map[string]TemporalValues)
+	maps.Copy(valuesMap, b.values)
+
+	if values, exists := valuesMap[attribute]; !exists {
+		values = buildTemporalValues(period, value)
+		valuesMap[attribute] = values
+	} else {
+		valuesMap[attribute] = values.Add(period, value)
+	}
+
+	return &baseContent{
+		activity: b.activity,
+		values:   valuesMap,
+	}
+}
+
+// Remove reduces the attribute values to exclude a period.
+// If all values are excluded, the attribute itself is removed.
+func (b *baseContent) Remove(attribute string, period periods.Period) Content {
+	if b == nil {
+		return nil
+	}
+
+	values, exists := b.values[attribute]
+	if !exists {
+		return b
+	} else {
+		newValues := make(map[string]TemporalValues)
+		maps.Copy(newValues, b.values)
+		newValue := values.Remove(period)
+		if !newValue.IsEmpty() {
+			newValues[attribute] = newValue
+		} else {
+			delete(newValues, attribute)
+		}
+
+		return &baseContent{
+			activity: b.activity,
+			values:   newValues,
+		}
+	}
+
+}
+
+// Cut reduces the content to only include values within the specified period.
+// It means reducing the content's lifetime, and the attributes values to those that are active within the given period.
+// If content is not active at all during that period, it returns nil
+func (b *baseContent) Cut(period periods.Period) Content {
+	if b == nil || period.IsEmpty() {
+		// cut on empty => no possible match
+		return nil
+	}
+
+	remainingActivity := period.Intersection(b.activity)
+	if remainingActivity.IsEmpty() {
+		return nil
+	}
+
+	valuesMap := make(map[string]TemporalValues)
+	for attribute, value := range b.values {
+		newValue := value.Cut(remainingActivity)
+		if !newValue.IsEmpty() {
+			valuesMap[attribute] = newValue
+		}
+	}
+	return &baseContent{
+		activity: remainingActivity,
+		values:   valuesMap,
+	}
+}
+
+// At returns the content at a given time, as a map of attributes and values.
+// If content is not active at moment, then it returns nil, false.
+func (b *baseContent) At(moment time.Time) (map[string]any, bool) {
+	if b == nil {
+		return nil, false
+	} else if !b.activity.Contains(moment) {
+		return nil, false
+	}
+
+	result := make(map[string]any)
+	for attribute, content := range b.values {
+		if value, exists := content.At(moment); exists {
+			result[attribute] = value
+		}
+	}
+
+	return result, true
+}
+
+// NewContent returns a new empty content. Default lifetime is full period.
+func NewContent() Content {
+	return &baseContent{
+		activity: periods.NewFullPeriod(),
+		values:   make(map[string]TemporalValues),
+	}
 }
