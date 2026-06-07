@@ -45,7 +45,7 @@ func TestTraitSame(t *testing.T) {
 	if t1.Same(nil) {
 		t.Errorf("Expected trait %v and nil to be different", t1)
 	}
-	
+
 	t4 := objects.NewTrait("person").WithAttribute("age", "int")
 	t5 := objects.NewTrait("person").WithAttribute("age", "int")
 	t6 := objects.NewTrait("person").WithAttribute("age", "string")

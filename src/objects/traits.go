@@ -6,12 +6,9 @@ import (
 
 // Trait is the immutable definition of a concept that can be instantiated into objects (instances of traits).
 type Trait interface {
+	Element
 	// Name returns the name of the trait, should be unique
 	Name() string
-	// DeclaringClass returns CLASS_TRAIT because this is a Trait
-	DeclaringClass() Class
-	// Same returns true if the other element is a Trait with the same name and attributes
-	Same(other Element) bool
 	// Attributes returns the attributes of the trait, as name and type
 	Attributes() map[string]string
 	// WithAttribute returns a new trait with the given attribute added.
