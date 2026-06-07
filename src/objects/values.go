@@ -461,7 +461,8 @@ func (b *LocalContentBuilder) Errors() error { return b.globalErrors }
 // It returns the builder for method chaining.
 func (b *LocalContentBuilder) Build() (TimeDependentContent, error) {
 	result := b.element
+	resultErr := b.globalErrors
 	b.element = newBaseContent()
 	b.globalErrors = nil
-	return result, b.globalErrors
+	return result, resultErr
 }
