@@ -462,5 +462,6 @@ func (b *LocalContentBuilder) Errors() error { return b.globalErrors }
 func (b *LocalContentBuilder) Build() (TimeDependentContent, error) {
 	result := b.element
 	b.element = newBaseContent()
+	b.globalErrors = nil
 	return result, b.globalErrors
 }

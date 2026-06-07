@@ -19,21 +19,24 @@ type PrimitiveValue interface {
 		~float32 | ~float64 | ~string | ~bool
 }
 
-// primitiveTypeName returns the string representation of allowed primitive types
+// primitiveTypeName returns the string representation of allowed primitive types.
+// To ensure that the type is correctly identified and handled, it works with the kind and not the raw name.
 func primitiveTypeName(v any) string {
 	if v == nil {
+		// changing this means changing the behavior of IsPrimitiveValue
 		return ""
 	}
 
-	valueType := reflect.TypeOf(v)
-	switch valueType.Kind() {
+	valueKind := reflect.TypeOf(v).Kind()
+	switch valueKind {
 	case reflect.Bool,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Float32, reflect.Float64,
 		reflect.String:
-		return valueType.String()
+		return valueKind.String()
 	default:
+		// changing this means changing the behavior of IsPrimitiveValue
 		return ""
 	}
 }
@@ -42,6 +45,7 @@ func primitiveTypeName(v any) string {
 // In contents implementation, it is used to ensure that only primitive values are stored.
 // Otherwise, it panics if the value is not primitive.
 func IsPrimitiveValue(v any) bool {
+	// note that it depends on the implementation of primitiveTypeName
 	return primitiveTypeName(v) != ""
 }
 
@@ -53,7 +57,7 @@ type TimeDependentValue interface {
 	// Basically, it is empty for nil or empty, the union of periods for values otherwise
 	Validity() periods.Period
 	// Same returns true if content is the same as another TimeDependentValues.
-	// It means : same periods, same values
+	// It means : same periods, same values, same underlying type
 	Same(other TimeDependentValue) bool
 	// IsEmpty checks if the TimeDependentValues collection is empty (no value on a non empty period)
 	IsEmpty() bool
