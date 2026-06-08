@@ -15,8 +15,8 @@ import (
 // For instance, for the "in memory" implementation, you need to check whether you want to use == or reflect.DeepEqual.
 type PrimitiveValue interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
-	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-	~float32 | ~float64 | ~string | ~bool
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+		~float32 | ~float64 | ~string | ~bool
 }
 
 // primitiveTypeName returns the string representation of allowed primitive types.
