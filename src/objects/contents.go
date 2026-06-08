@@ -15,8 +15,8 @@ import (
 // For instance, for the "in memory" implementation, you need to check whether you want to use == or reflect.DeepEqual.
 type PrimitiveValue interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
-		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-		~float32 | ~float64 | ~string | ~bool
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+	~float32 | ~float64 | ~string | ~bool
 }
 
 // primitiveTypeName returns the string representation of allowed primitive types.
@@ -104,7 +104,10 @@ type ContentBuilder interface {
 	// WithActivity changes the content's activity to that specific period.
 	WithActivity(period periods.Period) ContentBuilder
 	// WithAttributeDuring sets the attribute to the given value during the specified period.
-	// Types for value are defined in PrimitiveValue
+	// Types for value are defined in PrimitiveValue.
+	// If there is a type change, it should raise an error.
+	// For instance, an age that contains 10 and "twenty" should raise an error.
+	// Reasons are : storage, type safety, consistency
 	WithAttributeDuring(attribute string, period periods.Period, value any) ContentBuilder
 	// WithoutAttributeDuring removes the attribute during the specified period.
 	// If period covers all the content, the attribute is removed entirely.
