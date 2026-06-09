@@ -12,7 +12,6 @@ import (
 // Neither does it include interfaces, as they are not concrete types and cannot be stored directly.
 // In particular, it excludes to pass nil as a value, just do not store value instead of nil.
 // NOTE : if you add a type in this interface, make sure to review and test in deep the implementations.
-// For instance, for the "in memory" implementation, you need to check whether you want to use == or reflect.DeepEqual.
 type PrimitiveValue interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
 		~float32 | ~float64 |
@@ -28,10 +27,14 @@ func primitiveTypeName(v any) string {
 		// changing this means changing the behavior of IsPrimitiveValue
 		return ""
 	}
+
+	// accept time.Time.
+	// In general, put in here any additional types that should be considered primitive.
 	if _, okTime := v.(time.Time); okTime {
 		return "time.Time"
 	}
 
+	// Otherwise, check the kind of the value.
 	valueKind := reflect.TypeOf(v).Kind()
 	switch valueKind {
 	case reflect.Bool,
@@ -63,7 +66,7 @@ func defaultEquals(a, b any) bool {
 }
 
 // primitiveTypeEqualsFunc returns a function that tests two values for equality, based on the type name.
-// IMPORTANT : it assumes that the values are primitive.
+// IMPORTANT : it assumes that the values are primitive as defined in PrimitiveValue.
 func primitiveTypeEqualsFunc(typeName string) func(any, any) bool {
 	if typeName == "time.Time" {
 		return equalsTime
