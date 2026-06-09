@@ -10,7 +10,7 @@ func TestTraits(t *testing.T) {
 	trait := objects.NewTrait("person")
 	if trait.Name() != "person" {
 		t.Errorf("Expected trait name to be 'person', got '%s'", trait.Name())
-	} else if !objects.IsElementDeclaredInstance(trait, objects.CLASS_TRAIT) {
+	} else if !objects.IsInstanceOfClass(trait, objects.CLASS_TRAIT) {
 		t.Errorf("Expected trait to be declared as CLASS_TRAIT, got undeclared")
 	}
 

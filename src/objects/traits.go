@@ -60,7 +60,7 @@ func (t *baseTrait) Same(other Element) bool {
 		return true
 	} else if other == nil || t == nil {
 		return false
-	} else if !IsElementDeclaredInstance(other, CLASS_TRAIT) {
+	} else if !IsInstanceOfClass(other, CLASS_TRAIT) {
 		return false
 	}
 

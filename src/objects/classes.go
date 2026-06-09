@@ -26,9 +26,9 @@ type IdentifiableElement interface {
 	Id() string // Id returns the unique identifier for the element
 }
 
-// IsElementDeclaredInstance checks if an element is declared with a specific class.
+// IsInstanceOfClass checks if an element is declared with a specific class.
 // For instance, a link should declare CLASS_LINK
-func IsElementDeclaredInstance(element Element, c Class) bool {
+func IsInstanceOfClass(element Element, c Class) bool {
 	if element == nil {
 		return false
 	}
