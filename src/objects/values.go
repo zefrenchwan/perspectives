@@ -29,6 +29,8 @@ type valuesHandler struct {
 	values []valueNode
 	// storedType is the actual type name of the content (should be primitive)
 	storedType string
+	// equality function
+	equals func(a, b any) bool
 }
 
 // Same returns true if the two temporal values have the same values at the same periods, and same type
@@ -53,7 +55,7 @@ func (vh *valuesHandler) Same(other TimeDependentValue) bool {
 		for _, matching := range vh.values {
 			if period.Equals(matching.matchingPeriod) {
 				found = true
-				if matching.value != value {
+				if !vh.equals(matching.value, value) {
 					return false
 				}
 			}
@@ -115,7 +117,7 @@ func (vh *valuesHandler) DataType() string {
 func (vh *valuesHandler) Copy() *valuesHandler {
 	result := make([]valueNode, len(vh.values))
 	copy(result, vh.values)
-	return &valuesHandler{values: result, storedType: vh.storedType}
+	return &valuesHandler{values: result, storedType: vh.storedType, equals: vh.equals}
 }
 
 // withValueDuring adds a new value to a copy during a given period
@@ -128,14 +130,14 @@ func (vh *valuesHandler) withValueDuring(p periods.Period, v any) *valuesHandler
 
 	matchingPeriodValue := p
 	for _, element := range vh.values {
-		if element.value == v {
+		if vh.equals(element.value, v) {
 			matchingPeriodValue = matchingPeriodValue.Union(element.matchingPeriod)
 		}
 	}
 
 	result := make([]valueNode, 0, len(vh.values)+1)
 	for _, element := range vh.values {
-		if element.value != v {
+		if !vh.equals(element.value, v) {
 			remaining := element.matchingPeriod.Remove(matchingPeriodValue)
 			if !remaining.IsEmpty() {
 				result = append(result, valueNode{matchingPeriod: remaining, value: element.value})
@@ -147,7 +149,7 @@ func (vh *valuesHandler) withValueDuring(p periods.Period, v any) *valuesHandler
 		result = append(result, valueNode{matchingPeriod: matchingPeriodValue, value: v})
 	}
 
-	return &valuesHandler{values: result, storedType: vh.storedType}
+	return &valuesHandler{values: result, storedType: vh.storedType, equals: vh.equals}
 }
 
 // withoutValidity returns a copy without values for the given period.
@@ -167,7 +169,7 @@ func (vh *valuesHandler) withoutValidity(period periods.Period) *valuesHandler {
 		}
 	}
 
-	return &valuesHandler{values: result, storedType: vh.storedType}
+	return &valuesHandler{values: result, storedType: vh.storedType, equals: vh.equals}
 }
 
 // cut returns a copy with same values, restricted to a given period
@@ -180,7 +182,7 @@ func (vh *valuesHandler) cut(period periods.Period) *valuesHandler {
 		}
 	}
 
-	return &valuesHandler{values: remainingValues, storedType: vh.storedType}
+	return &valuesHandler{values: remainingValues, storedType: vh.storedType, equals: vh.equals}
 }
 
 // newValuesHandler creates a new TemporalValues instance with a single value for the given period.
@@ -188,9 +190,11 @@ func newValuesHandler(period periods.Period, value any) *valuesHandler {
 	if !IsPrimitiveValue(value) {
 		panic("cannot create valuesHandler with non-primitive value")
 	}
-
+	typeName := primitiveTypeName(value)
+	equalsForValue := primitiveTypeEqualsFunc(typeName)
 	return &valuesHandler{
-		storedType: primitiveTypeName(value),
+		equals:     equalsForValue,
+		storedType: typeName,
 		values:     []valueNode{{matchingPeriod: period, value: value}},
 	}
 }
@@ -199,6 +203,7 @@ func newValuesHandler(period periods.Period, value any) *valuesHandler {
 func valuesHandlerLoad(other TimeDependentValue) *valuesHandler {
 	result := new(valuesHandler)
 	result.storedType = other.DataType()
+	result.equals = primitiveTypeEqualsFunc(result.storedType)
 	for period, value := range other.Range {
 		if !IsPrimitiveValue(value) {
 			panic("cannot create valuesHandler with non-primitive value")

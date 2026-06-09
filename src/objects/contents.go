@@ -14,9 +14,11 @@ import (
 // NOTE : if you add a type in this interface, make sure to review and test in deep the implementations.
 // For instance, for the "in memory" implementation, you need to check whether you want to use == or reflect.DeepEqual.
 type PrimitiveValue interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64 |
-		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-		~float32 | ~float64 | ~string | ~bool
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+		~float32 | ~float64 |
+		~string |
+		~bool |
+		time.Time
 }
 
 // primitiveTypeName returns the string representation of allowed primitive types.
@@ -25,6 +27,9 @@ func primitiveTypeName(v any) string {
 	if v == nil {
 		// changing this means changing the behavior of IsPrimitiveValue
 		return ""
+	}
+	if _, okTime := v.(time.Time); okTime {
+		return "time.Time"
 	}
 
 	valueKind := reflect.TypeOf(v).Kind()
@@ -39,6 +44,31 @@ func primitiveTypeName(v any) string {
 		// changing this means changing the behavior of IsPrimitiveValue
 		return ""
 	}
+}
+
+// equalsTime tests two time.Time values for equality.
+func equalsTime(a, b any) bool {
+	if a == nil && b == nil {
+		return true
+	} else if a == nil || b == nil {
+		return false
+	}
+
+	return a.(time.Time).Equal(b.(time.Time))
+}
+
+// defaultEquals tests two values for equality, applying the == operator.
+func defaultEquals(a, b any) bool {
+	return a == b
+}
+
+// primitiveTypeEqualsFunc returns a function that tests two values for equality, based on the type name.
+// IMPORTANT : it assumes that the values are primitive.
+func primitiveTypeEqualsFunc(typeName string) func(any, any) bool {
+	if typeName == "time.Time" {
+		return equalsTime
+	}
+	return defaultEquals
 }
 
 // IsPrimitiveValue checks if the given value is a PrimitiveValue.

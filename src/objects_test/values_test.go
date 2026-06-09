@@ -172,6 +172,8 @@ func TestIsPrimitiveValue(t *testing.T) {
 		t.Error("expected string to be a valid primitive value")
 	} else if !objects.IsPrimitiveValue(true) {
 		t.Error("expected bool to be a valid primitive value")
+	} else if !objects.IsPrimitiveValue(time.Now()) {
+		t.Error("expected time.Time to be a valid primitive value")
 	}
 
 	// Invalid primitives
@@ -356,5 +358,150 @@ func TestContentSame(t *testing.T) {
 		t.Error("expected contents with different values NOT to be evaluated as same")
 	} else if c1.Same(c4) {
 		t.Error("expected contents with different activities NOT to be evaluated as same")
+	}
+}
+
+// =========================================================================
+// DEEP COVERAGE TESTS (HOLES, MERGES, RANGE EXITS, NIL COMPARISONS)
+// =========================================================================
+
+func TestWithoutAttributeDuringPartialDeletion(t *testing.T) {
+	now := time.Now()
+	day1 := now.Add(time.Hour * 24)
+	day2 := now.Add(time.Hour * 48)
+	day3 := now.Add(time.Hour * 72)
+	day4 := now.Add(time.Hour * 96)
+
+	fullPeriod := periods.NewFinitePeriod(now, day4, true, true)
+	// The hole is right in the middle (day2 to day3)
+	holePeriod := periods.NewFinitePeriod(day2, day3, true, true)
+
+	content, err := objects.NewLocalContentBuilder().
+		WithActivity(fullPeriod).
+		WithAttributeDuring("status", fullPeriod, "active").
+		WithoutAttributeDuring("status", holePeriod).
+		Build()
+
+	if err != nil {
+		t.Fatalf("unexpected error during build: %v", err)
+	}
+
+	value, found := content.Value("status")
+	if !found {
+		t.Fatalf("expected 'status' attribute to exist")
+	}
+
+	// 1. Verify value exists BEFORE the hole
+	if _, ok := value.At(day1); !ok {
+		t.Error("expected value to exist before the hole (day 1)")
+	}
+
+	// 2. Verify value is ABSENT DURING the hole
+	midHole := day2.Add(time.Hour * 12)
+	if _, ok := value.At(midHole); ok {
+		t.Error("expected no value inside the removed hole period")
+	}
+
+	// 3. Verify value exists AFTER the hole
+	midAfter := day3.Add(time.Hour * 12)
+	if _, ok := value.At(midAfter); !ok {
+		t.Error("expected value to exist after the hole (day 3+)")
+	}
+}
+
+func TestAdjacentPeriodsUnion(t *testing.T) {
+	now := time.Now()
+	mid := now.Add(time.Hour * 24)
+	end := now.Add(time.Hour * 48)
+
+	// Two adjacent periods: [now, mid) and [mid, end]
+	p1 := periods.NewFinitePeriod(now, mid, true, false)
+	p2 := periods.NewFinitePeriod(mid, end, true, true)
+	fullActivity := p1.Union(p2)
+
+	// Inserting the SAME value on adjacent periods should merge them
+	content, err := objects.NewLocalContentBuilder().
+		WithActivity(fullActivity).
+		WithAttributeDuring("state", p1, "on").
+		WithAttributeDuring("state", p2, "on").
+		Build()
+
+	if err != nil {
+		t.Fatalf("unexpected error during build: %v", err)
+	}
+
+	value, found := content.Value("state")
+	if !found {
+		t.Fatalf("expected 'state' attribute to exist")
+	}
+
+	iterations := 0
+	value.Range(func(p periods.Period, v any) bool {
+		iterations++
+		return true
+	})
+
+	// The internal valuesHandler.withValueDuring should merge overlapping/adjacent periods
+	// sharing the exact same value.
+	if iterations != 1 {
+		t.Errorf("expected adjacent periods with same value to be merged into 1 node, got %d", iterations)
+	}
+}
+
+func TestRangeEarlyExit(t *testing.T) {
+	now := time.Now()
+	p1 := periods.NewFinitePeriod(now, now.Add(time.Hour), true, false)
+	p2 := periods.NewFinitePeriod(now.Add(time.Hour), now.Add(time.Hour*2), true, false)
+	p3 := periods.NewFinitePeriod(now.Add(time.Hour*2), now.Add(time.Hour*3), true, true)
+	fullActivity := p1.Union(p2).Union(p3)
+
+	// 3 distinct periods with 3 distinct values
+	content, err := objects.NewLocalContentBuilder().
+		WithActivity(fullActivity).
+		WithAttributeDuring("phase", p1, "A").
+		WithAttributeDuring("phase", p2, "B").
+		WithAttributeDuring("phase", p3, "C").
+		Build()
+
+	if err != nil {
+		t.Fatalf("unexpected error during build: %v", err)
+	}
+
+	value, found := content.Value("phase")
+	if !found {
+		t.Fatalf("expected 'phase' attribute to exist")
+	}
+
+	iterations := 0
+	value.Range(func(p periods.Period, v any) bool {
+		iterations++
+		// Instruct Range to break the loop after 2 iterations
+		return iterations < 2
+	})
+
+	if iterations != 2 {
+		t.Errorf("expected Range to exit after exactly 2 iterations, got %d", iterations)
+	}
+}
+
+func TestContentSameEdgeCases(t *testing.T) {
+	emptyPeriod := periods.NewEmptyPeriod()
+
+	// Create two completely empty contents
+	c1, err1 := objects.NewLocalContentBuilder().WithActivity(emptyPeriod).Build()
+	c2, err2 := objects.NewLocalContentBuilder().WithActivity(emptyPeriod).Build()
+
+	if err1 != nil || err2 != nil {
+		t.Fatalf("failed to build empty contents")
+	}
+
+	// 1. Compare with nil (safe interface handling)
+	if c1.Same(nil) {
+		t.Error("expected instantiated content NOT to be same as nil")
+	}
+
+	// 2. Compare two empty contents
+	if !c1.Same(c2) {
+		t.Error("expected two empty contents to be evaluated as same")
 	}
 }
