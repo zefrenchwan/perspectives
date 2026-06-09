@@ -327,7 +327,8 @@ func (b *baseContent) Value(attribute string) (TimeDependentValue, bool) {
 // newBaseContent returns an empty baseContent
 func newBaseContent() *baseContent {
 	return &baseContent{
-		values: make(map[string]*valuesHandler),
+		activity: periods.NewEmptyPeriod(),
+		values:   make(map[string]*valuesHandler),
 	}
 }
 
@@ -464,5 +465,9 @@ func (b *LocalContentBuilder) Build() (TimeDependentContent, error) {
 	resultErr := b.globalErrors
 	b.element = newBaseContent()
 	b.globalErrors = nil
+	if resultErr != nil {
+		return b.element, resultErr
+	}
+
 	return result, resultErr
 }

@@ -157,3 +157,204 @@ func TestContentCut(t *testing.T) {
 		t.Errorf("expected age to be 25, got '%v'", value)
 	}
 }
+
+// =========================================================================
+// PRIMITIVE TYPES TESTS
+// =========================================================================
+
+func TestIsPrimitiveValue(t *testing.T) {
+	// Valid primitives
+	if !objects.IsPrimitiveValue(42) {
+		t.Error("expected int to be a valid primitive value")
+	} else if !objects.IsPrimitiveValue(3.14) {
+		t.Error("expected float64 to be a valid primitive value")
+	} else if !objects.IsPrimitiveValue("hello") {
+		t.Error("expected string to be a valid primitive value")
+	} else if !objects.IsPrimitiveValue(true) {
+		t.Error("expected bool to be a valid primitive value")
+	}
+
+	// Invalid primitives
+	if objects.IsPrimitiveValue([]int{1, 2}) {
+		t.Error("expected slice NOT to be a primitive value")
+	} else if objects.IsPrimitiveValue(map[string]int{"a": 1}) {
+		t.Error("expected map NOT to be a primitive value")
+	} else if objects.IsPrimitiveValue(nil) {
+		t.Error("expected nil NOT to be a primitive value")
+	} else if objects.IsPrimitiveValue(struct{ name string }{name: "test"}) {
+		t.Error("expected struct NOT to be a primitive value")
+	}
+}
+
+// =========================================================================
+// BUILDER EDGE CASES TESTS
+// =========================================================================
+
+func TestBuilderErrorAccumulation(t *testing.T) {
+	lifetime := periods.NewFullPeriod()
+	builder := objects.NewLocalContentBuilder().WithActivity(lifetime)
+
+	// Inducing multiple errors
+	builder.WithAttributeDuring("age", lifetime, nil)               // Error 1: nil value
+	builder.WithAttributeDuring("name", lifetime, []string{"John"}) // Error 2: non-primitive
+
+	if err := builder.Errors(); err == nil {
+		t.Error("expected errors to be accumulated, got nil")
+	} else if content, buildErr := builder.Build(); buildErr == nil {
+		t.Error("expected build to fail and return accumulated errors")
+	} else if content != nil && !content.Activity().IsEmpty() {
+		t.Error("expected an empty content on error build")
+	}
+}
+
+func TestBuilderWithoutAttributeDuring(t *testing.T) {
+	now := time.Now()
+	lifetime := periods.NewPeriodSince(now, true)
+
+	builder := objects.NewLocalContentBuilder().
+		WithActivity(lifetime).
+		WithAttributeDuring("status", lifetime, "active")
+
+	// 1. Remove on an empty period (should do nothing)
+	builder.WithoutAttributeDuring("status", periods.NewEmptyPeriod())
+
+	content, err := builder.Build()
+	if err != nil {
+		t.Error(err)
+	} else if _, has := content.Value("status"); !has {
+		t.Error("expected 'status' to still exist after removing an empty period")
+	}
+
+	// 2. Remove entirely
+	// Now content is well-defined in the function scope
+	builder = objects.LocalContentBuilderLoad(content)
+	builder.WithoutAttributeDuring("status", lifetime)
+
+	if content2, err := builder.Build(); err != nil {
+		t.Error(err)
+	} else if _, has := content2.Value("status"); has {
+		t.Error("expected 'status' attribute to be completely removed")
+	}
+}
+
+// =========================================================================
+// TEMPORAL LOGIC & VALUES HANDLER (TESTED VIA BUILDER)
+// =========================================================================
+
+func TestValueOverlapsAndScissions(t *testing.T) {
+	now := time.Now()
+	before := now.Add(-time.Hour * 48)
+	after := now.Add(time.Hour * 48)
+
+	fullPeriod := periods.NewFinitePeriod(before, after, true, true)
+	midPeriod := periods.NewFinitePeriod(now.Add(-time.Hour), now.Add(time.Hour), true, true)
+
+	// We add a value on the full period, then overwrite the middle with a DIFFERENT value.
+	// This should split the original period into two distinct nodes.
+	content, err := objects.NewLocalContentBuilder().
+		WithActivity(fullPeriod).
+		WithAttributeDuring("status", fullPeriod, "offline").
+		WithAttributeDuring("status", midPeriod, "online").
+		Build()
+
+	if err != nil {
+		t.Error(err)
+	} else if statusValue, found := content.Value("status"); !found {
+		t.Error("expected 'status' value to exist")
+	} else {
+		// Check middle period (should have been overwritten)
+		if val, ok := statusValue.At(now); !ok {
+			t.Error("expected a value at the middle period")
+		} else if val != "online" {
+			t.Errorf("expected 'online' in mid period, got '%v'", val)
+		}
+
+		// Check before middle period (should still be offline)
+		if val, ok := statusValue.At(before.Add(time.Hour)); !ok {
+			t.Error("expected a value before the middle period")
+		} else if val != "offline" {
+			t.Errorf("expected 'offline' before mid period, got '%v'", val)
+		}
+
+		// Check after middle period (should still be offline)
+		if val, ok := statusValue.At(after.Add(-time.Hour)); !ok {
+			t.Error("expected a value after the middle period")
+		} else if val != "offline" {
+			t.Errorf("expected 'offline' after mid period, got '%v'", val)
+		}
+	}
+}
+
+// =========================================================================
+// CONTENT METHODS (MATCHES & SAME)
+// =========================================================================
+
+func TestContentMatches(t *testing.T) {
+	now := time.Now()
+	activePeriod := periods.NewPeriodSince(now, true)
+
+	content, err := objects.NewLocalContentBuilder().
+		WithActivity(activePeriod).
+		WithAttributeDuring("role", activePeriod, "admin").
+		WithAttributeDuring("level", activePeriod, 5).
+		Build()
+	if err != nil {
+		t.Error(err)
+	}
+
+	// 1. Perfect match
+	validTrait := objects.NewTrait("valid").
+		WithAttribute("role", "string").
+		WithAttribute("level", "int")
+	if matchPeriod, matches := content.Matches(validTrait); !matches {
+		t.Error("expected content to match valid trait")
+	} else if !matchPeriod.Equals(activePeriod) {
+		t.Error("expected matching period to equal the content's active period")
+	}
+
+	// 2. Wrong type
+	invalidTypeTrait := objects.NewTrait("int role").WithAttribute("role", "int")
+	// Role is string in content
+
+	if _, matches := content.Matches(invalidTypeTrait); matches {
+		t.Error("expected content NOT to match trait due to incorrect type")
+	}
+
+	// 3. Missing attribute
+	missingAttrTrait := objects.NewTrait("missing fields").WithAttribute("unknown_field", "string")
+	if _, matches := content.Matches(missingAttrTrait); matches {
+		t.Error("expected content NOT to match trait due to missing attribute")
+	}
+}
+
+func TestContentSame(t *testing.T) {
+	p := periods.NewFullPeriod()
+
+	c1, _ := objects.NewLocalContentBuilder().
+		WithActivity(p).
+		WithAttributeDuring("key", p, "value").
+		Build()
+
+	c2, _ := objects.NewLocalContentBuilder().
+		WithActivity(p).
+		WithAttributeDuring("key", p, "value").
+		Build()
+
+	c3, _ := objects.NewLocalContentBuilder().
+		WithActivity(p).
+		WithAttributeDuring("key", p, "different_value").
+		Build()
+
+	c4, _ := objects.NewLocalContentBuilder().
+		WithActivity(periods.NewEmptyPeriod()). // Different activity
+		WithAttributeDuring("key", p, "value").
+		Build()
+
+	if !c1.Same(c2) {
+		t.Error("expected identical contents to be evaluated as same")
+	} else if c1.Same(c3) {
+		t.Error("expected contents with different values NOT to be evaluated as same")
+	} else if c1.Same(c4) {
+		t.Error("expected contents with different activities NOT to be evaluated as same")
+	}
+}
