@@ -26,7 +26,8 @@ The complete information is stored as a **content object**:
 1. A global activity: the period of time during which the content object is valid. For instance, Paul's activity would be his lifetime.
 2. Primitive values with a validity period. For instance, Paul's address is "123 Street" from `now() - 18 years` to `+oo`.
 
-Accepted primitive types are strings, bools, integers, floats, and times. Other types are not accepted.
+Accepted primitive types are strings, bools, integers, floats, and times. 
+Other types are not accepted.
 
 ### Instances are identified objects with time-varying content
 

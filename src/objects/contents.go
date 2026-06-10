@@ -1,9 +1,11 @@
 package objects
 
 import (
+	"math"
 	"reflect"
 	"time"
 
+	"github.com/zefrenchwan/perspectives.git/configuration"
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
@@ -12,6 +14,8 @@ import (
 // Neither does it include interfaces, as they are not concrete types and cannot be stored directly.
 // In particular, it excludes to pass nil as a value, just do not store value instead of nil.
 // NOTE : if you add a type in this interface, make sure to review and test in deep the implementations.
+// About time.Time, it is risky : underlying type is struct, which is seen as a reflect.Struct by kind.
+// So, it is not perfectly robust, but other option, using string and let people handle it, was not good either.
 type PrimitiveValue interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
 		~float32 | ~float64 |
@@ -57,7 +61,14 @@ func equalsTime(a, b any) bool {
 		return false
 	}
 
-	return a.(time.Time).Equal(b.(time.Time))
+	t1, ok1 := a.(time.Time)
+	t2, ok2 := b.(time.Time)
+
+	if !ok1 || !ok2 {
+		return false
+	}
+
+	return t1.Equal(t2)
 }
 
 // defaultEquals tests two values for equality, applying the == operator.
@@ -65,18 +76,55 @@ func defaultEquals(a, b any) bool {
 	return a == b
 }
 
+// equalsFloat tests two floats with an epsilon
+func equalsFloat(a, b any) bool {
+	if a == nil && b == nil {
+		return true
+	} else if a == nil || b == nil {
+		return false
+	}
+
+	switch v1 := a.(type) {
+	case float64:
+		v2, ok := b.(float64)
+		if !ok {
+			return false
+		}
+
+		return math.Abs(v1-v2) < configuration.LONG_EPSILON
+
+	case float32:
+		v2, ok := b.(float32)
+		if !ok {
+			return false
+		}
+
+		diff := v1 - v2
+		if diff < 0 {
+			diff = -diff
+		}
+		return diff < configuration.SHORT_EPSILON
+
+	default:
+		return false
+	}
+}
+
 // primitiveTypeEqualsFunc returns a function that tests two values for equality, based on the type name.
 // IMPORTANT : it assumes that the values are primitive as defined in PrimitiveValue.
 func primitiveTypeEqualsFunc(typeName string) func(any, any) bool {
-	if typeName == "time.Time" {
+	switch typeName {
+	case "time.Time":
 		return equalsTime
+	case "float32", "float64":
+		return equalsFloat
+	default:
+		return defaultEquals
 	}
-	return defaultEquals
 }
 
 // IsPrimitiveValue checks if the given value is a PrimitiveValue.
 // In contents implementation, it is used to ensure that only primitive values are stored.
-// Otherwise, it panics if the value is not primitive.
 func IsPrimitiveValue(v any) bool {
 	// note that it depends on the implementation of primitiveTypeName
 	return primitiveTypeName(v) != ""
@@ -146,7 +194,7 @@ type ContentBuilder interface {
 	// If period covers all the content, the attribute is removed entirely.
 	WithoutAttributeDuring(attribute string, period periods.Period) ContentBuilder
 	// Cut reduces the content to a given period.
-	// Typical use is to restrict attributes values to global content actvity.
+	// Typical use is to restrict attributes values to global content activity.
 	Cut(period periods.Period) ContentBuilder
 	// Errors returns, if any, current errors so far.
 	// Errors are cumulative
