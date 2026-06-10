@@ -9,6 +9,6 @@ type Instance interface {
 	// IdentifiableElement to provide a unique identifier for the instance.
 	IdentifiableElement
 	// Observe returns the state of the instance at the given time.
-	// State itself contains the full content over time.
+	// State itself contains the full content over time as far as we know at that obervation time. 
 	Observe(time.Time) TimeDependentContent
 }
