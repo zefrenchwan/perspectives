@@ -6,7 +6,8 @@ import (
 
 // Trait is the immutable definition of a concept that can be instantiated into objects (instances of traits).
 type Trait interface {
-	Element
+	Element  // Element as a system entity
+	Linkable // Linkable to use a trait as a link operand (compositions)
 	// Name returns the name of the trait, should be unique
 	Name() string
 	// Attributes returns the attributes of the trait, as name and type
@@ -32,12 +33,23 @@ func NewTrait(name string) Trait {
 	}
 }
 
+// Id returns the name of the trait, should be unique
+func (t *baseTrait) Id() string {
+	return t.name
+}
+
 // Name returns the name of the trait
 func (t *baseTrait) Name() string {
 	if t == nil {
 		return ""
 	}
 	return t.name
+}
+
+// isLinkable is a SEALED INTERFACE pattern implementation.
+// It allows traits to be linked to other elements.
+func (t *baseTrait) isLinkable() bool {
+	return true
 }
 
 // DeclaringClass returns the class that declares this trait.

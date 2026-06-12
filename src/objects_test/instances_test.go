@@ -8,156 +8,6 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
-func TestBuildFromScratch(t *testing.T) {
-	now := time.Now()
-	before := now.Add(-time.Hour * 24)
-	if content, err := objects.NewLocalContentBuilder().
-		WithActivity(periods.NewPeriodSince(before, true)).
-		WithAttributeDuring("name", periods.NewFullPeriod(), "John").
-		Build(); err != nil {
-		t.Error(err)
-	} else if content == nil {
-		t.Error("content should not be nil")
-	} else if values, exists := content.At(now); !exists {
-		t.Error("values should exist for current time")
-	} else if values == nil {
-		t.Error("values should not be nil")
-	} else if len(values) != 1 {
-		t.Errorf("expected 1 value, got %d", len(values))
-	} else if values["name"] != "John" {
-		t.Errorf("expected 'John', got '%s'", values["name"])
-	} else if description := content.Description(); len(description) != 1 {
-		t.Error("description should not be empty")
-	} else if description["name"] != "string" {
-		t.Errorf("expected 'string', got '%s'", description["name"])
-	}
-}
-
-func TestBuildFromOther(t *testing.T) {
-	now := time.Now()
-	before := now.Add(-time.Hour * 24)
-	if content, err := objects.NewLocalContentBuilder().
-		WithActivity(periods.NewPeriodSince(before, true)).
-		WithAttributeDuring("name", periods.NewFullPeriod(), "John").
-		Build(); err != nil {
-		t.Error(err)
-	} else if content == nil {
-		t.Error("content should not be nil")
-	} else if other, errOther := objects.LocalContentBuilderLoad(content).Build(); errOther != nil {
-		t.Error(errOther)
-	} else if other == nil {
-		t.Error("other should not be nil")
-	} else if values, exists := other.At(now); !exists {
-		t.Error("values should exist for current time")
-	} else if values == nil {
-		t.Error("values should not be nil")
-	} else if len(values) != 1 {
-		t.Errorf("expected 1 value, got %d", len(values))
-	} else if values["name"] != "John" {
-		t.Errorf("expected 'John', got '%s'", values["name"])
-	} else if description := other.Description(); len(description) != 1 {
-		t.Error("description should not be empty")
-	} else if description["name"] != "string" {
-		t.Errorf("expected 'string', got '%s'", description["name"])
-	}
-}
-
-func TestBuildError(t *testing.T) {
-	now := time.Now()
-	before := now.Add(-time.Hour * 24)
-	if _, err := objects.NewLocalContentBuilder().
-		WithActivity(periods.NewPeriodSince(before, true)).
-		WithAttributeDuring("name", periods.NewFullPeriod(), "John").
-		WithAttributeDuring("name", periods.NewFullPeriod(), 10).
-		Build(); err == nil {
-		t.Error("expected error for invalid attribute that changed its type")
-	}
-}
-
-func TestContentAt(t *testing.T) {
-	now := time.Now()
-	before := now.Add(-time.Hour * 24)
-	after := now.Add(time.Hour * 24)
-	timmy, err := objects.NewLocalContentBuilder().
-		WithActivity(periods.NewPeriodSince(now, true)).
-		WithAttributeDuring("name", periods.NewPeriodSince(now, true), "Timmy").
-		WithAttributeDuring("age", periods.NewPeriodSince(after, true), 25).
-		Build()
-	if err != nil {
-		t.Error(err)
-	} else if timmy == nil {
-		t.Error("expected content to be non-nil after creation")
-	}
-
-	if _, beforeFound := timmy.At(before); beforeFound {
-		t.Error("expected content NOT to exist (was created now)")
-	}
-
-	if values, afterFound := timmy.At(after); !afterFound {
-		t.Error("expected content to exist at after (was created now)")
-	} else if values == nil {
-		t.Error("expected content values to be non-nil at after (was created now)")
-	} else if len(values) != 2 {
-		t.Error("expected 2 values at after")
-	} else if values["name"] != "Timmy" {
-		t.Error("expected name value to be 'Timmy' at after")
-	} else if values["age"] != 25 {
-		t.Error("expected age value to be 25 at after")
-	}
-
-	if value, found := timmy.Value("name"); !found {
-		t.Error("expected 'name' value to exist at after")
-	} else if _, hasBefore := value.At(before); hasBefore {
-		t.Error("no value expected at before")
-	} else if vnow, hasNow := value.At(now); !hasNow {
-		t.Error("value expected at now")
-	} else if vnow != "Timmy" {
-		t.Error("expected name value to be 'Timmy' at now")
-	}
-
-	if value, found := timmy.Value("age"); !found {
-		t.Error("expected 'age' value to exist at after")
-	} else if _, hasBefore := value.At(before); hasBefore {
-		t.Error("no value expected at before")
-	} else if _, hasNow := value.At(now); hasNow {
-		t.Error("no value expected at now")
-	}
-}
-
-func TestContentCut(t *testing.T) {
-	now := time.Now()
-	before := time.Now().AddDate(-25, 0, 0)
-	lifetime := periods.NewPeriodSince(before, true)
-	lara, err := objects.NewLocalContentBuilder().
-		WithActivity(lifetime).
-		WithAttributeDuring("name", periods.NewFullPeriod(), "Lara").
-		WithAttributeDuring("age", periods.NewFullPeriod(), 25).
-		Build()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if cutLara, err := objects.LocalContentBuilderLoad(lara).Cut(lara.Activity()).Build(); err != nil {
-		t.Error(err)
-	} else if cutLara == nil {
-		t.Error("cutLara should not be nil")
-	} else if nameValue, has := cutLara.Value("name"); !has {
-		t.Error("name attribute should exist in cutLara")
-	} else if nameValue.DataType() != "string" {
-		t.Errorf("expected 'string', got '%s'", nameValue.DataType())
-	} else if !nameValue.Validity().Equals(lifetime) {
-		t.Errorf("expected attribute periode reduction, got '%v'", nameValue.Validity())
-	} else if ageValue, has := cutLara.Value("age"); !has {
-		t.Error("age attribute should exist in cutLara")
-	} else if ageValue.DataType() != "int" {
-		t.Errorf("expected 'int', got '%s'", ageValue.DataType())
-	} else if !ageValue.Validity().Equals(lifetime) {
-		t.Errorf("expected attribute periode reduction, got '%v'", ageValue.Validity())
-	} else if value, foundAge := ageValue.At(now); !foundAge || value != 25 {
-		t.Errorf("expected age to be 25, got '%v'", value)
-	}
-}
-
 // =========================================================================
 // PRIMITIVE TYPES TESTS
 // =========================================================================
@@ -188,13 +38,168 @@ func TestIsPrimitiveValue(t *testing.T) {
 	}
 }
 
+// ========================================================================
+// INSTANCES BASIC BEHAVIOR TESTS
+// ========================================================================
+
+func TestBuildFromScratch(t *testing.T) {
+	now := time.Now()
+	before := now.Add(-time.Hour * 24)
+	if instance, err := objects.NewLocalInstanceBuilder("id").
+		WithActivity(periods.NewPeriodSince(before, true)).
+		WithAttributeDuring("name", periods.NewFullPeriod(), "John").
+		Build(); err != nil {
+		t.Error(err)
+	} else if instance == nil {
+		t.Error("content should not be nil")
+	} else if instance.Id() != "id" {
+		t.Errorf("expected 'id', got '%s'", instance.Id())
+	} else if values, exists := instance.At(now); !exists {
+		t.Error("values should exist for current time")
+	} else if values == nil {
+		t.Error("values should not be nil")
+	} else if len(values) != 1 {
+		t.Errorf("expected 1 value, got %d", len(values))
+	} else if values["name"] != "John" {
+		t.Errorf("expected 'John', got '%s'", values["name"])
+	} else if description := instance.Description(); len(description) != 1 {
+		t.Error("description should not be empty")
+	} else if description["name"] != "string" {
+		t.Errorf("expected 'string', got '%s'", description["name"])
+	}
+}
+
+func TestBuildFromOther(t *testing.T) {
+	now := time.Now()
+	before := now.Add(-time.Hour * 24)
+	if content, err := objects.NewLocalInstanceBuilder("id").
+		WithActivity(periods.NewPeriodSince(before, true)).
+		WithAttributeDuring("name", periods.NewFullPeriod(), "John").
+		Build(); err != nil {
+		t.Error(err)
+	} else if content == nil {
+		t.Error("content should not be nil")
+	} else if other, errOther := objects.LocalInstanceBuilderLoad(content).Build(); errOther != nil {
+		t.Error(errOther)
+	} else if other == nil {
+		t.Error("other should not be nil")
+	} else if other.Id() != "id" {
+		t.Errorf("expected 'id', got '%s'", other.Id())
+	} else if values, exists := other.At(now); !exists {
+		t.Error("values should exist for current time")
+	} else if values == nil {
+		t.Error("values should not be nil")
+	} else if len(values) != 1 {
+		t.Errorf("expected 1 value, got %d", len(values))
+	} else if values["name"] != "John" {
+		t.Errorf("expected 'John', got '%s'", values["name"])
+	} else if description := other.Description(); len(description) != 1 {
+		t.Error("description should not be empty")
+	} else if description["name"] != "string" {
+		t.Errorf("expected 'string', got '%s'", description["name"])
+	}
+}
+
+func TestBuildError(t *testing.T) {
+	now := time.Now()
+	before := now.Add(-time.Hour * 24)
+	if _, err := objects.NewLocalInstanceBuilder("id").
+		WithActivity(periods.NewPeriodSince(before, true)).
+		WithAttributeDuring("name", periods.NewFullPeriod(), "John").
+		WithAttributeDuring("name", periods.NewFullPeriod(), 10).
+		Build(); err == nil {
+		t.Error("expected error for invalid attribute that changed its type")
+	}
+}
+
+func TestInstanceAt(t *testing.T) {
+	now := time.Now()
+	before := now.Add(-time.Hour * 24)
+	after := now.Add(time.Hour * 24)
+	timmy, err := objects.NewLocalInstanceBuilder("id").
+		WithActivity(periods.NewPeriodSince(now, true)).
+		WithAttributeDuring("name", periods.NewPeriodSince(now, true), "Timmy").
+		WithAttributeDuring("age", periods.NewPeriodSince(after, true), 25).
+		Build()
+	if err != nil {
+		t.Error(err)
+	} else if timmy == nil {
+		t.Error("expected instance to be non-nil after creation")
+	}
+
+	if _, beforeFound := timmy.At(before); beforeFound {
+		t.Error("expected instance NOT to exist (was created now)")
+	}
+
+	if values, afterFound := timmy.At(after); !afterFound {
+		t.Error("expected instance to exist at after (was created now)")
+	} else if values == nil {
+		t.Error("expected instance values to be non-nil at after (was created now)")
+	} else if len(values) != 2 {
+		t.Error("expected 2 values at after")
+	} else if values["name"] != "Timmy" {
+		t.Error("expected name value to be 'Timmy' at after")
+	} else if values["age"] != 25 {
+		t.Error("expected age value to be 25 at after")
+	}
+
+	if value, found := timmy.Value("name"); !found {
+		t.Error("expected 'name' value to exist at after")
+	} else if _, hasBefore := value.At(before); hasBefore {
+		t.Error("no value expected at before")
+	} else if vnow, hasNow := value.At(now); !hasNow {
+		t.Error("value expected at now")
+	} else if vnow != "Timmy" {
+		t.Error("expected name value to be 'Timmy' at now")
+	}
+
+	if value, found := timmy.Value("age"); !found {
+		t.Error("expected 'age' value to exist at after")
+	} else if _, hasBefore := value.At(before); hasBefore {
+		t.Error("no value expected at before")
+	} else if _, hasNow := value.At(now); hasNow {
+		t.Error("no value expected at now")
+	}
+}
+
+func TestInstanceCut(t *testing.T) {
+	now := time.Now()
+	before := time.Now().AddDate(-25, 0, 0)
+	lifetime := periods.NewPeriodSince(before, true)
+	if lara, err := objects.NewLocalInstanceBuilder("id").
+		WithActivity(lifetime).
+		WithAttributeDuring("name", periods.NewFullPeriod(), "Lara").
+		WithAttributeDuring("age", periods.NewFullPeriod(), 25).
+		Build(); err != nil {
+		t.Error(err)
+	} else if cutLara, err := objects.LocalInstanceBuilderLoad(lara).Cut(lara.Activity()).Build(); err != nil {
+		t.Error(err)
+	} else if cutLara == nil {
+		t.Error("cutLara should not be nil")
+	} else if nameValue, has := cutLara.Value("name"); !has {
+		t.Error("name attribute should exist in cutLara")
+	} else if nameValue.DataType() != "string" {
+		t.Errorf("expected 'string', got '%s'", nameValue.DataType())
+	} else if !nameValue.Validity().Equals(lifetime) {
+		t.Errorf("expected attribute periode reduction, got '%v'", nameValue.Validity())
+	} else if ageValue, has := cutLara.Value("age"); !has {
+		t.Error("age attribute should exist in cutLara")
+	} else if ageValue.DataType() != "int" {
+		t.Errorf("expected 'int', got '%s'", ageValue.DataType())
+	} else if !ageValue.Validity().Equals(lifetime) {
+		t.Errorf("expected attribute periode reduction, got '%v'", ageValue.Validity())
+	} else if value, foundAge := ageValue.At(now); !foundAge || value != 25 {
+		t.Errorf("expected age to be 25, got '%v'", value)
+	}
+}
+
 // =========================================================================
 // BUILDER EDGE CASES TESTS
 // =========================================================================
 
 func TestBuilderErrorAccumulation(t *testing.T) {
 	lifetime := periods.NewFullPeriod()
-	builder := objects.NewLocalContentBuilder().WithActivity(lifetime)
+	builder := objects.NewLocalInstanceBuilder("id").WithActivity(lifetime)
 
 	// Inducing multiple errors
 	builder.WithAttributeDuring("age", lifetime, nil)               // Error 1: nil value
@@ -205,7 +210,7 @@ func TestBuilderErrorAccumulation(t *testing.T) {
 	} else if content, buildErr := builder.Build(); buildErr == nil {
 		t.Error("expected build to fail and return accumulated errors")
 	} else if content != nil && !content.Activity().IsEmpty() {
-		t.Error("expected an empty content on error build")
+		t.Error("expected an empty instance on error build")
 	}
 }
 
@@ -213,7 +218,7 @@ func TestBuilderWithoutAttributeDuring(t *testing.T) {
 	now := time.Now()
 	lifetime := periods.NewPeriodSince(now, true)
 
-	builder := objects.NewLocalContentBuilder().
+	builder := objects.NewLocalInstanceBuilder("id").
 		WithActivity(lifetime).
 		WithAttributeDuring("status", lifetime, "active")
 
@@ -228,8 +233,8 @@ func TestBuilderWithoutAttributeDuring(t *testing.T) {
 	}
 
 	// 2. Remove entirely
-	// Now content is well-defined in the function scope
-	builder = objects.LocalContentBuilderLoad(content)
+	// Now instance is well-defined in the function scope
+	builder = objects.LocalInstanceBuilderLoad(content)
 	builder.WithoutAttributeDuring("status", lifetime)
 
 	if content2, err := builder.Build(); err != nil {
@@ -253,7 +258,7 @@ func TestValueOverlapsAndScissions(t *testing.T) {
 
 	// We add a value on the full period, then overwrite the middle with a DIFFERENT value.
 	// This should split the original period into two distinct nodes.
-	content, err := objects.NewLocalContentBuilder().
+	content, err := objects.NewLocalInstanceBuilder("id").
 		WithActivity(fullPeriod).
 		WithAttributeDuring("status", fullPeriod, "offline").
 		WithAttributeDuring("status", midPeriod, "online").
@@ -288,14 +293,14 @@ func TestValueOverlapsAndScissions(t *testing.T) {
 }
 
 // =========================================================================
-// CONTENT METHODS (MATCHES & SAME)
+// INSTANCE METHODS (MATCHES & SAME)
 // =========================================================================
 
-func TestContentMatches(t *testing.T) {
+func TestInstanceMatches(t *testing.T) {
 	now := time.Now()
 	activePeriod := periods.NewPeriodSince(now, true)
 
-	content, err := objects.NewLocalContentBuilder().
+	content, err := objects.NewLocalInstanceBuilder("id").
 		WithActivity(activePeriod).
 		WithAttributeDuring("role", activePeriod, "admin").
 		WithAttributeDuring("level", activePeriod, 5).
@@ -309,9 +314,9 @@ func TestContentMatches(t *testing.T) {
 		WithAttribute("role", "string").
 		WithAttribute("level", "int")
 	if matchPeriod, matches := content.Matches(validTrait); !matches {
-		t.Error("expected content to match valid trait")
+		t.Error("expected instance to match valid trait")
 	} else if !matchPeriod.Equals(activePeriod) {
-		t.Error("expected matching period to equal the content's active period")
+		t.Error("expected matching period to equal the instance's active period")
 	}
 
 	// 2. Wrong type
@@ -319,41 +324,48 @@ func TestContentMatches(t *testing.T) {
 	// Role is string in content
 
 	if _, matches := content.Matches(invalidTypeTrait); matches {
-		t.Error("expected content NOT to match trait due to incorrect type")
+		t.Error("expected instance NOT to match trait due to incorrect type")
 	}
 
 	// 3. Missing attribute
 	missingAttrTrait := objects.NewTrait("missing fields").WithAttribute("unknown_field", "string")
 	if _, matches := content.Matches(missingAttrTrait); matches {
-		t.Error("expected content NOT to match trait due to missing attribute")
+		t.Error("expected instance NOT to match trait due to missing attribute")
 	}
 }
 
 func TestContentSame(t *testing.T) {
 	p := periods.NewFullPeriod()
 
-	c1, _ := objects.NewLocalContentBuilder().
+	c1, _ := objects.NewLocalInstanceBuilder("1").
 		WithActivity(p).
 		WithAttributeDuring("key", p, "value").
 		Build()
 
-	c2, _ := objects.NewLocalContentBuilder().
+	c1Copy, _ := objects.NewLocalInstanceBuilder("1").
 		WithActivity(p).
 		WithAttributeDuring("key", p, "value").
 		Build()
 
-	c3, _ := objects.NewLocalContentBuilder().
+	c2, _ := objects.NewLocalInstanceBuilder("2").
+		WithActivity(p).
+		WithAttributeDuring("key", p, "value").
+		Build()
+
+	c3, _ := objects.NewLocalInstanceBuilder("3").
 		WithActivity(p).
 		WithAttributeDuring("key", p, "different_value").
 		Build()
 
-	c4, _ := objects.NewLocalContentBuilder().
+	c4, _ := objects.NewLocalInstanceBuilder("4").
 		WithActivity(periods.NewEmptyPeriod()). // Different activity
 		WithAttributeDuring("key", p, "value").
 		Build()
 
-	if !c1.Same(c2) {
-		t.Error("expected identical contents to be evaluated as same")
+	if !c1.Same(c1Copy) {
+		t.Error("expected identical instances to be evaluated as same")
+	} else if c1.Same(c2) {
+		t.Error("expected different is but identical contents NOT to be evaluated as same")
 	} else if c1.Same(c3) {
 		t.Error("expected contents with different values NOT to be evaluated as same")
 	} else if c1.Same(c4) {
@@ -376,7 +388,7 @@ func TestWithoutAttributeDuringPartialDeletion(t *testing.T) {
 	// The hole is right in the middle (day2 to day3)
 	holePeriod := periods.NewFinitePeriod(day2, day3, true, true)
 
-	content, err := objects.NewLocalContentBuilder().
+	instance, err := objects.NewLocalInstanceBuilder("id").
 		WithActivity(fullPeriod).
 		WithAttributeDuring("status", fullPeriod, "active").
 		WithoutAttributeDuring("status", holePeriod).
@@ -386,7 +398,7 @@ func TestWithoutAttributeDuringPartialDeletion(t *testing.T) {
 		t.Fatalf("unexpected error during build: %v", err)
 	}
 
-	value, found := content.Value("status")
+	value, found := instance.Value("status")
 	if !found {
 		t.Fatalf("expected 'status' attribute to exist")
 	}
@@ -420,7 +432,7 @@ func TestAdjacentPeriodsUnion(t *testing.T) {
 	fullActivity := p1.Union(p2)
 
 	// Inserting the SAME value on adjacent periods should merge them
-	content, err := objects.NewLocalContentBuilder().
+	instance, err := objects.NewLocalInstanceBuilder("id").
 		WithActivity(fullActivity).
 		WithAttributeDuring("state", p1, "on").
 		WithAttributeDuring("state", p2, "on").
@@ -430,7 +442,7 @@ func TestAdjacentPeriodsUnion(t *testing.T) {
 		t.Fatalf("unexpected error during build: %v", err)
 	}
 
-	value, found := content.Value("state")
+	value, found := instance.Value("state")
 	if !found {
 		t.Fatalf("expected 'state' attribute to exist")
 	}
@@ -456,7 +468,7 @@ func TestRangeEarlyExit(t *testing.T) {
 	fullActivity := p1.Union(p2).Union(p3)
 
 	// 3 distinct periods with 3 distinct values
-	content, err := objects.NewLocalContentBuilder().
+	instance, err := objects.NewLocalInstanceBuilder("id").
 		WithActivity(fullActivity).
 		WithAttributeDuring("phase", p1, "A").
 		WithAttributeDuring("phase", p2, "B").
@@ -467,7 +479,7 @@ func TestRangeEarlyExit(t *testing.T) {
 		t.Fatalf("unexpected error during build: %v", err)
 	}
 
-	value, found := content.Value("phase")
+	value, found := instance.Value("phase")
 	if !found {
 		t.Fatalf("expected 'phase' attribute to exist")
 	}
@@ -484,24 +496,18 @@ func TestRangeEarlyExit(t *testing.T) {
 	}
 }
 
-func TestContentSameEdgeCases(t *testing.T) {
+func TestInstanceSameEdgeCases(t *testing.T) {
 	emptyPeriod := periods.NewEmptyPeriod()
 
-	// Create two completely empty contents
-	c1, err1 := objects.NewLocalContentBuilder().WithActivity(emptyPeriod).Build()
-	c2, err2 := objects.NewLocalContentBuilder().WithActivity(emptyPeriod).Build()
+	// Create two completely empty instances
+	c1, err1 := objects.NewLocalInstanceBuilder("id").WithActivity(emptyPeriod).Build()
 
-	if err1 != nil || err2 != nil {
-		t.Fatalf("failed to build empty contents")
+	if err1 != nil {
+		t.Fatalf("failed to build empty instance")
 	}
 
 	// 1. Compare with nil (safe interface handling)
 	if c1.Same(nil) {
 		t.Error("expected instantiated content NOT to be same as nil")
-	}
-
-	// 2. Compare two empty contents
-	if !c1.Same(c2) {
-		t.Error("expected two empty contents to be evaluated as same")
 	}
 }
