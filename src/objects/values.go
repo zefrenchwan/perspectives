@@ -34,7 +34,7 @@ type valuesHandler struct {
 }
 
 // Same returns true if the two temporal values have the same values at the same periods, and same type
-func (vh *valuesHandler) Same(other TimeDependentValue) bool {
+func (vh *valuesHandler) Same(other DynamicValues) bool {
 	if vh == nil && other == nil {
 		return true
 	} else if vh == nil || other == nil {
@@ -199,8 +199,8 @@ func newValuesHandler(period periods.Period, value any) *valuesHandler {
 	}
 }
 
-// valuesHandlerLoad creates a new TemporalValues instance from another TimeDependentValue.
-func valuesHandlerLoad(other TimeDependentValue) *valuesHandler {
+// valuesHandlerLoad creates a new TemporalValues instance from another DynamicValues.
+func valuesHandlerLoad(other DynamicValues) *valuesHandler {
 	result := new(valuesHandler)
 	result.storedType = other.DataType()
 	result.equals = primitiveTypeEqualsFunc(result.storedType)
@@ -228,7 +228,7 @@ type baseContent struct {
 }
 
 // Same returns true if the content is the same as the other content : same period, same values
-func (b *baseContent) Same(other TimeDependentContent) bool {
+func (b *baseContent) Same(other DynamicContent) bool {
 	if b == nil && other == nil {
 		return true
 	} else if b == nil || other == nil {
@@ -315,8 +315,8 @@ func (b *baseContent) Description() map[string]string {
 }
 
 // Values returns a copy of the temporal values associated with their attributes names
-func (b *baseContent) Values() map[string]TimeDependentValue {
-	result := make(map[string]TimeDependentValue)
+func (b *baseContent) Values() map[string]DynamicValues {
+	result := make(map[string]DynamicValues)
 	for attribute, content := range b.values {
 		result[attribute] = content
 	}
@@ -324,7 +324,7 @@ func (b *baseContent) Values() map[string]TimeDependentValue {
 }
 
 // Value returns the temporal values associated with the given attribute name, if it exists
-func (b *baseContent) Value(attribute string) (TimeDependentValue, bool) {
+func (b *baseContent) Value(attribute string) (DynamicValues, bool) {
 	value, found := b.values[attribute]
 	return value, found
 }
@@ -337,9 +337,9 @@ func newBaseContent() *baseContent {
 	}
 }
 
-// baseContentLoad creates a new baseContent instance from a TimeDependentContent.
+// baseContentLoad creates a new baseContent instance from a DynamicContent.
 // It performs a full copy : it imports the activity period and initializes the values map with loaded content handlers.
-func baseContentLoad(other TimeDependentContent) *baseContent {
+func baseContentLoad(other DynamicContent) *baseContent {
 	result := new(baseContent)
 	result.activity = other.Activity()
 	result.values = make(map[string]*valuesHandler)
@@ -367,7 +367,7 @@ type LocalContentBuilder struct {
 
 // LocalContentBuilderLoad allows to read any content and get ready for an in-memory content rebuild.
 // Two main use cases: modify existing content or create a "in memory" content from another implementation.
-func LocalContentBuilderLoad(element TimeDependentContent) ContentBuilder {
+func LocalContentBuilderLoad(element DynamicContent) ContentBuilder {
 	return &LocalContentBuilder{
 		element: baseContentLoad(element),
 	}
@@ -465,7 +465,7 @@ func (b *LocalContentBuilder) Errors() error { return b.globalErrors }
 
 // Build returns the built content and resets the builder for future use.
 // It returns the builder for method chaining.
-func (b *LocalContentBuilder) Build() (TimeDependentContent, error) {
+func (b *LocalContentBuilder) Build() (DynamicContent, error) {
 	result := b.element
 	resultErr := b.globalErrors
 	b.element = newBaseContent()

@@ -6,6 +6,6 @@ package objects
 type Instance interface {
 	// Observable to provide
 	// a unique identifier for the instance (distinguishing it from other instances)
-	// an observation as a TimeDependentContent (historical data)
-	Observable[TimeDependentContent]
+	// an observation as a DynamicContent (historical data)
+	Observable[DynamicContent]
 }

@@ -2,25 +2,23 @@ package objects
 
 import (
 	"math"
-	"reflect"
 	"time"
 
 	"github.com/zefrenchwan/perspectives.git/configuration"
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
-// PrimitiveValue represents a basic data type that can be used as a value in a time-dependent context.
-// It does not include pointer types, as they are not suitable for time-dependent values.
-// Neither does it include interfaces, as they are not concrete types and cannot be stored directly.
-// In particular, it excludes to pass nil as a value, just do not store value instead of nil.
-// NOTE : if you add a type in this interface, make sure to review and test in deep the implementations.
-// About time.Time, it is risky : underlying type is struct, which is seen as a reflect.Struct by kind.
-// So, it is not perfectly robust, but other option, using string and let people handle it, was not good either.
+// PrimitiveValue represents a strictly basic data type.
+// Custom types (aliases) are explicitly rejected by design to ensure
+// seamless serialization and strict Trait matching.
+// Except time.Time, which is a special useful case, we want to restrict to basic values.
+// No pointer types are allowed, as they are not suitable for serde and distributed systems.
+// No structs (except time.Time), as they would allow bad design (use content instead)
 type PrimitiveValue interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-		~float32 | ~float64 |
-		~string |
-		~bool |
+	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 |
+		float32 | float64 |
+		string |
+		bool |
 		time.Time
 }
 
@@ -38,19 +36,41 @@ func primitiveTypeName(v any) string {
 		return "time.Time"
 	}
 
-	// Otherwise, check the kind of the value.
-	valueKind := reflect.TypeOf(v).Kind()
-	switch valueKind {
-	case reflect.Bool,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64,
-		reflect.String:
-		return valueKind.String()
+	switch v.(type) {
+	case bool:
+		return "bool"
+	case int:
+		return "int"
+	case int8:
+		return "int8"
+	case int16:
+		return "int16"
+	case int32:
+		return "int32"
+	case int64:
+		return "int64"
+	case uint:
+		return "uint"
+	case uint8:
+		return "uint8"
+	case uint16:
+		return "uint16"
+	case uint32:
+		return "uint32"
+	case uint64:
+		return "uint64"
+	case float32:
+		return "float32"
+	case float64:
+		return "float64"
+	case string:
+		return "string"
+	case time.Time:
+		return "time.Time"
 	default:
-		// changing this means changing the behavior of IsPrimitiveValue
 		return ""
 	}
+
 }
 
 // equalsTime tests two time.Time values for equality.
@@ -130,16 +150,16 @@ func IsPrimitiveValue(v any) bool {
 	return primitiveTypeName(v) != ""
 }
 
-// TimeDependentValue represents a value that depends on time.
+// DynamicValues represents a value that depends on time.
 // It is basically equivalent to a map of disjoined time intervals linked to primitive values.
 // Implementations have to ensure that value accepts only PrimitiveValue types.
-type TimeDependentValue interface {
+type DynamicValues interface {
 	// Validity returns the period the values are set for.
 	// Basically, it is empty for nil or empty, the union of periods for values otherwise
 	Validity() periods.Period
 	// Same returns true if content is the same as another TimeDependentValues.
 	// It means : same periods, same values, same underlying type
-	Same(other TimeDependentValue) bool
+	Same(other DynamicValues) bool
 	// IsEmpty checks if the TimeDependentValues collection is empty (no value on a non empty period)
 	IsEmpty() bool
 	// At retrieves the value at a specific moment in time, if any
@@ -151,10 +171,10 @@ type TimeDependentValue interface {
 	DataType() string
 }
 
-// TimeDependentContent defines attributes and time dependent values over time, with a global activity period.
+// DynamicContent defines attributes and time dependent values over time, with a global activity period.
 // For instance, a person has a global life time,
 // and that person's name, age, and address can be considered as attributes, while their values can change over time.
-type TimeDependentContent interface {
+type DynamicContent interface {
 	// Activity returns the global activity period this content lasts
 	Activity() periods.Period
 	// Description returns a map of attribute names to their data types.
@@ -162,9 +182,9 @@ type TimeDependentContent interface {
 	Description() map[string]string
 	// Values returns the attributes and their values at a given moment in time.
 	// The map keys are attribute names, and the values are the values of those attributes over time
-	Values() map[string]TimeDependentValue
+	Values() map[string]DynamicValues
 	// Value returns, if any, the values over time for that given attribute
-	Value(attribute string) (TimeDependentValue, bool)
+	Value(attribute string) (DynamicValues, bool)
 	// At returns, if any, the values of all attributes at a given moment in time.
 	// Because it is a snapshot of the content at a specific point in time,
 	// result is a map of attribute names to their values at that moment.
@@ -175,7 +195,7 @@ type TimeDependentContent interface {
 	// If that given trait is incompatible with the content, the result will be empty, false
 	Matches(trait Trait) (periods.Period, bool)
 	// Same returns whether the content is the same (same values, same attributes) as the other content.
-	Same(other TimeDependentContent) bool
+	Same(other DynamicContent) bool
 }
 
 // ContentBuilder manages the changes to apply on a given content.
@@ -203,5 +223,5 @@ type ContentBuilder interface {
 	// It returns the new content and an error if any occurred during the build process.
 	// It resets the builder to its initial state, ready for new content modifications.
 	// But the recommended use would be to create a new content with a new builder.
-	Build() (TimeDependentContent, error)
+	Build() (DynamicContent, error)
 }
