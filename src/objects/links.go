@@ -127,7 +127,7 @@ func (l *localLink) Same(other Element) bool {
 			return false
 		}
 
-		otherRolesFound := make(map[string]bool)
+		counter := 0
 		for otherRole, otherLinkable := range otherLink.Range {
 			if value, found := l.roles[otherRole]; !found {
 				return false
@@ -135,10 +135,10 @@ func (l *localLink) Same(other Element) bool {
 				return false
 			}
 
-			otherRolesFound[otherRole] = true
+			counter++
 		}
 
-		if len(otherRolesFound) != len(l.roles) {
+		if counter != len(l.roles) {
 			return false
 		}
 
@@ -201,6 +201,32 @@ func NewLocalLinkBuilder(id string) LinkBuilder {
 	return &localLinkBuilder{
 		id:    id,
 		roles: make(map[string]Linkable),
+	}
+}
+
+// LocalLinkBuilderLoad creates a new local link builder with the given link
+// It copies the full content roles from the original link.
+// Due to the immutable nature of links, the roles are copied to a new map and the rest is passed as is.
+func LocalLinkBuilderLoad(original Link) LinkBuilder {
+	if original == nil {
+		return &localLinkBuilder{
+			id: "", name: "",
+			roles:        nil,
+			activity:     periods.NewEmptyPeriod(),
+			globalErrors: errors.New("nil value"),
+		}
+	}
+
+	newRoles := make(map[string]Linkable)
+	for role, linkable := range original.Range {
+		newRoles[role] = linkable
+	}
+
+	return &localLinkBuilder{
+		id:       original.Id(),
+		name:     original.Name(),
+		activity: original.Activity(),
+		roles:    newRoles,
 	}
 }
 
