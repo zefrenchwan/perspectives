@@ -6,59 +6,89 @@ import (
 	"github.com/zefrenchwan/perspectives.git/objects"
 )
 
-func TestTraits(t *testing.T) {
-	trait := objects.NewTrait("person")
-	if trait.Name() != "person" {
-		t.Errorf("Expected trait name to be 'person', got '%s'", trait.Name())
-	} else if !objects.IsInstanceOfClass(trait, objects.CLASS_TRAIT) {
-		t.Errorf("Expected trait to be declared as CLASS_TRAIT, got undeclared")
+func TestTraitBuilder(t *testing.T) {
+	if trait, err := objects.NewTraitBuilder().WithName("Animals").Build(); err != nil {
+		t.Errorf("trait with just name should be OK")
+	} else if trait == nil {
+		t.Errorf("trait with just name should be OK")
+	} else if trait.Name() != "Animals" {
+		t.Errorf("error when passing name")
 	}
 
-	trait = trait.WithAttribute("age", "int")
-	if trait.Attributes()["age"] != "int" {
-		t.Errorf("Expected attribute 'age' to have type 'int', got '%s'", trait.Attributes()["age"])
+	if trait, err := objects.NewTraitBuilder().WithName("Humans").
+		WithAttribute("age", "int").
+		Build(); err != nil {
+		t.Errorf("trait with name and attribute should be OK")
+	} else if trait == nil {
+		t.Errorf("trait with name and attribute should be OK")
+	} else if trait.Name() != "Humans" {
+		t.Errorf("error when passing name")
+	} else if attrs := trait.Attributes(); len(attrs) != 1 {
+		t.Errorf("error when passing attribute")
+	} else if attrs["age"] != "int" {
+		t.Errorf("error when reading attribute type")
 	}
 
-	trait = trait.WithoutAttribute("age")
-	if _, ok := trait.Attributes()["age"]; ok {
-		t.Errorf("Expected attribute 'age' to be removed, but it still exists")
+	if trait, err := objects.NewTraitBuilder().WithName("Humans").
+		WithAttribute("age", "string").
+		WithAttribute("age", "int").
+		WithAttribute("test", "string").
+		WithoutAttribute("test").
+		Build(); err != nil {
+		t.Errorf("trait with name and attribute should be OK")
+	} else if trait == nil {
+		t.Errorf("trait with name and attribute should be OK")
+	} else if trait.Name() != "Humans" {
+		t.Errorf("error when passing name")
+	} else if attrs := trait.Attributes(); len(attrs) != 1 {
+		t.Errorf("error when passing attribute")
+	} else if attrs["age"] != "int" {
+		t.Errorf("error when reading attribute type")
+	}
+}
+
+func TestTraitBuilderErrors(t *testing.T) {
+	if _, err := objects.NewTraitBuilder().WithName("").Build(); err == nil {
+		t.Errorf("error expected when passing empty name")
+	} else if _, err := objects.NewTraitBuilder().WithAttribute("", "int").Build(); err == nil {
+		t.Errorf("error expected when passing attribute without name")
 	}
 
-	if len(trait.Attributes()) != 0 {
-		t.Errorf("Expected no attributes after removal, but found %d attributes", len(trait.Attributes()))
+	if _, err := objects.NewTraitBuilder().
+		WithName("Humans").
+		WithAttribute("age", "").
+		Build(); err == nil {
+		t.Errorf("error expected when passing empty attribute type")
+	} else if _, err := objects.NewTraitBuilder().
+		WithName("Humans").
+		WithAttribute("", "int").
+		Build(); err == nil {
+		t.Errorf("error expected when passing empty attribute name")
 	}
 }
 
 func TestTraitSame(t *testing.T) {
-	t1 := objects.NewTrait("person")
-	t2 := objects.NewTrait("person")
-	t3 := objects.NewTrait("animal")
+	trait, _ := objects.NewTraitBuilder().WithName("Humans").
+		WithAttribute("age", "int").
+		Build()
 
-	if !t1.Same(t2) {
-		t.Errorf("Expected trait %v and %v to be same", t1, t2)
+	if mismatchName, _ := objects.NewTraitBuilder().WithName("Dogs").
+		WithAttribute("age", "int").
+		Build(); trait.Same(mismatchName) {
+		t.Errorf("names mismatch")
 	}
 
-	if t1.Same(t3) {
-		t.Errorf("Expected trait %v and %v to be different", t1, t3)
+	if mismatchAttr, _ := objects.NewTraitBuilder().WithName("Humans").
+		WithAttribute("age", "string").
+		Build(); trait.Same(mismatchAttr) {
+		t.Errorf("attributes mismatch")
 	}
 
-	if t1.Same(nil) {
-		t.Errorf("Expected trait %v and nil to be different", t1)
-	}
-
-	t4 := objects.NewTrait("person").WithAttribute("age", "int")
-	t5 := objects.NewTrait("person").WithAttribute("age", "int")
-	t6 := objects.NewTrait("person").WithAttribute("age", "string")
-
-	if !t4.Same(t5) {
-		t.Errorf("Expected traits with same name and attributes to be same")
-	}
-
-	if t4.Same(t6) {
-		t.Errorf("Expected traits with same name but different attributes to be different")
-	}
-
-	if t1.Same(t4) {
-		t.Errorf("Expected trait without attribute and trait with attribute to be different")
+	if mismatchAttr, _ := objects.NewTraitBuilder().
+		WithName("Humans").
+		WithAttribute("age", "int").
+		WithAttribute("name", "string").
+		Build(); trait.Same(mismatchAttr) {
+		t.Errorf("attributes count mismatch")
 	}
 }

@@ -10,13 +10,15 @@ import (
 
 func TestBuildLinks(t *testing.T) {
 	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
-	trait := objects.NewTrait("Animals")
+	trait, _ := objects.NewTraitBuilder().WithName("Animals").Build()
+	other, _ := objects.NewTraitBuilder().WithName("other").Build()
+
 	is, errIs := objects.NewLocalLinkBuilder("links:is").
 		WithName("is").
 		WithActivity(periods.NewFullPeriod()).
 		WithOperand("subject", instance).
 		WithOperand("object", trait).
-		WithOperand("other", objects.NewTrait("other")).
+		WithOperand("other", other).
 		WithoutOperand("other").
 		Build()
 
@@ -66,7 +68,7 @@ func TestBuildLinksErrors(t *testing.T) {
 
 func TestReBuildLinks(t *testing.T) {
 	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
-	trait := objects.NewTrait("Animals")
+	trait, _ := objects.NewTraitBuilder().WithName("Animals").Build()
 	is, errIs := objects.NewLocalLinkBuilder("links:is").
 		WithName("is").
 		WithOperand("subject", instance).
@@ -88,7 +90,7 @@ func TestReBuildLinks(t *testing.T) {
 
 func TestLinkRange(t *testing.T) {
 	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
-	trait := objects.NewTrait("Animals")
+	trait, _ := objects.NewTraitBuilder().WithName("Animals").Build()
 	is, _ := objects.NewLocalLinkBuilder("links:is").
 		WithName("is").
 		WithOperand("subject", instance).

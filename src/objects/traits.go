@@ -1,36 +1,45 @@
 package objects
 
 import (
+	"errors"
 	"fmt"
+	"maps"
 )
 
 // Trait is the immutable definition of a concept that can be instantiated into objects (instances of traits).
 type Trait interface {
-	Element  // Element as a system entity
-	Linkable // Linkable to use a trait as a link operand (compositions)
+	Element
 	// Name returns the name of the trait, should be unique
 	Name() string
 	// Attributes returns the attributes of the trait, as name and type
 	Attributes() map[string]string
-	// WithAttribute returns a new trait with the given attribute added.
-	// Name is the name of the attribute to add, and its type is expectedType
-	WithAttribute(name, expectedType string) Trait
-	// WithoutAttribute returns a new trait with the given attribute removed
-	WithoutAttribute(name string) Trait
+}
+
+// TraitBuilder is the interface for building traits.
+// It allows to build traits by adding name and attributes without overloading GC.
+// One may modify the trait builder by adding or removing attributes,
+// but errors encountered during the building of the trait are cumulative.
+// It means that even if an error is encountered once, it stays as an error.
+type TraitBuilder interface {
+	// WithName changes the name of the trait.
+	WithName(string) TraitBuilder
+	// WithAttribute adds or changes the attribute of the trait.
+	// Name is the name of the attribute, and expectedType is the type for that attribute.
+	// It should be a primitive type.
+	WithAttribute(name, expectedType string) TraitBuilder
+	// WithoutAttribute removes the attribute of the trait.
+	WithoutAttribute(name string) TraitBuilder
+	// Errors returns the errors encountered during the building of the trait.
+	Errors() error
+	// Build returns the trait and the errors encountered during the building of the trait.
+	// It resets the builder to its initial state.
+	Build() (Trait, error)
 }
 
 // baseTrait is the standard implementation of the Trait interface.
 type baseTrait struct {
 	name       string            // name of the trait, should be unique
 	attributes map[string]string // attributes of the trait, as name and type
-}
-
-// NewTrait creates a new trait with the given name
-func NewTrait(name string) Trait {
-	return &baseTrait{
-		name:       name,
-		attributes: make(map[string]string),
-	}
 }
 
 // Id returns the name of the trait, should be unique
@@ -116,53 +125,107 @@ func (t *baseTrait) Attributes() map[string]string {
 	return result
 }
 
-// WithAttribute returns a new Trait instance with the given attribute added or updated.
-// The original Trait remains unchanged.
-func (t *baseTrait) WithAttribute(name, expectedType string) Trait {
-	if t == nil {
-		return nil
-	}
-	if name == "" || expectedType == "" {
+// baseTraitBuilder is a builder for Trait instances that avoids reconstructing the trait many times.
+type baseTraitBuilder struct {
+	// name of the trait to build
+	name string
+	// attributes of the trait to build
+	attributes map[string]string
+	// globalErrors is a list of errors that occurred during the construction of the trait.
+	// Note that they are cumulative
+	globalErrors error
+}
+
+// WithName sets the name of the trait.
+func (t *baseTraitBuilder) WithName(name string) TraitBuilder {
+	if name == "" {
+		t.globalErrors = errors.Join(t.globalErrors, errors.New("trait name cannot be empty"))
 		return t
 	}
 
-	// Copy existing attributes
-	newAttributes := t.Attributes()
-	if newAttributes == nil {
-		newAttributes = make(map[string]string)
+	t.name = name
+	return t
+}
+
+// WithAttribute adds an attribute to the trait builder.
+// Name is the name of the attribute to add, and expectedType is the type of the attribute.
+// Only primitive types are allowed.
+func (t *baseTraitBuilder) WithAttribute(name, expectedType string) TraitBuilder {
+	if name == "" {
+		t.globalErrors = errors.Join(t.globalErrors, errors.New("attribute name cannot be empty"))
+		return t
+	} else if expectedType == "" {
+		t.globalErrors = errors.Join(t.globalErrors, errors.New("attribute type cannot be empty"))
+		return t
+	} else if !IsPrimitiveTypeName(expectedType) {
+		t.globalErrors = errors.Join(t.globalErrors, errors.New("attribute type must be a primitive type"))
+		return t
 	}
 
-	// Add/Update the new attribute
-	newAttributes[name] = expectedType
+	t.attributes[name] = expectedType
+	return t
+}
 
-	return &baseTrait{
+// WithoutAttribute removes the attribute by name
+func (t *baseTraitBuilder) WithoutAttribute(name string) TraitBuilder {
+	if name == "" {
+		// we may avoid an error, but it is an error
+		//t.globalErrors = errors.New("attribute name cannot be empty")
+		return t
+	}
+
+	delete(t.attributes, name)
+	return t
+}
+
+// Errors returns the errors during trait builder, so far.
+func (t *baseTraitBuilder) Errors() error {
+	return t.globalErrors
+}
+
+// Build returns the trait, or all errors during its generation.
+func (t *baseTraitBuilder) Build() (Trait, error) {
+	if t.globalErrors != nil {
+		return nil, t.globalErrors
+	}
+
+	attributes := make(map[string]string)
+	maps.Copy(attributes, t.attributes)
+
+	result := &baseTrait{
 		name:       t.name,
-		attributes: newAttributes,
+		attributes: attributes,
+	}
+
+	t.name = ""
+	t.globalErrors = nil
+	t.attributes = make(map[string]string)
+
+	return result, nil
+}
+
+// NewTraitBuilder creates a new empty trait builder.
+func NewTraitBuilder() TraitBuilder {
+	return &baseTraitBuilder{
+		attributes: make(map[string]string),
 	}
 }
 
-// WithoutAttribute returns a new Trait instance without the given attribute.
-// If the attribute does not exist, it returns the current Trait instance.
-func (t *baseTrait) WithoutAttribute(name string) Trait {
-	if t == nil || name == "" {
-		return t
-	}
-
-	// Fast return if the attribute is not present (avoids useless allocation)
-	if _, exists := t.attributes[name]; !exists {
-		return t
-	}
-
-	// Copy all attributes except the one to remove
-	newAttributes := make(map[string]string, len(t.attributes)-1)
-	for k, v := range t.attributes {
-		if k != name {
-			newAttributes[k] = v
+// TraitBuilderLoad loads a trait into a trait builder.
+// This way, we may modify the trait again by rebuilding the new trait builder.
+func TraitBuilderLoad(other Trait) TraitBuilder {
+	if other == nil {
+		return &baseTraitBuilder{
+			globalErrors: errors.New("base trait cannot be nil"),
+			attributes:   make(map[string]string),
 		}
 	}
 
-	return &baseTrait{
-		name:       t.name,
-		attributes: newAttributes,
+	attributes := make(map[string]string)
+	maps.Copy(attributes, other.Attributes())
+
+	return &baseTraitBuilder{
+		name:       other.Name(),
+		attributes: attributes,
 	}
 }

@@ -8,36 +8,6 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
-// =========================================================================
-// PRIMITIVE TYPES TESTS
-// =========================================================================
-
-func TestIsPrimitiveValue(t *testing.T) {
-	// Valid primitives
-	if !objects.IsPrimitiveValue(42) {
-		t.Error("expected int to be a valid primitive value")
-	} else if !objects.IsPrimitiveValue(3.14) {
-		t.Error("expected float64 to be a valid primitive value")
-	} else if !objects.IsPrimitiveValue("hello") {
-		t.Error("expected string to be a valid primitive value")
-	} else if !objects.IsPrimitiveValue(true) {
-		t.Error("expected bool to be a valid primitive value")
-	} else if !objects.IsPrimitiveValue(time.Now()) {
-		t.Error("expected time.Time to be a valid primitive value")
-	}
-
-	// Invalid primitives
-	if objects.IsPrimitiveValue([]int{1, 2}) {
-		t.Error("expected slice NOT to be a primitive value")
-	} else if objects.IsPrimitiveValue(map[string]int{"a": 1}) {
-		t.Error("expected map NOT to be a primitive value")
-	} else if objects.IsPrimitiveValue(nil) {
-		t.Error("expected nil NOT to be a primitive value")
-	} else if objects.IsPrimitiveValue(struct{ name string }{name: "test"}) {
-		t.Error("expected struct NOT to be a primitive value")
-	}
-}
-
 // ========================================================================
 // INSTANCES BASIC BEHAVIOR TESTS
 // ========================================================================
@@ -197,6 +167,14 @@ func TestInstanceCut(t *testing.T) {
 // BUILDER EDGE CASES TESTS
 // =========================================================================
 
+func TestBuilderNoId(t *testing.T) {
+	builder := objects.NewLocalInstanceBuilder("").WithActivity(periods.NewFullPeriod())
+
+	if _, err := builder.Build(); err == nil {
+		t.Errorf("cannot make instance with no id")
+	}
+}
+
 func TestBuilderErrorAccumulation(t *testing.T) {
 	lifetime := periods.NewFullPeriod()
 	builder := objects.NewLocalInstanceBuilder("id").WithActivity(lifetime)
@@ -310,9 +288,10 @@ func TestInstanceMatches(t *testing.T) {
 	}
 
 	// 1. Perfect match
-	validTrait := objects.NewTrait("valid").
+	validTrait, _ := objects.NewTraitBuilder().WithName("valid").
 		WithAttribute("role", "string").
-		WithAttribute("level", "int")
+		WithAttribute("level", "int").
+		Build()
 	if matchPeriod, matches := content.Matches(validTrait); !matches {
 		t.Error("expected instance to match valid trait")
 	} else if !matchPeriod.Equals(activePeriod) {
@@ -320,7 +299,9 @@ func TestInstanceMatches(t *testing.T) {
 	}
 
 	// 2. Wrong type
-	invalidTypeTrait := objects.NewTrait("int role").WithAttribute("role", "int")
+	invalidTypeTrait, _ := objects.NewTraitBuilder().WithName("int role").
+		WithAttribute("role", "int").
+		Build()
 	// Role is string in content
 
 	if _, matches := content.Matches(invalidTypeTrait); matches {
@@ -328,13 +309,15 @@ func TestInstanceMatches(t *testing.T) {
 	}
 
 	// 3. Missing attribute
-	missingAttrTrait := objects.NewTrait("missing fields").WithAttribute("unknown_field", "string")
+	missingAttrTrait, _ := objects.NewTraitBuilder().WithName("missing fields").
+		WithAttribute("unknown_field", "string").
+		Build()
 	if _, matches := content.Matches(missingAttrTrait); matches {
 		t.Error("expected instance NOT to match trait due to missing attribute")
 	}
 }
 
-func TestContentSame(t *testing.T) {
+func TestInstanceSame(t *testing.T) {
 	p := periods.NewFullPeriod()
 
 	c1, _ := objects.NewLocalInstanceBuilder("1").

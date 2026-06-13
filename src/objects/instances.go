@@ -2,156 +2,10 @@ package objects
 
 import (
 	"errors"
-	"math"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/configuration"
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
-
-// PrimitiveValue represents a strictly basic data type.
-// Custom types (aliases) are explicitly rejected by design to ensure
-// seamless serialization and strict Trait matching.
-// Except time.Time, which is a special useful case, we want to restrict to basic values.
-// No pointer types are allowed, as they are not suitable for serde and distributed systems.
-// No structs (except time.Time), as they would allow bad design (use instance instead)
-// Note that this code is actually dead : not used elsewhere.
-// But it documents the allowed primitive types.
-type PrimitiveValue interface {
-	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 |
-		float32 | float64 |
-		string |
-		bool |
-		time.Time
-}
-
-// primitiveTypeName returns the string representation of allowed primitive types.
-// To ensure that the type is correctly identified and handled, it works with the kind and not the raw name.
-func primitiveTypeName(v any) string {
-	if v == nil {
-		// changing this means changing the behavior of IsPrimitiveValue
-		return ""
-	}
-
-	// accept time.Time.
-	// In general, put in here any additional types that should be considered primitive.
-	if _, okTime := v.(time.Time); okTime {
-		return "time.Time"
-	}
-
-	switch v.(type) {
-	case bool:
-		return "bool"
-	case int:
-		return "int"
-	case int8:
-		return "int8"
-	case int16:
-		return "int16"
-	case int32:
-		return "int32"
-	case int64:
-		return "int64"
-	case uint:
-		return "uint"
-	case uint8:
-		return "uint8"
-	case uint16:
-		return "uint16"
-	case uint32:
-		return "uint32"
-	case uint64:
-		return "uint64"
-	case float32:
-		return "float32"
-	case float64:
-		return "float64"
-	case string:
-		return "string"
-	case time.Time:
-		return "time.Time"
-	default:
-		return ""
-	}
-
-}
-
-// equalsTime tests two time.Time values for equality.
-func equalsTime(a, b any) bool {
-	if a == nil && b == nil {
-		return true
-	} else if a == nil || b == nil {
-		return false
-	}
-
-	t1, ok1 := a.(time.Time)
-	t2, ok2 := b.(time.Time)
-
-	if !ok1 || !ok2 {
-		return false
-	}
-
-	return t1.Equal(t2)
-}
-
-// defaultEquals tests two values for equality, applying the == operator.
-func defaultEquals(a, b any) bool {
-	return a == b
-}
-
-// equalsFloat tests two floats with an epsilon
-func equalsFloat(a, b any) bool {
-	if a == nil && b == nil {
-		return true
-	} else if a == nil || b == nil {
-		return false
-	}
-
-	switch v1 := a.(type) {
-	case float64:
-		v2, ok := b.(float64)
-		if !ok {
-			return false
-		}
-
-		return math.Abs(v1-v2) < configuration.LONG_EPSILON
-
-	case float32:
-		v2, ok := b.(float32)
-		if !ok {
-			return false
-		}
-
-		diff := v1 - v2
-		if diff < 0 {
-			diff = -diff
-		}
-		return diff < configuration.SHORT_EPSILON
-
-	default:
-		return false
-	}
-}
-
-// primitiveTypeEqualsFunc returns a function that tests two values for equality, based on the type name.
-// IMPORTANT : it assumes that the values are primitive as defined in PrimitiveValue.
-func primitiveTypeEqualsFunc(typeName string) func(any, any) bool {
-	switch typeName {
-	case "time.Time":
-		return equalsTime
-	case "float32", "float64":
-		return equalsFloat
-	default:
-		return defaultEquals
-	}
-}
-
-// IsPrimitiveValue checks if the given value is a PrimitiveValue.
-// In instances implementation, it is used to ensure that only primitive values are stored.
-func IsPrimitiveValue(v any) bool {
-	// note that it depends on the implementation of primitiveTypeName
-	return primitiveTypeName(v) != ""
-}
 
 // DynamicValues represents a value that depends on time.
 // It is basically equivalent to a map of disjoined time intervals linked to primitive values.
@@ -178,8 +32,7 @@ type DynamicValues interface {
 // For instance, a person has a global life time,
 // and that person's name, age, and address can be considered as attributes, while their values can change over time.
 type Instance interface {
-	Linkable // Linkable to become an operand of a link
-	Element  // Element because it is a system entity
+	Element
 	// Activity returns the global activity period this instance lasts
 	Activity() periods.Period
 	// Description returns a map of attribute names to their data types.
@@ -342,38 +195,6 @@ func (vh *valuesHandler) Copy() *valuesHandler {
 	return &valuesHandler{values: result, storedType: vh.storedType, equals: vh.equals}
 }
 
-// withValueDuring adds a new value to a copy during a given period
-func (vh *valuesHandler) withValueDuring(p periods.Period, v any) *valuesHandler {
-	if !IsPrimitiveValue(v) {
-		panic("cannot add value of incompatible type to valuesHandler")
-	} else if primitiveTypeName(v) != vh.storedType {
-		panic("cannot add value of incompatible type to valuesHandler")
-	}
-
-	matchingPeriodValue := p
-	for _, element := range vh.values {
-		if vh.equals(element.value, v) {
-			matchingPeriodValue = matchingPeriodValue.Union(element.matchingPeriod)
-		}
-	}
-
-	result := make([]valueNode, 0, len(vh.values)+1)
-	for _, element := range vh.values {
-		if !vh.equals(element.value, v) {
-			remaining := element.matchingPeriod.Remove(matchingPeriodValue)
-			if !remaining.IsEmpty() {
-				result = append(result, valueNode{matchingPeriod: remaining, value: element.value})
-			}
-		}
-	}
-
-	if !matchingPeriodValue.IsEmpty() {
-		result = append(result, valueNode{matchingPeriod: matchingPeriodValue, value: v})
-	}
-
-	return &valuesHandler{values: result, storedType: vh.storedType, equals: vh.equals}
-}
-
 // withoutValidity returns a copy without values for the given period.
 // If the period is empty or the handler is empty, it does nothing.
 func (vh *valuesHandler) withoutValidity(period periods.Period) *valuesHandler {
@@ -405,36 +226,6 @@ func (vh *valuesHandler) cut(period periods.Period) *valuesHandler {
 	}
 
 	return &valuesHandler{values: remainingValues, storedType: vh.storedType, equals: vh.equals}
-}
-
-// newValuesHandler creates a new TemporalValues instance with a single value for the given period.
-func newValuesHandler(period periods.Period, value any) *valuesHandler {
-	if !IsPrimitiveValue(value) {
-		panic("cannot create valuesHandler with non-primitive value")
-	}
-	typeName := primitiveTypeName(value)
-	equalsForValue := primitiveTypeEqualsFunc(typeName)
-	return &valuesHandler{
-		equals:     equalsForValue,
-		storedType: typeName,
-		values:     []valueNode{{matchingPeriod: period, value: value}},
-	}
-}
-
-// valuesHandlerLoad creates a new TemporalValues instance from another DynamicValues.
-func valuesHandlerLoad(other DynamicValues) *valuesHandler {
-	result := new(valuesHandler)
-	result.storedType = other.DataType()
-	result.equals = primitiveTypeEqualsFunc(result.storedType)
-	for period, value := range other.Range {
-		if !IsPrimitiveValue(value) {
-			panic("cannot create valuesHandler with non-primitive value")
-		}
-
-		result.values = append(result.values, valueNode{matchingPeriod: period, value: value})
-	}
-
-	return result
 }
 
 // =========================================================================
@@ -595,7 +386,14 @@ func baseInstanceLoad(other Instance) *baseInstance {
 	result.activity = other.Activity()
 	result.values = make(map[string]*valuesHandler)
 	for attribute, content := range other.Values() {
-		result.values[attribute] = valuesHandlerLoad(content)
+		handler := new(valuesHandler)
+		handler.storedType = content.DataType()
+		handler.equals = primitiveTypeEqualsFunc(handler.storedType)
+		for period, value := range content.Range {
+			handler.values = append(handler.values, valueNode{matchingPeriod: period, value: value})
+		}
+
+		result.values[attribute] = handler
 	}
 	return result
 }
@@ -627,8 +425,14 @@ func LocalInstanceBuilderLoad(element Instance) InstanceBuilder {
 // NewLocalInstanceBuilder creates a new local builder with an empty base instance.
 // Typical use case: create a new instance from scratch.
 func NewLocalInstanceBuilder(id string) InstanceBuilder {
+	var globalErrors error
+	if id == "" {
+		globalErrors = errors.New("instance id cannot be empty")
+	}
+
 	return &LocalInstanceBuilder{
-		element: newBaseInstance(id),
+		globalErrors: globalErrors,
+		element:      newBaseInstance(id),
 	}
 }
 
@@ -648,14 +452,45 @@ func (b *LocalInstanceBuilder) WithAttributeDuring(attribute string, period peri
 	if value == nil || !IsPrimitiveValue(value) {
 		b.globalErrors = errors.Join(b.globalErrors, errors.New("attribute value cannot be nil or non-primitive"))
 		return b
-	} else if values, exists := b.element.values[attribute]; !exists {
-		values = newValuesHandler(period, value)
-		b.element.values[attribute] = values
-	} else if primitiveTypeName(value) != values.storedType {
+	} else if existingHandler, exists := b.element.values[attribute]; !exists {
+		typeName := primitiveTypeName(value)
+		equalsForValue := primitiveTypeEqualsFunc(typeName)
+		existingHandler = &valuesHandler{
+			equals:     equalsForValue,
+			storedType: typeName,
+			values:     []valueNode{{matchingPeriod: period, value: value}},
+		}
+
+		b.element.values[attribute] = existingHandler
+	} else if primitiveTypeName(value) != existingHandler.storedType {
 		b.globalErrors = errors.Join(b.globalErrors, errors.New("cannot add value of incompatible type to valuesHandler"))
 		return b
 	} else {
-		b.element.values[attribute] = values.withValueDuring(period, value)
+		// value is OK, we already have a matching attribute and related mapping.
+		// At this point: values is the valuesHandler for the attribute
+		matchingPeriodValue := period
+		for existingPeriod, existingValue := range existingHandler.Range {
+			if existingHandler.equals(existingValue, value) {
+				matchingPeriodValue = matchingPeriodValue.Union(existingPeriod)
+			}
+		}
+
+		result := make([]valueNode, 0)
+		for existingPeriod, existingValue := range existingHandler.Range {
+			if !existingHandler.equals(existingValue, value) {
+				remaining := existingPeriod.Remove(matchingPeriodValue)
+				if !remaining.IsEmpty() {
+					result = append(result, valueNode{matchingPeriod: remaining, value: existingValue})
+				}
+			}
+		}
+
+		if !matchingPeriodValue.IsEmpty() {
+			result = append(result, valueNode{matchingPeriod: matchingPeriodValue, value: value})
+		}
+
+		existingHandler.values = result
+		b.element.values[attribute] = existingHandler
 	}
 
 	return b

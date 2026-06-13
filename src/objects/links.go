@@ -8,56 +8,21 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
-// Linkable defines any link operand.
-// It should be :
-// EITHER A LINK (link composition)
-// OR AN INSTANCE (instance as operand),
-// OR A TRAIT (trait as operand)
-// OR A VARIABLE (for pattern matching).
-// To do so, we use the sealed interface :
-// we include a private function to force that no other type can implement it.
-// This way, linkable types can only be implemented within this package.
-// VERY IMPORTANT : Linkable should be immutable.
-type Linkable interface {
-	// isLinkable is a private function to force that no other type can implement it.
-	// It is used as an implementation of the SEALED INTERFACE go pattern.
-	isLinkable() bool
-}
-
-// sameLinkable checks if two linkables are the same.
-func sameLinkable(a, b Linkable) bool {
-	if a == nil && b == nil {
-		return true
-	} else if a == nil || b == nil {
-		return false
-	}
-
-	elemA, okA := a.(Element)
-	elemB, okB := b.(Element)
-
-	if okA && okB {
-		return elemA.Same(elemB)
-	}
-
-	return false
-}
-
 // Link relates elements together during a given period.
 // For instance, FriendOf(subject=Marie,object=Paul) since now() - 3 years is a link.
 type Link interface {
-	Linkable // Linkable to use a link as a link operand (compositions)
-	Element  // Element to use links as base components of the system
+	Element
 	// Name of the link, it defines its semantic
 	Name() string
 	// Roles associated to the link, to define how the elements are related together.
 	// Although it is not mandatory, it is recommended to sort result.
 	Roles() []string
 	// Role returns the element associated to the given role, if any
-	Role(string) (Linkable, bool)
+	Role(string) (Element, bool)
 	// Activity returns the period during which the link is active
 	Activity() periods.Period
 	// Range iterates over the roles and their associated elements
-	Range(func(string, Linkable) bool)
+	Range(func(string, Element) bool)
 }
 
 // LinkBuilder is used to build a link.
@@ -66,7 +31,7 @@ type Link interface {
 // if there is ONE error once you build the link, all errors are returned.
 type LinkBuilder interface {
 	// WithOperand adds an operand with the given role
-	WithOperand(role string, operand Linkable) LinkBuilder
+	WithOperand(role string, operand Element) LinkBuilder
 	// WithoutOperand removes the given operand and related content
 	WithoutOperand(role string) LinkBuilder
 	// WithActivity changes the activity period for the link
@@ -87,7 +52,7 @@ type localLink struct {
 	// name of the link
 	name string
 	// roles of the link : for each name, linkable
-	roles map[string]Linkable
+	roles map[string]Element
 	// activity period of the link
 	activity periods.Period
 }
@@ -131,7 +96,7 @@ func (l *localLink) Same(other Element) bool {
 		for otherRole, otherLinkable := range otherLink.Range {
 			if value, found := l.roles[otherRole]; !found {
 				return false
-			} else if !sameLinkable(value, otherLinkable) {
+			} else if !value.Same(otherLinkable) {
 				return false
 			}
 
@@ -166,14 +131,14 @@ func (l *localLink) Roles() []string {
 	return result
 }
 
-// Role returns, if any, the linkable value associated to the role
-func (l *localLink) Role(role string) (Linkable, bool) {
+// Role returns, if any, the element associated to the role
+func (l *localLink) Role(role string) (Element, bool) {
 	linkable, found := l.roles[role]
 	return linkable, found
 }
 
-// Range iterates over the roles of the link and yields each role and its associated linkable value
-func (l *localLink) Range(yield func(string, Linkable) bool) {
+// Range iterates over the roles of the link and yields each role and its associated element
+func (l *localLink) Range(yield func(string, Element) bool) {
 	for role, linkable := range l.roles {
 		if !yield(role, linkable) {
 			return
@@ -187,8 +152,8 @@ type localLinkBuilder struct {
 	id string
 	// name of the link
 	name string
-	// roles mapping from role names to linkable value
-	roles map[string]Linkable
+	// roles mapping from role names to element
+	roles map[string]Element
 	// activity period for the link
 	activity periods.Period
 	// globalErrors when building (cumulative)
@@ -200,7 +165,7 @@ type localLinkBuilder struct {
 func NewLocalLinkBuilder(id string) LinkBuilder {
 	return &localLinkBuilder{
 		id:       id,
-		roles:    make(map[string]Linkable),
+		roles:    make(map[string]Element),
 		activity: periods.NewEmptyPeriod(),
 	}
 }
@@ -214,11 +179,11 @@ func LocalLinkBuilderLoad(original Link) LinkBuilder {
 			id: "", name: "",
 			roles:        nil,
 			activity:     periods.NewEmptyPeriod(),
-			globalErrors: errors.New("nil value"),
+			globalErrors: errors.New("base link cannot be nil"),
 		}
 	}
 
-	newRoles := make(map[string]Linkable)
+	newRoles := make(map[string]Element)
 	for role, linkable := range original.Range {
 		newRoles[role] = linkable
 	}
@@ -232,9 +197,9 @@ func LocalLinkBuilderLoad(original Link) LinkBuilder {
 }
 
 // WithOperand adds an operand with the given role
-func (l *localLinkBuilder) WithOperand(role string, operand Linkable) LinkBuilder {
+func (l *localLinkBuilder) WithOperand(role string, operand Element) LinkBuilder {
 	if l.roles == nil {
-		l.roles = make(map[string]Linkable)
+		l.roles = make(map[string]Element)
 	}
 
 	if operand == nil {
@@ -290,7 +255,7 @@ func (l *localLinkBuilder) Build() (Link, error) {
 		return nil, errors.New("no roles defined for link")
 	}
 
-	rolesCopy := make(map[string]Linkable, len(l.roles))
+	rolesCopy := make(map[string]Element, len(l.roles))
 	for role, linkable := range l.roles {
 		rolesCopy[role] = linkable
 	}
