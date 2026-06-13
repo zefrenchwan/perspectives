@@ -92,3 +92,16 @@ func TestTraitSame(t *testing.T) {
 		t.Errorf("attributes count mismatch")
 	}
 }
+
+func TestTraitLoad(t *testing.T) {
+	trait, _ := objects.NewTraitBuilder().
+		WithName("Humans").
+		WithAttribute("age", "int").
+		Build()
+
+	if copyTrait, err := objects.TraitBuilderLoad(trait).Build(); err != nil {
+		t.Errorf("error when loading trait")
+	} else if !trait.Same(copyTrait) {
+		t.Errorf("trait mismatch")
+	}
+}
