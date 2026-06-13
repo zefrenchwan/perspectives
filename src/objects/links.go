@@ -67,8 +67,8 @@ type Link interface {
 type LinkBuilder interface {
 	// WithOperand adds an operand with the given role
 	WithOperand(role string, operand Linkable) LinkBuilder
-	// WithoutRole removes the given role and related content
-	WithoutRole(role string) LinkBuilder
+	// WithoutOperand removes the given operand and related content
+	WithoutOperand(role string) LinkBuilder
 	// WithActivity changes the activity period for the link
 	WithActivity(period periods.Period) LinkBuilder
 	// WithName changes the name of the link
@@ -199,8 +199,9 @@ type localLinkBuilder struct {
 // Id will not change over time.
 func NewLocalLinkBuilder(id string) LinkBuilder {
 	return &localLinkBuilder{
-		id:    id,
-		roles: make(map[string]Linkable),
+		id:       id,
+		roles:    make(map[string]Linkable),
+		activity: periods.NewEmptyPeriod(),
 	}
 }
 
@@ -239,14 +240,17 @@ func (l *localLinkBuilder) WithOperand(role string, operand Linkable) LinkBuilde
 	if operand == nil {
 		l.globalErrors = errors.Join(l.globalErrors, fmt.Errorf("operand cannot be nil for %s", role))
 		return l
+	} else if role == "" {
+		l.globalErrors = errors.Join(l.globalErrors, fmt.Errorf("role cannot be empty"))
+		return l
 	}
 
 	l.roles[role] = operand
 	return l
 }
 
-// WithoutRole removes the given role and related content
-func (l *localLinkBuilder) WithoutRole(role string) LinkBuilder {
+// WithoutOperand removes the given role and related content
+func (l *localLinkBuilder) WithoutOperand(role string) LinkBuilder {
 	if l.roles != nil {
 		delete(l.roles, role)
 	}
@@ -274,6 +278,18 @@ func (l *localLinkBuilder) Errors() error {
 // Build the link or raise an error.
 // Once used, it resets all values except the id.
 func (l *localLinkBuilder) Build() (Link, error) {
+	if l.roles == nil {
+		return nil, errors.New("no roles defined for link")
+	} else if l.name == "" {
+		return nil, errors.New("no name defined for link")
+	} else if l.id == "" {
+		return nil, errors.New("no id defined for link")
+	} else if l.globalErrors != nil {
+		return nil, l.globalErrors
+	} else if len(l.roles) == 0 {
+		return nil, errors.New("no roles defined for link")
+	}
+
 	rolesCopy := make(map[string]Linkable, len(l.roles))
 	for role, linkable := range l.roles {
 		rolesCopy[role] = linkable
@@ -286,13 +302,11 @@ func (l *localLinkBuilder) Build() (Link, error) {
 		activity: l.activity,
 	}
 
-	resultErr := l.globalErrors
-
-	// result the builder
+	// reset the builder
 	l.roles = nil
 	l.activity = periods.NewEmptyPeriod()
 	l.name = ""
 	l.globalErrors = nil
 
-	return result, resultErr
+	return result, nil
 }
