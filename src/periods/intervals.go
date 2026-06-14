@@ -649,49 +649,54 @@ func (i interval) union(other interval) []interval {
 	}}
 }
 
-// intervalsUnionAll returns the union of all values
+// intervalsUnionAll returns the union of all intervals using an optimized sweep-line algorithm (O(N log N)).
 func intervalsUnionAll(intervals []interval) []interval {
-	size := len(intervals)
-	if size <= 1 {
+	if len(intervals) <= 1 {
 		return intervals
 	}
 
-	// initialize for loop
-	var unions []interval
-	currents := make([]interval, size)
-	copy(currents, intervals)
-
-	// make as many unions as possible
-	for {
-		sizeBefore := len(currents)
-		for index, current := range currents {
-			if current.empty {
-				continue
-			}
-
-			for otherIndex, otherCurrrent := range currents {
-				if otherCurrrent.empty {
-					continue
-				}
-
-				if index < otherIndex {
-					localUnion := current.union(otherCurrrent)
-					for _, value := range localUnion {
-						if !slices.ContainsFunc(unions, func(i interval) bool { return intervalEquals(i, value) }) {
-							unions = append(unions, value)
-						}
-					}
-				}
-			}
+	var valid []interval
+	for _, i := range intervals {
+		if i.empty {
+			continue
+		} else if i.isFull() {
+			return []interval{i}
 		}
+		valid = append(valid, i)
+	}
 
-		sizeAfter := len(unions)
-		if sizeBefore == sizeAfter {
-			return unions
+	if len(valid) == 0 {
+		return []interval{}
+	} else if len(valid) == 1 {
+		return valid
+	}
+
+	slices.SortStableFunc(valid, intervalCompare)
+	var result []interval
+	current := valid[0]
+
+	for i := 1; i < len(valid); i++ {
+		next := valid[i]
+
+		merged := current.union(next)
+		if len(merged) == 1 {
+			current = merged[0]
+
+			if current.isFull() {
+				return []interval{current}
+			}
 		} else {
-			currents = unions
+			result = append(result, current)
+
+			// next interval becomes the new reference
+			current = next
 		}
 	}
+
+	// 4. Ne pas oublier de pousser le tout dernier intervalle accumulé
+	result = append(result, current)
+
+	return result
 }
 
 // remove removes other from i

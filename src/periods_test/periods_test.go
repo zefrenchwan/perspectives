@@ -7,6 +7,28 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
+func TestPeriodIsEmpty(t *testing.T) {
+	if !periods.NewEmptyPeriod().IsEmpty() {
+		t.Log("NewEmptyPeriod should be empty")
+		t.Fail()
+	}
+	if periods.NewFullPeriod().IsEmpty() {
+		t.Log("NewFullPeriod should not be empty")
+		t.Fail()
+	}
+}
+
+func TestPeriodCopy(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	original := periods.NewPeriodSince(now, true)
+	copied := original.Copy()
+
+	if !copied.Equals(original) {
+		t.Log("Copied period should equal the original")
+		t.Fail()
+	}
+}
+
 func TestPeriodComplements(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	value := periods.NewPeriodSince(now, true)
@@ -42,6 +64,26 @@ func TestPeriodComplements(t *testing.T) {
 	}
 }
 
+func TestFinitePeriodComplement(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	before := now.Add(-10 * time.Hour)
+	after := now.Add(10 * time.Hour)
+
+	// Period is [before, after]
+	value := periods.NewFinitePeriod(before, after, true, true)
+	complement := value.Complement()
+
+	// Expected is ]-oo, before[ U ]after, +oo[
+	expectedLeft := periods.NewPeriodUntil(before, false)
+	expectedRight := periods.NewPeriodSince(after, false)
+	expected := expectedLeft.Union(expectedRight)
+
+	if !expected.Equals(complement) {
+		t.Logf("Finite complement failed, expected %s got %s", expected.AsRawString(), complement.AsRawString())
+		t.Fail()
+	}
+}
+
 func TestIntersectionWithFull(t *testing.T) {
 	value := periods.NewFullPeriod()
 	now := time.Now()
@@ -73,6 +115,24 @@ func TestIntersectionWithOther(t *testing.T) {
 	result := otherValue.Intersection(value)
 	if !result.Equals(expected) {
 		t.Logf("intersection with other failed: got %s BUT EXPECTED %s", result.AsRawString(), expected.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestIntersectionDisjoint(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	t1 := now.Add(1 * time.Hour)
+	t2 := now.Add(2 * time.Hour)
+	t3 := now.Add(3 * time.Hour)
+	t4 := now.Add(4 * time.Hour)
+
+	// [t1, t2] intersection [t3, t4] -> mathematically empty
+	p1 := periods.NewFinitePeriod(t1, t2, true, true)
+	p2 := periods.NewFinitePeriod(t3, t4, true, true)
+
+	result := p1.Intersection(p2)
+	if !result.IsEmpty() {
+		t.Logf("Disjoint intersection should be empty, got %s", result.AsRawString())
 		t.Fail()
 	}
 }
@@ -120,6 +180,43 @@ func TestInfiniteUnion(t *testing.T) {
 	result = second.Union(first)
 	if !result.Equals(expected) {
 		t.Logf("union to make full failed: got %s", result.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestComplexUnion(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	t1 := now.Add(1 * time.Hour)
+	t2 := now.Add(2 * time.Hour)
+	t3 := now.Add(3 * time.Hour)
+	t4 := now.Add(4 * time.Hour)
+
+	// Overlapping union: [t1, t3] U [t2, t4] -> [t1, t4]
+	p1 := periods.NewFinitePeriod(t1, t3, true, true)
+	p2 := periods.NewFinitePeriod(t2, t4, true, true)
+	res1 := p1.Union(p2)
+	exp1 := periods.NewFinitePeriod(t1, t4, true, true)
+	if !res1.Equals(exp1) {
+		t.Logf("Union with overlap failed: got %s", res1.AsRawString())
+		t.Fail()
+	}
+
+	// Contiguous union: [t1, t2] U ]t2, t3] -> [t1, t3]
+	p3 := periods.NewFinitePeriod(t1, t2, true, true)
+	p4 := periods.NewFinitePeriod(t2, t3, false, true)
+	res2 := p3.Union(p4)
+	exp2 := periods.NewFinitePeriod(t1, t3, true, true)
+	if !res2.Equals(exp2) {
+		t.Logf("Contiguous union failed: got %s", res2.AsRawString())
+		t.Fail()
+	}
+
+	// Disjoint union: [t1, t2] U [t3, t4] -> keeps both disjoint intervals
+	p5 := periods.NewFinitePeriod(t1, t2, true, true)
+	p6 := periods.NewFinitePeriod(t3, t4, true, true)
+	res3 := p5.Union(p6)
+	if res3.IsEmpty() {
+		t.Log("Disjoint union should not be empty")
 		t.Fail()
 	}
 }
@@ -177,6 +274,45 @@ func TestPeriodContains(t *testing.T) {
 	}
 }
 
+func TestPeriodIsIncludedIn(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	t1 := now.Add(1 * time.Hour)
+	t2 := now.Add(2 * time.Hour)
+	t3 := now.Add(3 * time.Hour)
+	t4 := now.Add(4 * time.Hour)
+
+	large := periods.NewFinitePeriod(t1, t4, true, true)
+	small := periods.NewFinitePeriod(t2, t3, true, true)
+	overlapping := periods.NewFinitePeriod(t3, now.Add(5*time.Hour), true, true)
+
+	if !small.IsIncludedIn(large) {
+		t.Log("Small should be included in large")
+		t.Fail()
+	}
+
+	if large.IsIncludedIn(small) {
+		t.Log("Large should not be included in small")
+		t.Fail()
+	}
+
+	if overlapping.IsIncludedIn(large) {
+		t.Log("Overlapping interval should not be completely included")
+		t.Fail()
+	}
+
+	empty := periods.NewEmptyPeriod()
+	if !empty.IsIncludedIn(large) {
+		t.Log("Empty period should be mathematically included in any period")
+		t.Fail()
+	}
+
+	full := periods.NewFullPeriod()
+	if !large.IsIncludedIn(full) {
+		t.Log("Any finite period should be included in full space")
+		t.Fail()
+	}
+}
+
 func TestPeriodRemove(t *testing.T) {
 	now := time.Now().Truncate(time.Hour)
 	before := now.AddDate(-10, 0, 0)
@@ -187,6 +323,45 @@ func TestPeriodRemove(t *testing.T) {
 	expected := periods.NewPeriodUntil(before, false).Union(periods.NewFinitePeriod(now, after, true, true))
 	if !remaining.Equals(expected) {
 		t.Logf("Failed to remove period, got %s but expected %s", remaining.AsRawString(), expected.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestPeriodRemoveSplitting(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	t1 := now.Add(1 * time.Hour)
+	t2 := now.Add(2 * time.Hour)
+	t3 := now.Add(3 * time.Hour)
+	t4 := now.Add(4 * time.Hour)
+
+	base := periods.NewFinitePeriod(t1, t4, true, true)
+	hole := periods.NewFinitePeriod(t2, t3, true, true)
+
+	res := base.Remove(hole)
+	// We expect [t1, t2[ U ]t3, t4]
+	expLeft := periods.NewFinitePeriod(t1, t2, true, false)
+	expRight := periods.NewFinitePeriod(t3, t4, false, true)
+	expected := expLeft.Union(expRight)
+
+	if !res.Equals(expected) {
+		t.Logf("Failed to split interval via hole removal, got %s but expected %s", res.AsRawString(), expected.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestPeriodRemoveDisjoint(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	t1 := now.Add(1 * time.Hour)
+	t2 := now.Add(2 * time.Hour)
+	t3 := now.Add(3 * time.Hour)
+	t4 := now.Add(4 * time.Hour)
+
+	base := periods.NewFinitePeriod(t1, t2, true, true)
+	toRemove := periods.NewFinitePeriod(t3, t4, true, true)
+
+	res := base.Remove(toRemove)
+	if !res.Equals(base) {
+		t.Logf("Failed to remove disjoint period, got %s but expected %s", res.AsRawString(), base.AsRawString())
 		t.Fail()
 	}
 }
@@ -211,7 +386,41 @@ func TestPeriodRemoveLargerPeriod(t *testing.T) {
 		t.Log("remaining should be empty because toRemove contains period")
 		t.Fail()
 	}
+}
 
+func TestPeriodRemoveFromEmpty(t *testing.T) {
+	p := periods.NewEmptyPeriod()
+	res := p.Remove(periods.NewFullPeriod())
+	if !res.Equals(p) {
+		t.Logf("failed to remove from empty period, got %s", res.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestFinitePeriodEdgeCases(t *testing.T) {
+	now := time.Now().Truncate(time.Hour)
+	before := now.Add(-1 * time.Hour)
+
+	// Math edge case 1: min > max -> should be empty
+	inverted := periods.NewFinitePeriod(now, before, true, true)
+	if !inverted.IsEmpty() {
+		t.Log("Inverted boundaries period (min > max) should be empty")
+		t.Fail()
+	}
+
+	// Math edge case 2: min == max but boundaries excluded -> should be empty
+	pointExcluded := periods.NewFinitePeriod(now, now, false, false)
+	if !pointExcluded.IsEmpty() {
+		t.Log("Point period with excluded boundaries should be empty")
+		t.Fail()
+	}
+
+	// Math edge case 3: min == max and boundaries included -> valid point interval
+	pointIncluded := periods.NewFinitePeriod(now, now, true, true)
+	if pointIncluded.IsEmpty() || !pointIncluded.Contains(now) {
+		t.Log("Point period with included boundaries should be valid and contain the exact point")
+		t.Fail()
+	}
 }
 
 func TestPeriodSerde(t *testing.T) {
@@ -247,6 +456,22 @@ func TestPeriodSerde(t *testing.T) {
 	}
 }
 
+func TestPeriodLoadErrors(t *testing.T) {
+	badPartitions := [][]string{
+		{"invalid-string"},
+		{"[2024-01-01;]"}, // malformed parts
+		{"-oo;+oo"},       // missing boundaries
+		{"]foo;bar["},     // invalid dates
+	}
+
+	for _, parts := range badPartitions {
+		if _, err := periods.PeriodLoad(parts); err == nil {
+			t.Logf("Expected error for malformed partition %v, but got none", parts)
+			t.Fail()
+		}
+	}
+}
+
 func TestPeriodInfiniteBoundaries(t *testing.T) {
 	now := time.Now().Truncate(1 * time.Hour)
 	before := now.AddDate(-1, 0, 0)
@@ -272,15 +497,6 @@ func TestPeriodFiniteBoundaries(t *testing.T) {
 	expected := periods.NewFinitePeriod(before, evenAfter, false, true)
 	if !expected.Equals(res) {
 		t.Logf("failed to find finite intervals as boundaries, got %s", res.AsRawString())
-		t.Fail()
-	}
-}
-
-func TestPeriodRemoveFromEmpty(t *testing.T) {
-	p := periods.NewEmptyPeriod()
-	res := p.Remove(periods.NewFullPeriod())
-	if !res.Equals(p) {
-		t.Logf("failed to remove from empty period, got %s", res.AsRawString())
 		t.Fail()
 	}
 }

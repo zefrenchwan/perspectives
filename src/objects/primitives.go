@@ -3,17 +3,28 @@ package objects
 import (
 	"fmt"
 	"math"
-	"reflect"
 	"time"
 
 	"github.com/zefrenchwan/perspectives.git/configuration"
 )
 
+// ===================================================
+// DESIGN INFORMATION
+// This code was optimized for performance.
+// It means that if you change primitive types, you should check the full code file.
+// Many times here, code contains switch statements with duplicated code.
+// It means that adding or removing a primitive type might fail in the switch statements.
+// ===================================================
+
+// primitiveActions store operands to apply on primitive types.
 type primitiveActions struct {
-	equals   func(any, any) bool
+	// equals operator on a specified type
+	equals func(any, any) bool
+	// toString operator on a specified type
 	toString func(any) string
 }
 
+// defaultValues returns default primitive actions (int, string, bool)
 func defaultValues() primitiveActions {
 	return primitiveActions{
 		equals:   defaultEquals,
@@ -21,6 +32,7 @@ func defaultValues() primitiveActions {
 	}
 }
 
+// float32Actions returns primitive actions for float32 type
 func float32Actions() primitiveActions {
 	return primitiveActions{
 		equals:   equalsFloat32,
@@ -28,6 +40,7 @@ func float32Actions() primitiveActions {
 	}
 }
 
+// float64Actions returns primitive actions for float64 type
 func float64Actions() primitiveActions {
 	return primitiveActions{
 		equals:   equalsFloat32,
@@ -35,6 +48,7 @@ func float64Actions() primitiveActions {
 	}
 }
 
+// timeActions returns primitive actions for time.Time type
 func timeActions() primitiveActions {
 	return primitiveActions{
 		equals:   equalsTime,
@@ -42,8 +56,8 @@ func timeActions() primitiveActions {
 	}
 }
 
-// allowedPrimitives is the part to change to add / remove primitive types.
-// As a single source of truth, it associates the name of the primitive type with the corresponding equality function.
+// allowedPrimitives associates the name of the primitive type with the corresponding equality function.
+// It is NOT the unique source of truth, code was optimized for performance.
 var allowedPrimitives = map[string]primitiveActions{
 	"int":       defaultValues(),
 	"int32":     defaultValues(),
@@ -66,14 +80,20 @@ func primitiveTypeName(v any) string {
 	if v == nil {
 		return ""
 	}
-
-	// reflect.TypeOf().String() is slower than case switch for sure,
-	// BUT it reduces readability.
-	name := reflect.TypeOf(v).String()
-	if IsPrimitiveTypeName(name) {
-		return name
+	switch v.(type) {
+	case int, int32, int64:
+		return "int"
+	case float64:
+		return "float64"
+	case string:
+		return "string"
+	case bool:
+		return "bool"
+	case time.Time:
+		return "time.Time"
+	default:
+		return ""
 	}
-	return ""
 }
 
 // primitiveTypeEqualsFunc returns the function to use for comparing primitive types.
@@ -90,20 +110,18 @@ func IsPrimitiveValue(v any) bool {
 }
 
 func primitiveValueToString(v any) string {
-	if v == nil {
-		return ""
+	if value, ok := v.(time.Time); ok {
+		return timeString(value)
+	} else {
+		return fmt.Sprintf("%v", v)
 	}
-	name := reflect.TypeOf(v).String()
-	if fn, ok := allowedPrimitives[name]; ok {
-		return fn.toString(v)
-	}
-	return fmt.Sprintf("%v", v)
 }
 
 // ===========================================================================
 // STRING FUNCTIONS FOR DEDICATED TYPES
 // ===========================================================================
 
+// defaultString is how to convert a primitive value to a string by default.
 func defaultString(v any) string {
 	if v == nil {
 		return ""
@@ -112,6 +130,8 @@ func defaultString(v any) string {
 	return fmt.Sprintf("%v", v)
 }
 
+// timeString is dedicated to time.Time values.
+// It returns either an empty string (not a time.Time instance) or a formatted time string based on the configuration.
 func timeString(v any) string {
 	if v == nil {
 		return ""
