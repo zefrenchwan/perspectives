@@ -19,4 +19,6 @@ type Element interface {
 	DeclaringClass() Class
 	// we use the sealed interface to manage linkable types
 	isLinkable() bool
+	// we use toHashString to manage sames without full link walks
+	toHashString() string
 }

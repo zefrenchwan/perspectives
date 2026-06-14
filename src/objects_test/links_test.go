@@ -8,6 +8,36 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
+func TestLinkSame(t *testing.T) {
+	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
+	other, _ := objects.NewLocalInstanceBuilder("other").WithActivity(periods.NewFullPeriod()).Build()
+	reference, _ := objects.NewLocalLinkBuilder("links:is").
+		WithName("is").
+		WithOperand("subject", instance).
+		WithOperand("object", other).
+		Build()
+
+	noMatchName, _ := objects.NewLocalLinkBuilder("links:other").
+		WithName("is not").
+		WithOperand("subject", instance).
+		WithOperand("object", other).
+		Build()
+
+	noMatchOperand, _ := objects.NewLocalLinkBuilder("links:is").
+		WithName("is").
+		WithOperand("subject", other).
+		WithOperand("object", instance).
+		Build()
+
+	if !reference.Same(reference) {
+		t.Errorf("Expected link to be the same as itself")
+	} else if reference.Same(noMatchName) {
+		t.Errorf("Expected link to be different from another link with different name")
+	} else if reference.Same(noMatchOperand) {
+		t.Errorf("Expected link to be different from another link with different operand")
+	}
+}
+
 func TestBuildLinks(t *testing.T) {
 	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
 	trait, _ := objects.NewTraitBuilder().WithName("Animals").Build()

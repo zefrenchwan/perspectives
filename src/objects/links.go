@@ -55,11 +55,22 @@ type localLink struct {
 	roles map[string]Element
 	// activity period of the link
 	activity periods.Period
+	// hashString is the hash of the link
+	hashString string
 }
 
 // isLinkable uses sealed pattern to ensure that localLink instances can satisfy the Linkable interface requirements.
 func (l *localLink) isLinkable() bool {
 	return true
+}
+
+// toHashString returns the hash of the link
+func (l *localLink) toHashString() string {
+	if l == nil {
+		return ""
+	}
+
+	return l.hashString
 }
 
 // Id returns the id of the link
@@ -86,28 +97,9 @@ func (l *localLink) Same(other Element) bool {
 	if otherLink, ok := other.(Link); ok {
 		if l.Id() != otherLink.Id() {
 			return false
-		} else if otherLink.Name() != l.Name() {
-			return false
-		} else if !otherLink.Activity().Equals(l.Activity()) {
-			return false
+		} else {
+			return otherLink.toHashString() == l.toHashString()
 		}
-
-		counter := 0
-		for otherRole, otherLinkable := range otherLink.Range {
-			if value, found := l.roles[otherRole]; !found {
-				return false
-			} else if !value.Same(otherLinkable) {
-				return false
-			}
-
-			counter++
-		}
-
-		if counter != len(l.roles) {
-			return false
-		}
-
-		return true
 	}
 
 	return false
@@ -266,6 +258,8 @@ func (l *localLinkBuilder) Build() (Link, error) {
 		roles:    rolesCopy,
 		activity: l.activity,
 	}
+
+	result.hashString = hashLink(result)
 
 	// reset the builder
 	l.roles = nil

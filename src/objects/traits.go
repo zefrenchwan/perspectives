@@ -40,6 +40,16 @@ type TraitBuilder interface {
 type baseTrait struct {
 	name       string            // name of the trait, should be unique
 	attributes map[string]string // attributes of the trait, as name and type
+	hashString string            // hashString as the hashed content, calculated once
+}
+
+// toHashString returns the hashString as the hashed content, calculated once
+func (t *baseTrait) toHashString() string {
+	if t == nil {
+		return ""
+	}
+
+	return t.hashString
 }
 
 // Id returns the name of the trait, should be unique
@@ -91,24 +101,7 @@ func (t *baseTrait) Same(other Element) bool {
 		return false
 	}
 
-	// Compare against the interface method rather than internal fields
-	if t.name != otherTrait.Name() {
-		return false
-	}
-
-	// now, test attributes
-	if len(t.attributes) != len(otherTrait.Attributes()) {
-		return false
-	}
-
-	otherAttributes := otherTrait.Attributes()
-	for attr, attrType := range t.attributes {
-		if otherType, found := otherAttributes[attr]; !found || attrType != otherType {
-			return false
-		}
-	}
-
-	return true
+	return t.toHashString() == otherTrait.toHashString()
 }
 
 // Attributes returns a copy of all attributes of the trait (key) and type (value)
@@ -197,6 +190,9 @@ func (t *baseTraitBuilder) Build() (Trait, error) {
 		attributes: attributes,
 	}
 
+	result.hashString = hashTrait(result)
+
+	// then reset
 	t.name = ""
 	t.globalErrors = nil
 	t.attributes = make(map[string]string)

@@ -14,7 +14,7 @@ type DynamicValues interface {
 	// Validity returns the period the values are set for.
 	// Basically, it is empty for nil or empty, the union of periods for values otherwise
 	Validity() periods.Period
-	// Same returns true if instance is the same as another TimeDependentValues.
+	// Same returns true if instance is the same as another DynamicValues.
 	// It means : same periods, same values, same underlying type
 	Same(other DynamicValues) bool
 	// IsEmpty checks if the TimeDependentValues collection is empty (no value on a non empty period)
@@ -240,12 +240,22 @@ type baseInstance struct {
 	activity periods.Period
 	// values are the temporal values associated with their attributes names
 	values map[string]*valuesHandler
+	// hashString is the hash of the instance
+	hashString string
 }
 
 // isLinkable is a SEALED INTERFACE pattern implementation.
 // It allows instances to be linked to other elements.
 func (b *baseInstance) isLinkable() bool {
 	return true
+}
+
+// toHashString returns the hash of the instance
+func (b *baseInstance) toHashString() string {
+	if b == nil {
+		return ""
+	}
+	return b.hashString
 }
 
 // Same returns true if the instance is the same as the other element : same class, same id, same period, same values
@@ -265,34 +275,23 @@ func (b *baseInstance) Same(other Element) bool {
 		return false
 	}
 
-	if !b.activity.Equals(otherInstance.Activity()) {
-		return false
-	}
-
-	counter := 0
-	for name, content := range otherInstance.Values() {
-		counter++
-		if matching, found := b.values[name]; !found {
-			return false
-		} else if !matching.Same(content) {
-			return false
-		}
-	}
-
-	if len(b.values) != counter {
-		return false
-	}
-
-	return true
+	return b.toHashString() == otherInstance.toHashString()
 }
 
 // Activity returns the period during which the instance is valid
 func (b *baseInstance) Activity() periods.Period {
+	if b == nil {
+		return periods.NewEmptyPeriod()
+	}
 	return b.activity
 }
 
 // Id returns the id of the instance
 func (b *baseInstance) Id() string {
+	if b == nil {
+		return ""
+	}
+
 	return b.id
 }
 
@@ -348,6 +347,10 @@ func (b *baseInstance) Matches(trait Trait) (periods.Period, bool) {
 // Description returns a map of attribute names to their data types
 func (b *baseInstance) Description() map[string]string {
 	result := make(map[string]string)
+	if b == nil {
+		return result
+	}
+
 	for attribute, content := range b.values {
 		result[attribute] = content.DataType()
 	}
@@ -369,7 +372,8 @@ func (b *baseInstance) Value(attribute string) (DynamicValues, bool) {
 	return value, found
 }
 
-// newBaseInstance returns an empty baseInstance
+// newBaseInstance returns an empty baseInstance.
+// It does NOT set the hash, pay attention
 func newBaseInstance(id string) *baseInstance {
 	return &baseInstance{
 		id:       id,
@@ -395,6 +399,8 @@ func baseInstanceLoad(other Instance) *baseInstance {
 
 		result.values[attribute] = handler
 	}
+
+	result.hashString = hashInstance(result)
 	return result
 }
 
@@ -561,5 +567,6 @@ func (b *LocalInstanceBuilder) Build() (Instance, error) {
 		return nil, resultErr
 	}
 
+	result.hashString = hashInstance(result)
 	return result, resultErr
 }

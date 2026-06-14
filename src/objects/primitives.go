@@ -1,6 +1,7 @@
 package objects
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"time"
@@ -8,24 +9,50 @@ import (
 	"github.com/zefrenchwan/perspectives.git/configuration"
 )
 
+type primitiveActions struct {
+	equals   func(any, any) bool
+	toString func(any) string
+}
+
+func defaultValues() primitiveActions {
+	return primitiveActions{
+		equals:   defaultEquals,
+		toString: defaultString,
+	}
+}
+
+func float32Actions() primitiveActions {
+	return primitiveActions{
+		equals:   equalsFloat32,
+		toString: defaultString,
+	}
+}
+
+func float64Actions() primitiveActions {
+	return primitiveActions{
+		equals:   equalsFloat32,
+		toString: defaultString,
+	}
+}
+
+func timeActions() primitiveActions {
+	return primitiveActions{
+		equals:   equalsTime,
+		toString: timeString,
+	}
+}
+
 // allowedPrimitives is the part to change to add / remove primitive types.
 // As a single source of truth, it associates the name of the primitive type with the corresponding equality function.
-var allowedPrimitives = map[string]func(any, any) bool{
-	"int": defaultEquals,
-	//"int8":      defaultEquals,
-	//"int16":     defaultEquals,
-	"int32": defaultEquals,
-	"int64": defaultEquals,
-	//"uint":      defaultEquals,
-	//"uint8":     defaultEquals,
-	//"uint16":    defaultEquals,
-	//"uint32":    defaultEquals,
-	//"uint64":    defaultEquals,
-	"float32":   equalsFloat32,
-	"float64":   equalsFloat64,
-	"string":    defaultEquals,
-	"bool":      defaultEquals,
-	"time.Time": equalsTime,
+var allowedPrimitives = map[string]primitiveActions{
+	"int":       defaultValues(),
+	"int32":     defaultValues(),
+	"int64":     defaultValues(),
+	"float32":   float32Actions(),
+	"float64":   float64Actions(),
+	"string":    defaultValues(),
+	"bool":      defaultValues(),
+	"time.Time": timeActions(),
 }
 
 // IsPrimitiveTypeName checks if the given name is a primitive type name.
@@ -52,14 +79,48 @@ func primitiveTypeName(v any) string {
 // primitiveTypeEqualsFunc returns the function to use for comparing primitive types.
 func primitiveTypeEqualsFunc(typeName string) func(any, any) bool {
 	if fn, ok := allowedPrimitives[typeName]; ok {
-		return fn
+		return fn.equals
 	}
-	return defaultEquals // Fallback par défaut ou nil selon tes préférences
+	return defaultEquals
 }
 
 // IsPrimitiveValue checks whether any is a primitive type instance or not.
 func IsPrimitiveValue(v any) bool {
 	return primitiveTypeName(v) != ""
+}
+
+func primitiveValueToString(v any) string {
+	if v == nil {
+		return ""
+	}
+	name := reflect.TypeOf(v).String()
+	if fn, ok := allowedPrimitives[name]; ok {
+		return fn.toString(v)
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+// ===========================================================================
+// STRING FUNCTIONS FOR DEDICATED TYPES
+// ===========================================================================
+
+func defaultString(v any) string {
+	if v == nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%v", v)
+}
+
+func timeString(v any) string {
+	if v == nil {
+		return ""
+	}
+	t, ok := v.(time.Time)
+	if !ok {
+		return ""
+	}
+	return t.Format(configuration.TIME_FORMAT)
 }
 
 // ===========================================================================

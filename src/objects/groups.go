@@ -1,6 +1,7 @@
 package objects
 
 import (
+	"cmp"
 	"slices"
 	"strings"
 
@@ -28,11 +29,22 @@ type baseCollection struct {
 	id string
 	// elements maps instance IDs to their corresponding Instance objects for O(1) access.
 	elements map[string]Instance
+	// hashString is the hash of the collection
+	hashString string
 }
 
 // Id returns the unique identifier for the collection.
 func (b *baseCollection) Id() string {
 	return b.id
+}
+
+// toHashString returns the hash of the collection
+func (b *baseCollection) toHashString() string {
+	if b == nil {
+		return ""
+	}
+
+	return b.hashString
 }
 
 // DeclaringClass returns the class for this collection: a CLASS_INSTANCES_COLLECTION.
@@ -61,21 +73,7 @@ func (b *baseCollection) Same(other Element) bool {
 		return false
 	}
 
-	// Fast path: if sizes differ, they cannot be the same.
-	if b.Size() != otherCollection.Size() {
-		return false
-	}
-
-	// Check if all elements in the other collection exist in this one.
-	for instance := range otherCollection.Range {
-		if instance == nil {
-			return false
-		} else if _, found := b.elements[instance.Id()]; !found {
-			return false
-		}
-	}
-
-	return true
+	return b.toHashString() == otherCollection.toHashString()
 }
 
 // SortedInstances returns a sorted slice of all instances within the collection.
@@ -91,7 +89,7 @@ func (b *baseCollection) SortedInstances() []Instance {
 	}
 
 	slices.SortFunc(elements, func(a, b Instance) int {
-		return strings.Compare(a.Id(), b.Id())
+		return cmp.Compare(a.Id(), b.Id())
 	})
 
 	return elements
@@ -110,7 +108,8 @@ func (b *baseCollection) Contains(i Instance) bool {
 	if i == nil || b == nil {
 		return false
 	}
-	return b.elements[i.Id()] != nil
+	_, exists := b.elements[i.Id()]
+	return exists
 }
 
 // Range iterates over all instances in the collection and yields each to the provided function.
@@ -132,23 +131,28 @@ func NewSetOfInstances(instances []Instance) SetOfInstances {
 
 	// Step 1: Populate the map to guarantee deduplication and ignore nil values.
 	for _, instance := range instances {
-		if instance == nil {
-			continue
+		if instance != nil {
+			elements[instance.Id()] = instance
 		}
-		elements[instance.Id()] = instance
 	}
 
 	// Step 2: Generate the ID from the deduplicated elements.
 	allIds := make([]string, 0, len(elements))
-	for id := range elements {
+	allHashes := make([]string, 0, len(elements))
+	for id, instance := range elements {
 		allIds = append(allIds, id)
+		allHashes = append(allHashes, hashInstance(instance))
 	}
 
 	slices.Sort(allIds)
+	slices.Sort(allHashes)
 	commonId := commons.HashString(strings.Join(allIds, ","))
 
-	return &baseCollection{
+	result := &baseCollection{
 		id:       commonId,
 		elements: elements,
 	}
+
+	result.hashString = commons.HashString(strings.Join(allHashes, ","))
+	return result
 }
