@@ -5,8 +5,7 @@ package objects
 // It should be :
 // EITHER A LINK (link composition)
 // OR AN INSTANCE (instance as operand) OR A SET OF INSTANCES (as a collection),
-// OR A TRAIT (trait as operand)
-// OR A VARIABLE (for pattern matching).
+// OR A TRAIT (trait as operand).
 // To do so, we use the sealed interface :
 // we include a private function to force that no other type can implement it.
 // This way, element are linkable types and can only be implemented within this package.
