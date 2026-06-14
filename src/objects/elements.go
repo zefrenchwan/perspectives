@@ -4,7 +4,7 @@ package objects
 // It has an identifier and Same implementation has to be consistent with the identifier.
 // It should be :
 // EITHER A LINK (link composition)
-// OR AN INSTANCE (instance as operand),
+// OR AN INSTANCE (instance as operand) OR A SET OF INSTANCES (as a collection),
 // OR A TRAIT (trait as operand)
 // OR A VARIABLE (for pattern matching).
 // To do so, we use the sealed interface :
