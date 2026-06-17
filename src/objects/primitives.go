@@ -43,7 +43,7 @@ func float32Actions() primitiveActions {
 // float64Actions returns primitive actions for float64 type
 func float64Actions() primitiveActions {
 	return primitiveActions{
-		equals:   equalsFloat32,
+		equals:   equalsFloat64,
 		toString: defaultString,
 	}
 }
@@ -81,8 +81,14 @@ func primitiveTypeName(v any) string {
 		return ""
 	}
 	switch v.(type) {
-	case int, int32, int64:
+	case int:
 		return "int"
+	case int32:
+		return "int32"
+	case int64:
+		return "int64"
+	case float32:
+		return "float32"
 	case float64:
 		return "float64"
 	case string:

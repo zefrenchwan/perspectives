@@ -1,6 +1,7 @@
 package objects_test
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/zefrenchwan/perspectives.git/objects"
@@ -23,10 +24,13 @@ func TestTraitBuilder(t *testing.T) {
 		t.Errorf("trait with name and attribute should be OK")
 	} else if trait.Name() != "Humans" {
 		t.Errorf("error when passing name")
-	} else if attrs := trait.Attributes(); len(attrs) != 1 {
-		t.Errorf("error when passing attribute")
-	} else if attrs["age"] != "int" {
-		t.Errorf("error when reading attribute type")
+	} else {
+		attributes := maps.Collect(trait.Range)
+		if len(attributes) != 1 {
+			t.Errorf("error when passing attribute")
+		} else if attributes["age"] != "int" {
+			t.Errorf("error when reading attribute type")
+		}
 	}
 
 	if trait, err := objects.NewTraitBuilder().WithName("Humans").
@@ -40,7 +44,7 @@ func TestTraitBuilder(t *testing.T) {
 		t.Errorf("trait with name and attribute should be OK")
 	} else if trait.Name() != "Humans" {
 		t.Errorf("error when passing name")
-	} else if attrs := trait.Attributes(); len(attrs) != 1 {
+	} else if attrs := maps.Collect(trait.Range); len(attrs) != 1 {
 		t.Errorf("error when passing attribute")
 	} else if attrs["age"] != "int" {
 		t.Errorf("error when reading attribute type")

@@ -1,6 +1,7 @@
 package objects_test
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -32,7 +33,7 @@ func TestBuildFromScratch(t *testing.T) {
 		t.Errorf("expected 1 value, got %d", len(values))
 	} else if values["name"] != "John" {
 		t.Errorf("expected 'John', got '%s'", values["name"])
-	} else if description := instance.Description(); len(description) != 1 {
+	} else if description := maps.Collect(instance.Description); len(description) != 1 {
 		t.Error("description should not be empty")
 	} else if description["name"] != "string" {
 		t.Errorf("expected 'string', got '%s'", description["name"])
@@ -63,7 +64,7 @@ func TestBuildFromOther(t *testing.T) {
 		t.Errorf("expected 1 value, got %d", len(values))
 	} else if values["name"] != "John" {
 		t.Errorf("expected 'John', got '%s'", values["name"])
-	} else if description := other.Description(); len(description) != 1 {
+	} else if description := maps.Collect(other.Description); len(description) != 1 {
 		t.Error("description should not be empty")
 	} else if description["name"] != "string" {
 		t.Errorf("expected 'string', got '%s'", description["name"])

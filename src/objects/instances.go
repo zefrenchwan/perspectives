@@ -35,12 +35,11 @@ type Instance interface {
 	Element
 	// Activity returns the global activity period this instance lasts
 	Activity() periods.Period
-	// Description returns a map of attribute names to their data types.
+	// Description iterates over attribute names and their data types.
 	// They cannot change over time : it is impossible to change the type of an attribute once it is defined.
-	Description() map[string]string
-	// Values returns the attributes and their values at a given moment in time.
-	// The map keys are attribute names, and the values are the values of those attributes over time
-	Values() map[string]DynamicValues
+	Description(yield func(attribute string, dataType string) bool)
+	// Values allow range iteration over the attributes and their values over time.
+	Values(yield func(attribute string, value DynamicValues) bool)
 	// Value returns, if any, the values over time for that given attribute
 	Value(attribute string) (DynamicValues, bool)
 	// At returns, if any, the values of all attributes at a given moment in time.
@@ -328,7 +327,7 @@ func (b *baseInstance) Matches(trait Trait) (periods.Period, bool) {
 	}
 
 	matchingPeriod := b.activity
-	for attribute, attributeType := range trait.Attributes() {
+	for attribute, attributeType := range trait.Range {
 		// early test : leave when no match
 		if matchingPeriod.IsEmpty() {
 			return periods.NewEmptyPeriod(), false
@@ -344,26 +343,26 @@ func (b *baseInstance) Matches(trait Trait) (periods.Period, bool) {
 	return matchingPeriod, !matchingPeriod.IsEmpty()
 }
 
-// Description returns a map of attribute names to their data types
-func (b *baseInstance) Description() map[string]string {
-	result := make(map[string]string)
+// Description iterates over the metadata of the instance
+func (b *baseInstance) Description(yield func(attributeName string, attributeType string) bool) {
 	if b == nil {
-		return result
+		return
 	}
 
 	for attribute, content := range b.values {
-		result[attribute] = content.DataType()
+		if !yield(attribute, content.DataType()) {
+			return
+		}
 	}
-	return result
 }
 
-// Values returns a copy of the temporal values associated with their attribute names
-func (b *baseInstance) Values() map[string]DynamicValues {
-	result := make(map[string]DynamicValues)
+// Values iterates over the attributes values by name.
+func (b *baseInstance) Values(yield func(attributeName string, attributeValues DynamicValues) bool) {
 	for attribute, content := range b.values {
-		result[attribute] = content
+		if !yield(attribute, content) {
+			return
+		}
 	}
-	return result
 }
 
 // Value returns the temporal values associated with the given attribute name, if it exists
@@ -389,7 +388,7 @@ func baseInstanceLoad(other Instance) *baseInstance {
 	result.id = other.Id()
 	result.activity = other.Activity()
 	result.values = make(map[string]*valuesHandler)
-	for attribute, content := range other.Values() {
+	for attribute, content := range other.Values {
 		handler := new(valuesHandler)
 		handler.storedType = content.DataType()
 		handler.equals = primitiveTypeEqualsFunc(handler.storedType)
@@ -525,7 +524,7 @@ func (b *LocalInstanceBuilder) WithoutAttributeDuring(attribute string, period p
 // Cut reduces the whole instance (activity and values) to given period.
 // It returns the builder for method chaining.
 func (b *LocalInstanceBuilder) Cut(period periods.Period) InstanceBuilder {
-	empty := &baseInstance{activity: periods.NewEmptyPeriod(), values: make(map[string]*valuesHandler)}
+	empty := &baseInstance{id: b.element.id, activity: periods.NewEmptyPeriod(), values: make(map[string]*valuesHandler)}
 	if period.IsEmpty() {
 		b.element = empty
 		return b

@@ -11,8 +11,9 @@ type Trait interface {
 	Element
 	// Name returns the name of the trait, should be unique
 	Name() string
-	// Attributes returns the attributes of the trait, as name and type
-	Attributes() map[string]string
+	// Range defines an iterator for range.
+	// It is better than a defensive content copy, because this one does not allocate memory.
+	Range(yield func(name string, expectedType string) bool)
 }
 
 // TraitBuilder is the interface for building traits.
@@ -104,18 +105,17 @@ func (t *baseTrait) Same(other Element) bool {
 	return t.toHashString() == otherTrait.toHashString()
 }
 
-// Attributes returns a copy of all attributes of the trait (key) and type (value)
-// A defensive copy is returned to enforce immutability.
-func (t *baseTrait) Attributes() map[string]string {
-	if t == nil || t.attributes == nil {
-		return nil
+// Range applies an iterator over the content, letting users manage a defensive copy if ncessary
+func (t *baseTrait) Range(yield func(string, string) bool) {
+	if t == nil {
+		return
 	}
 
-	result := make(map[string]string, len(t.attributes))
 	for k, v := range t.attributes {
-		result[k] = v
+		if !yield(k, v) {
+			return
+		}
 	}
-	return result
 }
 
 // baseTraitBuilder is a builder for Trait instances that avoids reconstructing the trait many times.
@@ -218,7 +218,9 @@ func TraitBuilderLoad(other Trait) TraitBuilder {
 	}
 
 	attributes := make(map[string]string)
-	maps.Copy(attributes, other.Attributes())
+	for k, v := range other.Range {
+		attributes[k] = v
+	}
 
 	return &baseTraitBuilder{
 		name:       other.Name(),
