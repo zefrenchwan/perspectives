@@ -66,3 +66,12 @@ Paul's lifetime is an interval `[now() - 18 years, +oo[` and the `FRIEND_OF` lin
 
 #### Example: Knowledge Management
 `Link:Knows(Subject=Paul, Object=Likes(Subject=Marie, Object=John))`
+
+### The observable model
+
+There are two moments: 
+1. When a change actually happens => we use links, traits and instances to remember that information 
+2. When we observe the system => we use relations (for links), entities (for instances) and concepts (for traits) to represent the system at a given time.
+
+
+**Elements (links, instances, traits) are our environment representation when we observe the system.**
