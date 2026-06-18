@@ -14,8 +14,8 @@ import (
 // for functional equivalence using hashes.
 //
 // DESIGN PRINCIPLES TO AVOID COLLISIONS:
-// 1. CLASS PREFIXING: Every hash is prefixed with a specific identifier (e.g., "TRAIT|", "LINK|")
-//    to prevent cross-class collisions (an Instance and a Trait cannot have the same hash).
+// 1. CLASS PREFIXING: Every hash is prefixed with a specific identifier (e.g., "LINK|")
+//    to prevent cross-class collisions (an Instance and a group cannot have the same hash).
 // 2. STRUCTURAL SEPARATION: Fixed properties (Id, Name, Activity) are kept in strict order and
 //    NEVER sorted together with dynamic properties. Sorting is restricted ONLY to map iterations
 //    (like attributes and roles) to guarantee determinism without destroying structural semantics.
@@ -88,38 +88,6 @@ func hashInstance(instance Instance) string {
 	builder.WriteString(fmt.Sprintf("act:%d:%s|", len(actStr), actStr))
 
 	builder.WriteString("vals:")
-	builder.WriteString(strings.Join(dynamicContent, "|"))
-
-	return commons.HashString(builder.String())
-}
-
-// hashTrait returns a collision-resistant hash string for the given Trait.
-func hashTrait(trait Trait) string {
-	if trait == nil {
-		return ""
-	}
-
-	dynamicContent := make([]string, 0)
-
-	for attr, value := range trait.Range {
-		// Embed the length of both key and value to strictly enforce boundaries.
-		dynamicContent = append(dynamicContent, fmt.Sprintf("%d:%s=>%d:%s", len(attr), attr, len(value), value))
-	}
-
-	// Sort ONLY the dynamic map properties to guarantee determinism.
-	slices.Sort(dynamicContent)
-
-	var builder strings.Builder
-	builder.WriteString("TRAIT|")
-
-	// Append fixed properties in a strict, unchangeable order.
-	idStr := trait.Id()
-	builder.WriteString(fmt.Sprintf("id:%d:%s|", len(idStr), idStr))
-
-	nameStr := trait.Name()
-	builder.WriteString(fmt.Sprintf("name:%d:%s|", len(nameStr), nameStr))
-
-	builder.WriteString("attrs:")
 	builder.WriteString(strings.Join(dynamicContent, "|"))
 
 	return commons.HashString(builder.String())

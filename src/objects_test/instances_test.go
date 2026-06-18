@@ -272,51 +272,8 @@ func TestValueOverlapsAndScissions(t *testing.T) {
 }
 
 // =========================================================================
-// INSTANCE METHODS (MATCHES & SAME)
+// INSTANCE METHODS
 // =========================================================================
-
-func TestInstanceMatches(t *testing.T) {
-	now := time.Now()
-	activePeriod := periods.NewPeriodSince(now, true)
-
-	content, err := objects.NewLocalInstanceBuilder("id").
-		WithActivity(activePeriod).
-		WithAttributeDuring("role", activePeriod, "admin").
-		WithAttributeDuring("level", activePeriod, 5).
-		Build()
-	if err != nil {
-		t.Error(err)
-	}
-
-	// 1. Perfect match
-	validTrait, _ := objects.NewTraitBuilder().WithName("valid").
-		WithAttribute("role", "string").
-		WithAttribute("level", "int").
-		Build()
-	if matchPeriod, matches := content.Matches(validTrait); !matches {
-		t.Error("expected instance to match valid trait")
-	} else if !matchPeriod.Equals(activePeriod) {
-		t.Error("expected matching period to equal the instance's active period")
-	}
-
-	// 2. Wrong type
-	invalidTypeTrait, _ := objects.NewTraitBuilder().WithName("int role").
-		WithAttribute("role", "int").
-		Build()
-	// Role is string in content
-
-	if _, matches := content.Matches(invalidTypeTrait); matches {
-		t.Error("expected instance NOT to match trait due to incorrect type")
-	}
-
-	// 3. Missing attribute
-	missingAttrTrait, _ := objects.NewTraitBuilder().WithName("missing fields").
-		WithAttribute("unknown_field", "string").
-		Build()
-	if _, matches := content.Matches(missingAttrTrait); matches {
-		t.Error("expected instance NOT to match trait due to missing attribute")
-	}
-}
 
 func TestInstanceSame(t *testing.T) {
 	p := periods.NewFullPeriod()

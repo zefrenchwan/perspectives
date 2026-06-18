@@ -46,11 +46,6 @@ type Instance interface {
 	// Because it is a snapshot of the instance at a specific point in time,
 	// result is a map of attribute names to their values at that moment.
 	At(moment time.Time) (map[string]any, bool)
-	// Matches returns, if any, the period during which this instance matches the given trait.
-	// For instance, a person may have a student identity, and a student trait may match that identity during a specific period.
-	// The returned period indicates the time frame during which the instance's attributes and values align with the trait's requirements.
-	// If that given trait is incompatible with the instance, the result will be empty, false
-	Matches(trait Trait) (periods.Period, bool)
 }
 
 // InstanceBuilder manages the changes to apply on a given instance.
@@ -316,31 +311,6 @@ func (b *baseInstance) At(moment time.Time) (map[string]any, bool) {
 	}
 
 	return result, true
-}
-
-// Matches tests if instance matches a given trait and returns the matching period.
-// For instance, an instance has a name, an age and, during 5 years, a student id.
-// Trait student may match on name and student id, but during 5 years only.
-func (b *baseInstance) Matches(trait Trait) (periods.Period, bool) {
-	if b == nil {
-		return periods.NewEmptyPeriod(), false
-	}
-
-	matchingPeriod := b.activity
-	for attribute, attributeType := range trait.Range {
-		// early test : leave when no match
-		if matchingPeriod.IsEmpty() {
-			return periods.NewEmptyPeriod(), false
-		} else if matchingAttribute, exists := b.values[attribute]; !exists {
-			return periods.NewEmptyPeriod(), false
-		} else if attributeType != matchingAttribute.DataType() {
-			return periods.NewEmptyPeriod(), false
-		} else {
-			matchingPeriod = matchingPeriod.Intersection(matchingAttribute.Validity())
-		}
-	}
-
-	return matchingPeriod, !matchingPeriod.IsEmpty()
 }
 
 // Description iterates over the metadata of the instance

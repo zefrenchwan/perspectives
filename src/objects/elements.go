@@ -1,11 +1,10 @@
 package objects
 
-// Element is a system entity : for instance, traits, instances, links, etc.
+// Element is a system entity : for instance, instances, links, etc.
 // It has an identifier and Same implementation has to be consistent with the identifier.
 // It should be :
 // EITHER A LINK (link composition)
-// OR AN INSTANCE (instance as operand) OR A SET OF INSTANCES (as a collection),
-// OR A TRAIT (trait as operand).
+// OR AN INSTANCE (instance as operand) OR A SET OF INSTANCES (as a collection).
 // To do so, we use the sealed interface :
 // we include a private function to force that no other type can implement it.
 // This way, element are linkable types and can only be implemented within this package.

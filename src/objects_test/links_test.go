@@ -40,14 +40,14 @@ func TestLinkSame(t *testing.T) {
 
 func TestBuildLinks(t *testing.T) {
 	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
-	trait, _ := objects.NewTraitBuilder().WithName("Animals").Build()
-	other, _ := objects.NewTraitBuilder().WithName("other").Build()
+	one, _ := objects.NewLocalInstanceBuilder("one").Build()
+	other, _ := objects.NewLocalInstanceBuilder("other").Build()
 
 	is, errIs := objects.NewLocalLinkBuilder("links:is").
 		WithName("is").
 		WithActivity(periods.NewFullPeriod()).
 		WithOperand("subject", instance).
-		WithOperand("object", trait).
+		WithOperand("object", one).
 		WithOperand("other", other).
 		WithoutOperand("other").
 		Build()
@@ -64,8 +64,8 @@ func TestBuildLinks(t *testing.T) {
 		t.Errorf("Expected link subject to be '%s', got '%v'", instance.Id(), subject)
 	} else if object, hasObject := is.Role("object"); !hasObject {
 		t.Errorf("Expected link to have an 'object' role")
-	} else if object != trait {
-		t.Errorf("Expected link object to be '%s', got '%v'", trait.Id(), object)
+	} else if object != one {
+		t.Errorf("Expected link object to be '%s', got '%v'", one.Id(), object)
 	} else if !is.Activity().Equals(periods.NewFullPeriod()) {
 		t.Errorf("Expected link activity to be full period, got '%v'", is.Activity())
 	}
@@ -98,11 +98,11 @@ func TestBuildLinksErrors(t *testing.T) {
 
 func TestReBuildLinks(t *testing.T) {
 	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
-	trait, _ := objects.NewTraitBuilder().WithName("Animals").Build()
+	animals, _ := objects.NewLocalInstanceBuilder("Animals").Build()
 	is, errIs := objects.NewLocalLinkBuilder("links:is").
 		WithName("is").
 		WithOperand("subject", instance).
-		WithOperand("object", trait).
+		WithOperand("object", animals).
 		Build()
 
 	if errIs != nil {
@@ -120,11 +120,11 @@ func TestReBuildLinks(t *testing.T) {
 
 func TestLinkRange(t *testing.T) {
 	instance, _ := objects.NewLocalInstanceBuilder("id").WithActivity(periods.NewFullPeriod()).Build()
-	trait, _ := objects.NewTraitBuilder().WithName("Animals").Build()
+	animals, _ := objects.NewLocalInstanceBuilder("Animals").Build()
 	is, _ := objects.NewLocalLinkBuilder("links:is").
 		WithName("is").
 		WithOperand("subject", instance).
-		WithOperand("object", trait).
+		WithOperand("object", animals).
 		Build()
 
 	if roles := is.Roles(); len(roles) != 2 {
@@ -140,8 +140,8 @@ func TestLinkRange(t *testing.T) {
 				t.Errorf("Expected subject to be '%s', got '%v'", instance.Id(), value)
 			}
 		case "object":
-			if value != trait {
-				t.Errorf("Expected object to be '%s', got '%v'", trait.Id(), value)
+			if value != animals {
+				t.Errorf("Expected object to be '%s', got '%v'", animals.Id(), value)
 			}
 		default:
 			t.Errorf("Unexpected role '%s'", name)
