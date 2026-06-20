@@ -1,6 +1,8 @@
 package objects
 
-import "github.com/zefrenchwan/perspectives.git/periods"
+import (
+	"github.com/zefrenchwan/perspectives.git/periods"
+)
 
 // AttributeDetails represents the metadata details of the attribute.
 // It contains information about the attribute's name, type, validity, and instance activity.

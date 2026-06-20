@@ -7,7 +7,7 @@ type Class string
 
 const CLASS_LINK Class = "link"
 const CLASS_INSTANCE Class = "instance"
-const CLASS_PREDICATE Class = "predicate"
+const CLASS_DEFINITION Class = "definition"
 
 // IsInstanceOfClass checks if an element is declared with a specific class.
 // For instance, a link should declare CLASS_LINK

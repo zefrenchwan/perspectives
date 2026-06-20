@@ -132,3 +132,39 @@ func hashLink(link Link) string {
 
 	return commons.HashString(builder.String())
 }
+
+// hashTrait defines the hash of a given trait.
+func hashTrait(trait Trait) string {
+	builder := strings.Builder{}
+	builder.WriteString("DECLARING CLASS => TRAIT \n")
+	builder.WriteString("NAME (")
+	builder.WriteString(strconv.Itoa(int(len(trait.name))))
+	builder.WriteString(") ")
+	builder.WriteString(trait.name)
+	rawName := builder.String()
+	attributesHash := make([]string, 0, len(trait.attributes))
+	for currentName, currentType := range trait.attributes {
+		builder.Reset()
+		builder.WriteString("ATTRIBUTE (")
+		builder.WriteString(strconv.Itoa(int(len(currentName))))
+		builder.WriteString(") ")
+		builder.WriteString(currentName)
+		builder.WriteString(" : ")
+		builder.WriteString(strconv.Itoa(int(len(currentType))))
+		builder.WriteString(" ")
+		builder.WriteString(currentType)
+		attributesHash = append(attributesHash, builder.String())
+	}
+
+	slices.Sort(attributesHash)
+	builder.Reset()
+	builder.WriteString(rawName)
+	builder.WriteString("\n")
+	for _, attributeHash := range attributesHash {
+		builder.WriteString(attributeHash)
+		builder.WriteString("\n")
+	}
+
+	content := builder.String()
+	return commons.HashString(content)
+}
