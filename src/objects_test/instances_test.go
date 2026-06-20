@@ -1,7 +1,7 @@
 package objects_test
 
 import (
-	"maps"
+	"slices"
 	"testing"
 	"time"
 
@@ -33,10 +33,20 @@ func TestBuildFromScratch(t *testing.T) {
 		t.Errorf("expected 1 value, got %d", len(values))
 	} else if values["name"] != "John" {
 		t.Errorf("expected 'John', got '%s'", values["name"])
-	} else if description := maps.Collect(instance.Description); len(description) != 1 {
-		t.Error("description should not be empty")
-	} else if description["name"] != "string" {
-		t.Errorf("expected 'string', got '%s'", description["name"])
+	} else if attributes := slices.Collect(instance.Attributes); len(attributes) != 1 {
+		t.Error("list of attributes should not be empty")
+	} else if attributes[0] != "name" {
+		t.Error("attribute should be 'name'")
+	} else if details, found := instance.Attribute("name"); !found {
+		t.Error("attribute should not be nil")
+	} else if details.AttributeName != "name" {
+		t.Errorf("expected 'name', got '%s'", details.AttributeName)
+	} else if details.AttributeType != "string" {
+		t.Errorf("expected 'string', got '%s'", details.AttributeType)
+	} else if !details.AttributeValidity.Equals(periods.NewFullPeriod()) {
+		t.Error("attribute period should be full")
+	} else if !details.InstanceActivity.Equals(periods.NewPeriodSince(before, true)) {
+		t.Error("instance period should be since now")
 	}
 }
 
@@ -64,10 +74,20 @@ func TestBuildFromOther(t *testing.T) {
 		t.Errorf("expected 1 value, got %d", len(values))
 	} else if values["name"] != "John" {
 		t.Errorf("expected 'John', got '%s'", values["name"])
-	} else if description := maps.Collect(other.Description); len(description) != 1 {
-		t.Error("description should not be empty")
-	} else if description["name"] != "string" {
-		t.Errorf("expected 'string', got '%s'", description["name"])
+	} else if attributes := slices.Collect(other.Attributes); len(attributes) != 1 {
+		t.Error("list of attributes should not be empty")
+	} else if attributes[0] != "name" {
+		t.Error("attribute should be 'name'")
+	} else if details, found := other.Attribute("name"); !found {
+		t.Error("attribute should not be nil")
+	} else if details.AttributeName != "name" {
+		t.Errorf("expected 'name', got '%s'", details.AttributeName)
+	} else if details.AttributeType != "string" {
+		t.Errorf("expected 'string', got '%s'", details.AttributeType)
+	} else if !details.AttributeValidity.Equals(periods.NewFullPeriod()) {
+		t.Error("attribute period should be full")
+	} else if !details.InstanceActivity.Equals(periods.NewPeriodSince(before, true)) {
+		t.Error("instance period should be since now")
 	}
 }
 

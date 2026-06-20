@@ -35,9 +35,10 @@ type Instance interface {
 	Element
 	// Activity returns the global activity period this instance lasts
 	Activity() periods.Period
-	// Description iterates over attribute names and their data types.
-	// They cannot change over time : it is impossible to change the type of an attribute once it is defined.
-	Description(yield func(attribute string, dataType string) bool)
+	// Attributes return the name of all attributes to iterate over
+	Attributes(yield func(attribute string) bool)
+	// Attribute returns the attribute details by name
+	Attribute(attribute string) (AttributeDetails, bool)
 	// Values allow range iteration over the attributes and their values over time.
 	Values(yield func(attribute string, value DynamicValues) bool)
 	// Value returns, if any, the values over time for that given attribute
@@ -313,17 +314,28 @@ func (b *baseInstance) At(moment time.Time) (map[string]any, bool) {
 	return result, true
 }
 
-// Description iterates over the metadata of the instance
-func (b *baseInstance) Description(yield func(attributeName string, attributeType string) bool) {
-	if b == nil {
-		return
-	}
-
-	for attribute, content := range b.values {
-		if !yield(attribute, content.DataType()) {
+// Attributes return the name of all attributes to iterate over
+func (b *baseInstance) Attributes(yield func(attribute string) bool) {
+	for attribute := range b.values {
+		if !yield(attribute) {
 			return
 		}
 	}
+}
+
+// Attribute returns the attribute details by name
+func (b *baseInstance) Attribute(attribute string) (AttributeDetails, bool) {
+	content, found := b.values[attribute]
+	if !found {
+		return AttributeDetails{}, false
+	}
+
+	return AttributeDetails{
+		AttributeName:     attribute,
+		AttributeType:     content.DataType(),
+		AttributeValidity: content.Validity(),
+		InstanceActivity:  b.activity,
+	}, true
 }
 
 // Values iterates over the attributes values by name.
