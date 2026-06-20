@@ -1,8 +1,15 @@
 package objects
 
-// Definition defines concepts with a name (its id).
-// Predicates are the concrete way to test at a given time (because words change their meaning over time).
+import (
+	"github.com/zefrenchwan/perspectives.git/periods"
+)
+
+// Definition is the concrete meaning of a term at a given time.
+// Term = word to describe a concept.
+// Definition = concrete meaning of a term at a given time.
 type Definition interface {
-	// Observable of a definition is the actual way to test it, hence, a predicate.
-	Observable[Predicate]
+	// Element to link predicates to instances via links
+	Element
+	// Matches returns the period during which the definition applies to that instance (if any).
+	Matches(Instance) (periods.Period, bool)
 }
