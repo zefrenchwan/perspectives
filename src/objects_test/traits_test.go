@@ -49,6 +49,20 @@ func TestTraitBuildErrors(t *testing.T) {
 	}
 }
 
+func TestTraitBuildFromOther(t *testing.T) {
+	trait, _ := objects.NewTraitBuilder().
+		WithName("test").
+		WithAttribute("attr", "string").
+		WithAttribute("attr2", "string").
+		Build()
+
+	if copyTrait, err := objects.TraitBuilderLoad(trait).Build(); err != nil {
+		t.Error("failed to build copy trait")
+	} else if !copyTrait.Same(trait) {
+		t.Error("expected traits to be same")
+	}
+}
+
 func TestTraitMatchingAccepts(t *testing.T) {
 	birthDate := time.Now().Truncate(24*time.Hour).AddDate(-20, 0, 0)
 	studentDate := birthDate.AddDate(18, 0, 0)
