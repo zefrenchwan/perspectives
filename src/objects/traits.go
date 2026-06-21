@@ -3,6 +3,7 @@ package objects
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
@@ -159,7 +160,7 @@ func TraitBuilderLoad(trait Trait) TraitBuilder {
 
 // WithName sets the name for that trait to build.
 func (b *baseTraitBuilder) WithName(name string) TraitBuilder {
-	if name == "" {
+	if strings.TrimSpace(name) == "" {
 		b.globalErrors = errors.Join(b.globalErrors, fmt.Errorf("trait name cannot be empty"))
 		return b
 	}
@@ -171,7 +172,7 @@ func (b *baseTraitBuilder) WithName(name string) TraitBuilder {
 // WithAttribute adds an attribute (or change type) for the trait to build.
 // Name should not be blank, and type must be a primitive value.
 func (b *baseTraitBuilder) WithAttribute(attrName, attrType string) TraitBuilder {
-	if attrName == "" {
+	if strings.TrimSpace(attrName) == "" {
 		b.globalErrors = errors.Join(b.globalErrors, fmt.Errorf("attribute name cannot be empty"))
 		return b
 	} else if !IsPrimitiveTypeName(attrType) {

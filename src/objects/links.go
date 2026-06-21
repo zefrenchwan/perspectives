@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
@@ -197,7 +198,7 @@ func (l *localLinkBuilder) WithOperand(role string, operand Element) LinkBuilder
 	if operand == nil {
 		l.globalErrors = errors.Join(l.globalErrors, fmt.Errorf("operand cannot be nil for %s", role))
 		return l
-	} else if role == "" {
+	} else if strings.TrimSpace(role) == "" {
 		l.globalErrors = errors.Join(l.globalErrors, fmt.Errorf("role cannot be empty"))
 		return l
 	}
@@ -222,6 +223,11 @@ func (l *localLinkBuilder) WithActivity(period periods.Period) LinkBuilder {
 
 // WithName changes the name of the link
 func (l *localLinkBuilder) WithName(name string) LinkBuilder {
+	if strings.TrimSpace(name) == "" {
+		l.globalErrors = errors.Join(l.globalErrors, fmt.Errorf("link name cannot be empty"))
+		return l
+	}
+
 	l.name = name
 	return l
 }
@@ -237,7 +243,7 @@ func (l *localLinkBuilder) Errors() error {
 func (l *localLinkBuilder) Build() (Link, error) {
 	if l.roles == nil {
 		return nil, errors.New("no roles defined for link")
-	} else if l.name == "" {
+	} else if strings.TrimSpace(l.name) == "" {
 		return nil, errors.New("no name defined for link")
 	} else if l.id == "" {
 		return nil, errors.New("no id defined for link")
