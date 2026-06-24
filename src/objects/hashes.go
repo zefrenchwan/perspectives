@@ -59,15 +59,13 @@ func hashDynamicValues(dv DynamicValues) string {
 	return commons.HashString(builder.String())
 }
 
-// hashInstance returns a collision-resistant hash string for the given Instance.
-func hashInstance(instance Instance) string {
-	if instance == nil {
+func hashEntity(element Entity) string {
+	if element == nil {
 		return ""
 	}
 
 	dynamicContent := make([]string, 0)
-
-	for attr, value := range instance.Values {
+	for attr, value := range element.Values {
 		hashedValue := hashDynamicValues(value)
 		// Embed the length of the attribute name to avoid delimiter injection.
 		// hashedValue is already a fixed-length hash, so it doesn't need length prefixing.
@@ -77,94 +75,36 @@ func hashInstance(instance Instance) string {
 	// We must not sort fixed fields like ID or Activity along with attributes.
 	slices.Sort(dynamicContent)
 
+	// same algorithm on links
+	dynamicLinks := make([]string, 0)
+	// Iterate over the roles and their associated elements
+	for role, linkedElement := range element.Links {
+		linkedElementHash := ""
+		if linkedElement != nil {
+			// recursive resolution is OK because each element has its own hash, no full walk
+			linkedElementHash = linkedElement.ToHashString()
+		}
+		// Embed the length of the role string to avoid any parsing ambiguities.
+		dynamicLinks = append(dynamicLinks, fmt.Sprintf("%d:%s=>%s", len(role), role, linkedElementHash))
+	}
+
+	slices.Sort(dynamicLinks)
+
 	var builder strings.Builder
 	builder.WriteString("INSTANCE|")
 
 	// Append fixed properties in a strict, unchangeable order.
-	idStr := instance.Id()
+	idStr := element.Id()
 	builder.WriteString(fmt.Sprintf("id:%d:%s|", len(idStr), idStr))
 
-	actStr := instance.Activity().AsRawString()
+	actStr := element.Activity().AsRawString()
 	builder.WriteString(fmt.Sprintf("act:%d:%s|", len(actStr), actStr))
 
 	builder.WriteString("vals:")
 	builder.WriteString(strings.Join(dynamicContent, "|"))
 
-	return commons.HashString(builder.String())
-}
-
-// hashLink returns a collision-resistant hash string for the given Link.
-func hashLink(link Link) string {
-	if link == nil {
-		return ""
-	}
-
-	dynamicContent := make([]string, 0)
-
-	// Iterate over the roles and their associated elements
-	for role, element := range link.Range {
-		elementHash := ""
-		if element != nil {
-			elementHash = element.toHashString() // recursive resolution
-		}
-		// Embed the length of the role string to avoid any parsing ambiguities.
-		dynamicContent = append(dynamicContent, fmt.Sprintf("%d:%s=>%s", len(role), role, elementHash))
-	}
-
-	// Sort ONLY dynamic roles for determinism.
-	slices.Sort(dynamicContent)
-
-	var builder strings.Builder
-	builder.WriteString("LINK|")
-
-	// It is crucial to include the Link ID to differentiate otherwise identical links.
-	idStr := link.Id()
-	builder.WriteString(fmt.Sprintf("id:%d:%s|", len(idStr), idStr))
-
-	nameStr := link.Name()
-	builder.WriteString(fmt.Sprintf("name:%d:%s|", len(nameStr), nameStr))
-
-	actStr := link.Activity().AsRawString()
-	builder.WriteString(fmt.Sprintf("act:%d:%s|", len(actStr), actStr))
-
-	builder.WriteString("roles:")
-	builder.WriteString(strings.Join(dynamicContent, "|"))
+	builder.WriteString("links:")
+	builder.WriteString(strings.Join(dynamicLinks, "||"))
 
 	return commons.HashString(builder.String())
-}
-
-// hashTrait defines the hash of a given trait.
-func hashTrait(trait Trait) string {
-	builder := strings.Builder{}
-	builder.WriteString("DECLARING CLASS => TRAIT \n")
-	builder.WriteString("NAME (")
-	builder.WriteString(strconv.Itoa(int(len(trait.name))))
-	builder.WriteString(") ")
-	builder.WriteString(trait.name)
-	rawName := builder.String()
-	attributesHash := make([]string, 0, len(trait.attributes))
-	for currentName, currentType := range trait.attributes {
-		builder.Reset()
-		builder.WriteString("ATTRIBUTE (")
-		builder.WriteString(strconv.Itoa(int(len(currentName))))
-		builder.WriteString(") ")
-		builder.WriteString(currentName)
-		builder.WriteString(" : ")
-		builder.WriteString(strconv.Itoa(int(len(currentType))))
-		builder.WriteString(" ")
-		builder.WriteString(currentType)
-		attributesHash = append(attributesHash, builder.String())
-	}
-
-	slices.Sort(attributesHash)
-	builder.Reset()
-	builder.WriteString(rawName)
-	builder.WriteString("\n")
-	for _, attributeHash := range attributesHash {
-		builder.WriteString(attributeHash)
-		builder.WriteString("\n")
-	}
-
-	content := builder.String()
-	return commons.HashString(content)
 }
