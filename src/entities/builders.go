@@ -1,4 +1,4 @@
-package objects
+package entities
 
 import (
 	"errors"
@@ -8,35 +8,59 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
+// EntityBuilder is an interface for building entities.
+// Entities are immutable entities that represent entities in the system.
+// So to act on their state, a builder allows entities creation and entities copies from others for modification.
+// Rules are:
+// => Name of the attribute must not be blank, and it is case sensitive.
+// => Same for roles.
+// => Attributes types should be primitive as defined within the project.
+// => Periods of attributes are not related to entity's activity.
+// Reason is that lifetime change would make information loss.
+// => To manage chaining, return the same builder.
 type EntityBuilder interface {
+	// WithActivity changes the current activity of the entity to build
 	WithActivity(period periods.Period) EntityBuilder
-
+	// WithAttributeDuring adds an attribute to the entity during a specific period.
+	// If attribute already exists, value will be overwritten for given period, rest remaining unchanged.
 	WithAttributeDuring(attribute string, period periods.Period, value any) EntityBuilder
-
+	// WithoutAttributeDuring removes period for that attribute.
 	WithoutAttributeDuring(attribute string, period periods.Period) EntityBuilder
-
+	// Cut transforms all periods (activity and attributes) as current value intersection with period.
+	// If attributes or lifetime periods are not intersecting with given period, they are removed.
+	// In particular, entity may become empty.
 	Cut(period periods.Period) EntityBuilder
-
+	// WithOperand adds an operand to the entity with a given role.
+	// General roles are usually subject, object, etc.
 	WithOperand(role string, operand Entity) EntityBuilder
-
+	// WithoutOperand removes an operand from the entity for that given role.
 	WithoutOperand(role string) EntityBuilder
-
+	// Errors returns all errors encountered during building.
 	Errors() error
-
+	// Build returns the built entity and any errors encountered during building.
 	Build() (Entity, error)
 }
 
+// localEntityBuilder is a builder for local entities.
+// It contains the entity to build and all errors encountered during building.
+// It is the default implementation, and will make in memory entities
 type localEntityBuilder struct {
-	element      *localEntity
+	// element is the decorated entity to build
+	element *localEntity
+	// globalErrors is the list of errors encountered during building.
 	globalErrors error
 }
 
+// LocalEntityBuilderLoad returns a builder for the given entity.
+// It makes a copy of the entity to build, so that the original entity is not modified.
 func LocalEntityBuilderLoad(element Entity) EntityBuilder {
 	return &localEntityBuilder{
 		element: localEntityLoad(element),
 	}
 }
 
+// NewLocalEntityBuilder builds a new empty entity.
+// Because id is the only mandatory element, it must be provided.
 func NewLocalEntityBuilder(id string) EntityBuilder {
 	var globalErrors error
 	if id == "" {
@@ -160,7 +184,8 @@ func (b *localEntityBuilder) Cut(period periods.Period) EntityBuilder {
 }
 
 // WithOperand adds an operand to the entity to build.
-// Role is the key of the operand to add, operand is the actual value to add
+// Role is the key of the operand to add, operand is the actual value to add.
+// It returns the same builder for chaining.
 func (l *localEntityBuilder) WithOperand(role string, operand Entity) EntityBuilder {
 	if l.element.roles == nil {
 		l.element.roles = make(map[string]Entity)
@@ -178,7 +203,8 @@ func (l *localEntityBuilder) WithOperand(role string, operand Entity) EntityBuil
 	return l
 }
 
-// WithoutOperand removes the given role and related content
+// WithoutOperand removes the given role and related content.
+// It returns the same builder for chaining.
 func (l *localEntityBuilder) WithoutOperand(role string) EntityBuilder {
 	// role may be empty, no problem.
 	// We may raise an error, but operation with empty role does not create an error
@@ -193,7 +219,7 @@ func (l *localEntityBuilder) WithoutOperand(role string) EntityBuilder {
 func (b *localEntityBuilder) Errors() error { return b.globalErrors }
 
 // Build returns the built entity and resets the builder for future use.
-// It returns the builder for method chaining.
+// It returns the builder for method chaining, but it may make code easier to read if you use a new one.
 func (b *localEntityBuilder) Build() (Entity, error) {
 	// no check on attributes (might not have) or roles (might not have)
 	// But id is mandatory

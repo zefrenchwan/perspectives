@@ -1,4 +1,4 @@
-package objects
+package entities
 
 import (
 	"fmt"
@@ -59,6 +59,8 @@ func hashDynamicValues(dv DynamicValues) string {
 	return commons.HashString(builder.String())
 }
 
+// hashEntity returns the hash of the given entity.
+// It uses a deterministic algorithm to compute the hash of the entity.
 func hashEntity(element Entity) string {
 	if element == nil {
 		return ""

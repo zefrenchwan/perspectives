@@ -1,26 +1,28 @@
-package objects_test
+package entities_test
+
 
 import (
 	"testing"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/objects"
+	"github.com/zefrenchwan/perspectives.git/entities"
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
+
 
 // ============================================
 // PUT IN HERE ALL END TO END / DESIGN TESTS ==
 // ============================================
 
 func TestEntityBuild(t *testing.T) {
-	john, _ := objects.NewLocalEntityBuilder("john").
+	john, _ := entities.NewLocalEntityBuilder("john").
 		WithActivity(periods.NewFullPeriod()).
 		Build()
-	tiramisu, _ := objects.NewLocalEntityBuilder("tiramisu").
+	tiramisu, _ := entities.NewLocalEntityBuilder("tiramisu").
 		WithActivity(periods.NewFullPeriod()).
 		WithAttributeDuring("calories", periods.NewFullPeriod(), "way too much").
 		Build()
-	likes, _ := objects.NewLocalEntityBuilder("likes").
+	likes, _ := entities.NewLocalEntityBuilder("likes").
 		WithActivity(periods.NewFullPeriod()).
 		WithOperand("subject", john).
 		WithOperand("object", tiramisu).
