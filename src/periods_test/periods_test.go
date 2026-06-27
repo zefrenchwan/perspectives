@@ -500,3 +500,61 @@ func TestPeriodFiniteBoundaries(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestPeriodUnionWhenIncludedSince(t *testing.T) {
+	now := time.Now().Truncate(1 * time.Hour)
+	before := now.AddDate(-1, 0, 0)
+	after := now.AddDate(1, 0, 0)
+	container := periods.NewPeriodSince(before, true)
+	contained := periods.NewPeriodSince(after, true)
+	expected := periods.NewPeriodSince(before, true)
+
+	res1 := container.Union(contained)
+	res2 := contained.Union(container)
+	if !res1.Equals(res2) {
+		t.Logf("union is not commutative, got %s and %s", res1.AsRawString(), res2.AsRawString())
+		t.Fail()
+	} else if !res1.Equals(expected) {
+		t.Logf("union of included periods should be as expected, got %s", res1.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestPeriodUnionWhenIncludedUntil(t *testing.T) {
+	now := time.Now().Truncate(1 * time.Hour)
+	before := now.AddDate(-1, 0, 0)
+	after := now.AddDate(1, 0, 0)
+	container := periods.NewPeriodUntil(after, true)
+	contained := periods.NewPeriodUntil(before, true)
+	expected := periods.NewPeriodUntil(after, true)
+
+	res1 := container.Union(contained)
+	res2 := contained.Union(container)
+	if !res1.Equals(res2) {
+		t.Logf("union is not commutative, got %s and %s", res1.AsRawString(), res2.AsRawString())
+		t.Fail()
+	} else if !res1.Equals(expected) {
+		t.Logf("union of included periods should be as expected, got %s", res1.AsRawString())
+		t.Fail()
+	}
+}
+
+func TestBoundingPeriodEdgeCases(t *testing.T) {
+	// Edge case 1: Empty period
+	empty := periods.NewEmptyPeriod()
+	if !empty.BoundingPeriod().IsEmpty() {
+		t.Log("BoundingPeriod of an empty period should be empty")
+		t.Fail()
+	}
+
+	// Edge case 2: Single interval period
+	now := time.Now().Truncate(time.Hour)
+	before := now.Add(-1 * time.Hour)
+	single := periods.NewFinitePeriod(before, now, true, false)
+
+	res := single.BoundingPeriod()
+	if !res.Equals(single) {
+		t.Logf("BoundingPeriod of a single interval should be equal to itself, got %s", res.AsRawString())
+		t.Fail()
+	}
+}

@@ -617,7 +617,7 @@ func (i interval) union(other interval) []interval {
 	// left bound: pick the less the values
 	minFinite = i.leftFinite && other.leftFinite
 	if minFinite {
-		comparison = i.leftMoment.Compare(other.rightMoment)
+		comparison = i.leftMoment.Compare(other.leftMoment)
 		switch {
 		case comparison < 0:
 			minIncluded, minValue = i.leftIncluded, i.leftMoment
