@@ -26,7 +26,7 @@ type DynamicLink interface {
 // Knows(subject=Marie, object=Likes(subject=Lisa, object=chocolate))
 type Linkable interface {
 	// Links allows an iterator over the links as role and actual link value.
-	Links(yield func(role string, link DynamicLink) bool)
+	Links() iter.Seq2[string, DynamicLink]
 	// Link returns the entity associated with the given role (if it exists), for that period.
 	Link(string) (DynamicLink, bool)
 	// LinksAt returns the entities associated with the given roles for that moment.
