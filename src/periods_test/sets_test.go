@@ -21,7 +21,7 @@ func TestDynamicSetEmpty(t *testing.T) {
 	}
 
 	counter := 0
-	for p, v := range currentSet.Range {
+	for p, v := range currentSet.Range() {
 		_ = p
 		_ = v
 		counter++
@@ -119,7 +119,7 @@ func TestDynamicSetEquals(t *testing.T) {
 	}
 }
 
-func TestDynamicSetRangeBreak(t *testing.T) {
+func TestDynamicSetRange(t *testing.T) {
 	currentSet := periods.NewDynamicSet[int]("int", func(a, b int) bool { return a == b })
 	now := time.Now().Truncate(time.Second)
 
@@ -128,19 +128,6 @@ func TestDynamicSetRangeBreak(t *testing.T) {
 	currentSet.Add(2, periods.NewPeriodSince(now, true))
 	currentSet.Add(3, periods.NewPeriodSince(now, true))
 
-	// Test early exit on Range()
-	counterRange := 0
-	currentSet.Range(func(p periods.Period, v int) bool {
-		counterRange++
-		// returning false should immediately stop the iteration
-		return false
-	})
-
-	if counterRange != 1 {
-		t.Errorf("Expected Range to stop after 1 iteration, but ran %d times", counterRange)
-	}
-
-	// Test early exit on At() iterator (Go 1.23 seq)
 	counterAt := 0
 	if iterator, has := currentSet.At(now); !has {
 		t.Errorf("Expected to have elements at now")
@@ -148,12 +135,10 @@ func TestDynamicSetRangeBreak(t *testing.T) {
 		for v := range iterator {
 			_ = v
 			counterAt++
-			// breaking out of the loop sends false to the yield function
-			break
 		}
 	}
 
-	if counterAt != 1 {
-		t.Errorf("Expected At iterator to stop after 1 iteration, but ran %d times", counterAt)
+	if counterAt != 3 {
+		t.Errorf("Expected At iterator to stop after 3 iteration, but ran %d times", counterAt)
 	}
 }

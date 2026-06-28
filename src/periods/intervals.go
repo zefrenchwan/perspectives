@@ -470,7 +470,9 @@ func intervalFromString(rawData string) (interval, error) {
 	return interval{empty: false, leftFinite: true, rightFinite: true, leftIncluded: leftIn, rightIncluded: rightIn, leftMoment: leftVal, rightMoment: rightVal}, nil
 }
 
-// toString returns the interval as a string
+// toString returns the interval as a string.
+// Note that, for this one, we use time.RFC3339Nano and NOT our configuration format.
+// Reason is that a change of configuration should NOT change the serialization of intervals.
 func (i interval) toString() string {
 	var result string
 	if i.empty {
@@ -484,7 +486,7 @@ func (i interval) toString() string {
 			result = INTERVAL_BOUNDARY_LEFT
 		}
 
-		result = result + i.leftMoment.Format(configuration.TIME_FORMAT)
+		result = result + i.leftMoment.Format(time.RFC3339Nano)
 	} else {
 		result = INTERVAL_BOUNDARY_LEFT + INTERVAL_VALUE_LEFT_INFINITY
 	}
@@ -492,7 +494,7 @@ func (i interval) toString() string {
 	result = result + INTERVAL_PARTS_SEPARATOR
 
 	if i.rightFinite {
-		result = result + i.rightMoment.Format(configuration.TIME_FORMAT)
+		result = result + i.rightMoment.Format(time.RFC3339Nano)
 		if i.rightIncluded {
 			result = result + INTERVAL_BOUNDARY_LEFT
 		} else {

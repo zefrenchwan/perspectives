@@ -1,8 +1,14 @@
 package periods
 
 import (
+	"fmt"
 	"iter"
+	"slices"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 // DynamicCollection is a collection of values that can change over time.
@@ -16,10 +22,10 @@ type DynamicCollection[T any] interface {
 	Equals(other DynamicCollection[T]) bool
 	// IsEmpty returns true if the collection is empty.
 	IsEmpty() bool
-	// Range iterates over the collection, calling the yield function for each period and value.
+	// Range iterates over the collection as a couple of matching periods and related value.
 	// Note that, for sets, there are multiple values per period.
 	// For partitions, there is only one value per period.
-	Range(yield func(Period, T) bool)
+	Range() iter.Seq2[Period, T]
 	// Add adds a value to the collection within the collection.
 	// General contract is defined here, but implementation is left to the concrete type.
 	// For sets : just add the value to the collection.
@@ -55,6 +61,63 @@ type DynamicPartition[T any] interface {
 	At(moment time.Time) (T, bool)
 	// Copy returns a copy of the dynamic partition.
 	Copy() DynamicPartition[T]
+}
+
+// ===================================================
+// HASHING FUNCTION TO CALCULATE EQUALS AND CHANGES ==
+// ===================================================
+
+// General assumptions apply :
+// Hash system should be injective almost every time.
+// Idea is to speed up link equality calculation and avoid full walkthrough.
+
+// HashDynamicCollection calculates a hash for a dynamic collection.
+// Partition indicates whether the collection is partitioned.
+func HashDynamicCollection[T any](dv DynamicCollection[T], partition bool) string {
+	if dv == nil || dv.IsEmpty() {
+		value := fmt.Sprintf("Dynamic collection of %s with partition %t", dv.DataType(), partition)
+		return commons.HashString(value)
+	}
+
+	valueType := dv.DataType()
+
+	// We don't know the exact number of periods in advance when using the range iterator,
+	// so we start with an empty slice.
+	elements := make([]string, 0)
+
+	// Range over the time-dependent values using Go 1.22+ iterator pattern
+	for period, value := range dv.Range() {
+		valueString := fmt.Sprintf("%v", value)
+		sizeString := strconv.Itoa(len(valueString))
+
+		// Use strict formatting with length prefixing to prevent delimiter injection.
+		// Format: [Period]->Type(Length):Value
+		mappedString := fmt.Sprintf("[%s]->%s(%s):%s", period.AsRawString(), valueType, sizeString, valueString)
+		elements = append(elements, mappedString)
+	}
+
+	// Sort ONLY the dynamic elements to ensure a deterministic hash regardless of iteration order.
+	slices.Sort(elements)
+
+	var builder strings.Builder
+	builder.WriteString("Dynamic collection of ")
+	builder.WriteString(valueType)
+	builder.WriteString(" with partition ")
+	builder.WriteString(fmt.Sprintf("%t", partition))
+	builder.WriteString("\n\n")
+	builder.WriteString(strings.Join(elements, "|"))
+
+	return commons.HashString(builder.String())
+}
+
+// HashDynamicPartition returns a hash of the given dynamic partition.
+func HashDynamicPartition[T any](p DynamicPartition[T]) string {
+	return HashDynamicCollection(p, true)
+}
+
+// HashDynamicSet returns a hash of the given dynamic set.
+func HashDynamicSet[T any](p DynamicSet[T]) string {
+	return HashDynamicCollection(p, false)
 }
 
 // =========================================================================
@@ -100,7 +163,7 @@ func (vh *valuesHandler[T]) Equals(other DynamicCollection[T]) bool {
 	}
 
 	counter := 0
-	for period, value := range other.Range {
+	for period, value := range other.Range() {
 		counter++
 		found := false
 		for _, matching := range vh.values {
@@ -179,11 +242,13 @@ func (vh *valuesHandler[T]) all(moment time.Time) (iter.Seq[T], bool) {
 	return seq, hasElements
 }
 
-// Range iterates over all values in the TemporalValues collection, yielding each period and value to a provided function
-func (vh *valuesHandler[T]) Range(yield func(Period, T) bool) {
-	for _, element := range vh.values {
-		if !yield(element.matchingPeriod, element.value) {
-			break
+// Range iterates over all values in the TemporalValues collection
+func (vh *valuesHandler[T]) Range() iter.Seq2[Period, T] {
+	return func(yield func(Period, T) bool) {
+		for _, element := range vh.values {
+			if !yield(element.matchingPeriod, element.value) {
+				break
+			}
 		}
 	}
 }

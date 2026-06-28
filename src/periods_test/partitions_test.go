@@ -101,7 +101,7 @@ func TestPartitionDestructiveAdd(t *testing.T) {
 	var bobPeriod periods.Period
 	var aliceCount, bobCount int
 
-	partition.Range(func(p periods.Period, v string) bool {
+	for p, v := range partition.Range() {
 		if v == "Alice" {
 			alicePeriod = p
 			aliceCount++
@@ -109,8 +109,7 @@ func TestPartitionDestructiveAdd(t *testing.T) {
 			bobPeriod = p
 			bobCount++
 		}
-		return true
-	})
+	}
 
 	if aliceCount != 1 {
 		t.Errorf("Expected Alice to have exactly 1 matching period, got %d", aliceCount)

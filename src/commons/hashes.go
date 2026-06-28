@@ -12,3 +12,11 @@ func HashString(text string) string {
 	hasher.Write([]byte(text))
 	return hex.EncodeToString(hasher.Sum(nil))
 }
+
+// Hashable is a technical interface to calculate a hash of a struct or element.
+// It means we may
+type Hashable interface {
+	// ToHashString returns the hash of the entity.
+	// Because an entity is immutable, the hash string should be invariant.
+	ToHashString() string
+}

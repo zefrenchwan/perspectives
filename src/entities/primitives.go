@@ -115,6 +115,8 @@ func IsPrimitiveValue(v any) bool {
 	return primitiveTypeName(v) != ""
 }
 
+// primitiveValueToString returns the string representation of a primitive value.
+// It uses the right serializer for that given value based on its type.
 func primitiveValueToString(v any) string {
 	if value, ok := v.(time.Time); ok {
 		return timeString(value)
@@ -137,7 +139,8 @@ func defaultString(v any) string {
 }
 
 // timeString is dedicated to time.Time values.
-// It returns either an empty string (not a time.Time instance) or a formatted time string based on the configuration.
+// It returns either an empty string (not a time.Time instance) or a formatted time string.
+// It is NOT based on the configuration : we want to serialize time.Time values in a standard way.
 func timeString(v any) string {
 	if v == nil {
 		return ""
@@ -146,7 +149,8 @@ func timeString(v any) string {
 	if !ok {
 		return ""
 	}
-	return t.Format(configuration.TIME_FORMAT)
+	// DO NOT USE CONFIGURATION HERE : CHANGE OF CONF => NO NEED TO RECALCULATE ALL HASHES
+	return t.Format(time.RFC3339Nano)
 }
 
 // ===========================================================================
