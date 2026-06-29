@@ -2,10 +2,7 @@ package entities
 
 import (
 	"fmt"
-	"math"
 	"time"
-
-	"github.com/zefrenchwan/perspectives.git/configuration"
 )
 
 // ===================================================
@@ -150,7 +147,7 @@ func timeString(v any) string {
 		return ""
 	}
 	// DO NOT USE CONFIGURATION HERE : CHANGE OF CONF => NO NEED TO RECALCULATE ALL HASHES
-	return t.Format(time.RFC3339Nano)
+	return t.UTC().Format(time.RFC3339Nano)
 }
 
 // ===========================================================================
@@ -176,7 +173,7 @@ func equalsTime(a, b any) bool {
 	return t1.Equal(t2)
 }
 
-// equalsFloat32 tests equality between two float32 values using the SHORT_EPSILON constant.
+// equalsFloat32 tests equality between two float32 values
 func equalsFloat32(a, b any) bool {
 	if a == nil && b == nil {
 		return true
@@ -187,10 +184,10 @@ func equalsFloat32(a, b any) bool {
 	if !ok1 || !ok2 {
 		return false
 	}
-	return math.Abs(float64(v1-v2)) < configuration.SHORT_EPSILON
+	return v1 == v2
 }
 
-// equalsFloat64 tests equality between two float64 values using the LONG_EPSILON constant.
+// equalsFloat64 tests equality between two float64 values
 func equalsFloat64(a, b any) bool {
 	if a == nil && b == nil {
 		return true
@@ -201,5 +198,5 @@ func equalsFloat64(a, b any) bool {
 	if !ok1 || !ok2 {
 		return false
 	}
-	return math.Abs(v1-v2) < configuration.LONG_EPSILON
+	return v1 == v2
 }
