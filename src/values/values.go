@@ -18,4 +18,6 @@ type Value interface {
 	Content() any
 	// Serialize returns the serialized form of the value.
 	Serialize() string
+	// isReference forces sealed interface
+	isReference() bool
 }

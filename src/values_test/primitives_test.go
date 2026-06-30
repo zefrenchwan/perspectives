@@ -57,6 +57,22 @@ func TestIsPrimitiveTypeName(t *testing.T) {
 	}
 }
 
+func TestPrimitiveBool(t *testing.T) {
+	b := values.NewBool(true)
+	if b.Datatype() != values.PRIMITIVE_TYPE_BOOL {
+		t.Error("expected datatype to be bool")
+	} else if b.Content() != true {
+		t.Errorf("Content should  be true, got %v", b.Content())
+	}
+
+	a := values.NewBool(false)
+	if a.Equals(b) {
+		t.Error("expected bool values NOT to be equal")
+	} else if !a.Equals(a) {
+		t.Error("expected bool values to be equal")
+	}
+}
+
 func TestPrimitiveInt(t *testing.T) {
 	a := values.NewInt(0)
 	b := values.NewInt(1)
@@ -74,6 +90,15 @@ func TestPrimitiveInt(t *testing.T) {
 		t.Error("expected int values to be equal")
 	} else if b.Content() != 1 {
 		t.Errorf("Content should  be 1, got %v", b.Content())
+	}
+}
+
+func TestPrimitiveFloat(t *testing.T) {
+	f := values.NewFloat(1.0)
+	if f.Datatype() != values.PRIMITIVE_TYPE_FLOAT {
+		t.Error("expected datatype to be float")
+	} else if f.Content() != 1.0 {
+		t.Errorf("Content should  be 1.0, got %v", f.Content())
 	}
 }
 

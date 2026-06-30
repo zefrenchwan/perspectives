@@ -11,6 +11,11 @@ type ReferenceValue struct {
 	serialized string
 }
 
+// isReference forces sealed interface
+func (p ReferenceValue) isReference() bool {
+	return true
+}
+
 // Datatype returns the type of the value : a reference.
 func (r ReferenceValue) Datatype() string {
 	return REFERENCE_TYPE

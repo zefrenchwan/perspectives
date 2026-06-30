@@ -60,6 +60,23 @@ France == president since 1958 ==> between 2017 and 2027 -> Macron
                                    ...
 ```
 
+A json translation might be : 
+
+```json
+{
+  "subject": "France",
+  "link": {
+    "type": "Role",
+    "name": "President",
+    "established": "1958-10-04"
+  },
+  "history": [
+    { "target": "Macron", "valid_from": "2017", "valid_to": "2027" },
+    { "target": "Hollande", "valid_from": "2012", "valid_to": "2017" }
+  ]
+}
+```
+
 For this specific situation, we included both times. 
 
 #### Links should be combined within other links
@@ -68,3 +85,11 @@ Third idea : we want links of links, so we use **reification**.
 As an example, *Knows(subject=Marie, object=Likes(subject=John, object=Tiramisu))*.
 It means that links may be linked to other links for given roles. 
 
+
+#### Subjective truths
+
+This system does not enforce an "objective truth". 
+Instead, users, sources, and beliefs are first-class citizens within the model itself.
+When a user logs in, they are represented as a node. 
+Their inputs are modeled as reified links (beliefs) attached to them. 
+This allows the system to store conflicting information from different sources simultaneously, leaving conflict resolution to the query level ("What does Source A believe vs Source B").

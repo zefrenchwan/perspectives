@@ -21,6 +21,11 @@ type PrimitiveValue struct {
 	serialized string
 }
 
+// isReference forces sealed interface
+func (p PrimitiveValue) isReference() bool {
+	return false
+}
+
 // serializeContent serializes a PrimitiveValue into a string representation.
 // For inner purpose only, as soon as an element is built
 func serializeContent(p PrimitiveValue) string {
