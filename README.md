@@ -86,7 +86,7 @@ As an example, *Knows(subject=Marie, object=Likes(subject=John, object=Tiramisu)
 It means that links may be linked to other links for given roles. 
 
 
-#### Subjective truths
+### Subjective truths
 
 This system does not enforce an "objective truth". 
 Instead, users, sources, and beliefs are first-class citizens within the model itself.
