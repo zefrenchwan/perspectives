@@ -8,8 +8,8 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
-func TestDynamicSetEmpty(t *testing.T) {
-	currentSet := periods.NewDynamicSet[int]("int", func(a, b int) bool { return a == b })
+func TestTimeRelationEmpty(t *testing.T) {
+	currentSet := periods.NewTimeRelation[int]("int", func(a, b int) bool { return a == b })
 	if !currentSet.IsEmpty() {
 		t.Errorf("Expected set to be empty")
 	} else if currentSet.DataType() != "int" {
@@ -32,8 +32,8 @@ func TestDynamicSetEmpty(t *testing.T) {
 	}
 }
 
-func TestDynamicSetAt(t *testing.T) {
-	currentSet := periods.NewDynamicSet[int]("int", func(a, b int) bool { return a == b })
+func TestTimeRelationAt(t *testing.T) {
+	currentSet := periods.NewTimeRelation[int]("int", func(a, b int) bool { return a == b })
 	now := time.Now().Truncate(time.Second)
 	before := now.AddDate(-20, 0, 0)
 	after := now.AddDate(20, 0, 0)
@@ -66,8 +66,8 @@ func TestDynamicSetAt(t *testing.T) {
 	}
 }
 
-func TestDynamicSetRemove(t *testing.T) {
-	currentSet := periods.NewDynamicSet[int]("int", func(a, b int) bool { return a == b })
+func TestTimeRelationRemove(t *testing.T) {
+	currentSet := periods.NewTimeRelation[int]("int", func(a, b int) bool { return a == b })
 	now := time.Now().Truncate(time.Second)
 	before := now.AddDate(-20, 0, 0)
 	after := now.AddDate(20, 0, 0)
@@ -90,8 +90,8 @@ func TestDynamicSetRemove(t *testing.T) {
 	}
 }
 
-func TestDynamicSetEquals(t *testing.T) {
-	currentSet := periods.NewDynamicSet[int]("int", func(a, b int) bool { return a == b })
+func TestTimeRelationEquals(t *testing.T) {
+	currentSet := periods.NewTimeRelation[int]("int", func(a, b int) bool { return a == b })
 	if !currentSet.Equals(currentSet) {
 		t.Errorf("Expected set to be equal to itself")
 	}
@@ -119,8 +119,8 @@ func TestDynamicSetEquals(t *testing.T) {
 	}
 }
 
-func TestDynamicSetRange(t *testing.T) {
-	currentSet := periods.NewDynamicSet[int]("int", func(a, b int) bool { return a == b })
+func TestTimeRelationRange(t *testing.T) {
+	currentSet := periods.NewTimeRelation[int]("int", func(a, b int) bool { return a == b })
 	now := time.Now().Truncate(time.Second)
 
 	// Add multiple values at the exact same period

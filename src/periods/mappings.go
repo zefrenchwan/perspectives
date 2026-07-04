@@ -11,56 +11,57 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-// DynamicCollection is a collection of values that can change over time.
-// For instance, given a company, CEO is a role that changes over time.
-// The CEO role would be a DYNAMIC collection.
-type DynamicCollection[T any] interface {
+// DynamicMapping is a mapping of values that can change over time.
+// For instance, given a company, CEO is a role that may be X during a given period, then Y, then...
+// The CEO role would be a DYNAMIC mapping over time.
+type DynamicMapping[T any] interface {
 	// Domain is the union of periods linked to at least one value.
 	Domain() Period
-	// Equals returns true if the two collections are equal :
+	// Equals returns true if the two mappings are equal :
 	// same type, same elements, same underlying type.
-	Equals(other DynamicCollection[T]) bool
-	// IsEmpty returns true if the collection is empty.
+	Equals(other DynamicMapping[T]) bool
+	// IsEmpty returns true if the mapping is empty.
 	IsEmpty() bool
-	// Range iterates over the collection as a couple of matching periods and related value.
-	// Note that, for sets, there are multiple values per period.
-	// For partitions, there is only one value per period.
+	// Range iterates over the mapping as a couple of matching periods and related value.
+	// Note that, for relations, there are multiple values per period.
+	// For functions, there is only one value per period.
 	Range() iter.Seq2[Period, T]
-	// Add adds a value to the collection within the collection.
+	// Add adds a value to the mapping.
 	// General contract is defined here, but implementation is left to the concrete type.
-	// For sets : just add the value to the collection.
-	// For partitions : add the value to the collection to maintain the partition invariant.
+	// For relations: just add the value to the mapping.
+	// For functions: add the value to the mapping to maintain the partition invariant.
 	Add(value T, period Period)
-	// Remove removes the given period from the collection and all related values.
+	// Remove removes the given period from the mapping and all related values.
 	Remove(period Period)
-	// DataType returns the type of the values stored in the collection.
+	// DataType returns the type of the values stored in the mapping.
 	DataType() string
-	// isPartition returns true if the collection is a partition.
+	// isFunctionalMapping returns true if the mapping is a function.
+	// It is true if, given a moment, there is only one value.
 	// It means a sealed interface.
-	isPartition() bool
+	isFunctionalMapping() bool
 }
 
-// DynamicSet is a dynamic collection with possibly multiple values per period.
+// DynamicRelation is a dynamic mapping with possibly multiple values per period.
 // At returns an iterator over the values, there may be many values per period.
-type DynamicSet[T any] interface {
-	// DynamicCollection[T] to regroup the common methods.
-	DynamicCollection[T]
+type DynamicRelation[T any] interface {
+	// DynamicMapping to regroup the common methods.
+	DynamicMapping[T]
 	// At returns the elements at a given moment (if any).
-	// If none matches, the iterator is empty and second result is then false
+	// If none matches, the iterator is empty and the second result is then false
 	At(moment time.Time) (iter.Seq[T], bool)
-	// Copy returns a copy of the dynamic set.
-	Copy() DynamicSet[T]
+	// Copy returns a copy of the dynamic relation.
+	Copy() DynamicRelation[T]
 }
 
-// DynamicPartition defines a dynamic collection with ONE value maximum at a given period.
-// It is a collection of values, each value being valid during a specific period.
-type DynamicPartition[T any] interface {
-	// DynamicCollection[T] to regroup the common methods.
-	DynamicCollection[T]
+// DynamicFunction defines a dynamic mapping with ONE value maximum at a given period.
+// It is a mapping of values, each value being valid during a specific period.
+type DynamicFunction[T any] interface {
+	// DynamicMapping to regroup the common methods.
+	DynamicMapping[T]
 	// At returns the unique element (if any) matching the given moment.
 	At(moment time.Time) (T, bool)
-	// Copy returns a copy of the dynamic partition.
-	Copy() DynamicPartition[T]
+	// Copy returns a copy of the dynamic function.
+	Copy() DynamicFunction[T]
 }
 
 // ===================================================
@@ -68,14 +69,14 @@ type DynamicPartition[T any] interface {
 // ===================================================
 
 // General assumptions apply :
-// Hash system should be injective almost every time.
-// Idea is to speed up link equality calculation and avoid full walkthrough.
+// That hash system should be injective almost every time.
+// Idea is to speed up link equality calculation and avoid a full walkthrough.
 
-// HashDynamicCollection calculates a hash for a dynamic collection.
-// Partition indicates whether the collection is partitioned.
-func HashDynamicCollection[T any](dv DynamicCollection[T], partition bool) string {
+// HashDynamicMapping calculates a hash for a dynamic mapping.
+// Parameter isFunction indicates whether the mapping is a function (to distinguish the same content, different type)
+func HashDynamicMapping[T any](dv DynamicMapping[T], isFunction bool) string {
 	if dv == nil || dv.IsEmpty() {
-		value := fmt.Sprintf("Dynamic collection of %s with partition %t", dv.DataType(), partition)
+		value := fmt.Sprintf("Dynamic mapping of %s with functional %t", dv.DataType(), isFunction)
 		return commons.HashString(value)
 	}
 
@@ -85,7 +86,6 @@ func HashDynamicCollection[T any](dv DynamicCollection[T], partition bool) strin
 	// so we start with an empty slice.
 	elements := make([]string, 0)
 
-	// Range over the time-dependent values using Go 1.22+ iterator pattern
 	for period, value := range dv.Range() {
 		valueString := fmt.Sprintf("%v", value)
 		sizeString := strconv.Itoa(len(valueString))
@@ -100,24 +100,24 @@ func HashDynamicCollection[T any](dv DynamicCollection[T], partition bool) strin
 	slices.Sort(elements)
 
 	var builder strings.Builder
-	builder.WriteString("Dynamic collection of ")
+	builder.WriteString("Dynamic mapping of ")
 	builder.WriteString(valueType)
-	builder.WriteString(" with partition ")
-	builder.WriteString(fmt.Sprintf("%t", partition))
+	builder.WriteString(" with functional ")
+	builder.WriteString(fmt.Sprintf("%t", isFunction))
 	builder.WriteString("\n\n")
 	builder.WriteString(strings.Join(elements, "|"))
 
 	return commons.HashString(builder.String())
 }
 
-// HashDynamicPartition returns a hash of the given dynamic partition.
-func HashDynamicPartition[T any](p DynamicPartition[T]) string {
-	return HashDynamicCollection(p, true)
+// HashDynamicFunction returns a hash of the given dynamic function.
+func HashDynamicFunction[T any](p DynamicFunction[T]) string {
+	return HashDynamicMapping(p, true)
 }
 
-// HashDynamicSet returns a hash of the given dynamic set.
-func HashDynamicSet[T any](p DynamicSet[T]) string {
-	return HashDynamicCollection(p, false)
+// HashDynamicRelation returns a hash of the given dynamic relation.
+func HashDynamicRelation[T any](p DynamicFunction[T]) string {
+	return HashDynamicMapping(p, false)
 }
 
 // =========================================================================
@@ -134,8 +134,8 @@ type valueNode[T any] struct {
 }
 
 // valuesHandler stores a set of values, each value being valid during a specific period.
-// For sets, values are not disjoint, and can overlap.
-// For partitions, values are disjoint, and cannot overlap.
+// For relations, values are not disjoint and can overlap.
+// For functions, values are disjoint and cannot overlap.
 type valuesHandler[T any] struct {
 	// values have one value per matching period
 	values []valueNode[T]
@@ -143,20 +143,20 @@ type valuesHandler[T any] struct {
 	storedType string
 	// equality function
 	equals func(a, b T) bool
-	// isPartition is true for partition, false for set
-	isPartition bool
+	// isFunction is true for partition, false for set
+	isFunction bool
 }
 
-// Equals returns true if the two temporal values are both partitions or sets (same collection type),
+// Equals returns true if the two dynamic mappings share a same mapping type,
 // and have the same values at the same periods, with the exact same type.
-func (vh *valuesHandler[T]) Equals(other DynamicCollection[T]) bool {
+func (vh *valuesHandler[T]) Equals(other DynamicMapping[T]) bool {
 	if vh == nil && other == nil {
 		return true
 	} else if vh == nil || other == nil {
 		return false
 	} else if vh.IsEmpty() != other.IsEmpty() {
 		return false
-	} else if other.isPartition() != vh.isPartition {
+	} else if other.isFunctionalMapping() != vh.isFunctionalMapping() {
 		return false
 	} else if other.IsEmpty() && vh.IsEmpty() {
 		return true
@@ -242,7 +242,7 @@ func (vh *valuesHandler[T]) all(moment time.Time) (iter.Seq[T], bool) {
 	return seq, hasElements
 }
 
-// Range iterates over all values in the TemporalValues collection
+// Range iterates over all values in the TemporalValues mapping
 func (vh *valuesHandler[T]) Range() iter.Seq2[Period, T] {
 	return func(yield func(Period, T) bool) {
 		for _, element := range vh.values {
@@ -307,7 +307,7 @@ func (vh *valuesHandler[T]) Add(value T, period Period) {
 		return
 	} else if period.IsEmpty() {
 		return
-	} else if !vh.isPartition {
+	} else if !vh.isFunction {
 		vh.values = append(vh.values, valueNode[T]{matchingPeriod: period, value: value})
 		return
 	}
@@ -338,4 +338,9 @@ func (vh *valuesHandler[T]) Add(value T, period Period) {
 
 	// We may now add the new value
 	vh.values = append(remainingValues, valueNode[T]{matchingPeriod: commonPeriod, value: value})
+}
+
+// isFunctionalMapping returns true if the mapping is functional or false for relational
+func (vh *valuesHandler[T]) isFunctionalMapping() bool {
+	return vh.isFunction
 }
