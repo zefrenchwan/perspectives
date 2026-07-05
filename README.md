@@ -121,13 +121,36 @@ Values may be :
 | Relation        | Reference | Define time dependent set of references (friends)                    |
 
 
-## Bitemporal model : terminology and implications
+## Events, entities, and states
 
-Based on [Martin's Fowler bitemporal description](https://martinfowler.com/articles/bitemporal-history.html), we will use this terminolgy : 
+System evolves with events. 
+Events arrive and change our knowledge of a system. 
+The model we use is named *bitemporal* and is *event-driven*. 
+Each event is associated with a record date and an actual date. 
+No other mechanism changes the actual state of the system.
+
+Based on [Martin's Fowler bitemporal description](https://martinfowler.com/articles/bitemporal-history.html), we will use this terminolgy :
 1. **record date** : the date an event notified a change happened
 2. **actual date** : the date the actual change happened
 
 For instance, a record arrives now (record date), informing the system about the birth of X (actual date), 3 days ago.
-Still from [this source](https://martinfowler.com/articles/bitemporal-history.html), usual SQL terms are confusing, and we agree. 
+We will not apply standard SQL vocabulary: [this source](https://martinfowler.com/articles/bitemporal-history.html) consider SQL terms are confusing, and we agree.
 
 
+Then, given a record date, we want to distinguish between an element of the system that may change, and its current state. 
+State is an information that changes over time, but entity keeps being. 
+Entity is an element of the system that may change, and state is its current information. 
+An event arrives and notifies a state change such as :
+* entity creation, end of life
+* state change for that entity
+* link creation between entities, link deactivation, state change for that link
+
+| Name | Definition                                             |
+| --- |--------------------------------------------------------|
+| Entity | An element of the system that may change               |
+| State | The current information of an entity                   |
+| Link | A relationship between entities that evolves over time |
+| Link state | The current information of a link                      |
+| Event | A notification of a state change (local or global)     |
+| Record date | The date an event notified a change happened           |
+| Actual date | The date the actual change happened                    |
