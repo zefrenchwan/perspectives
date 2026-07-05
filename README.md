@@ -99,10 +99,16 @@ Mapping is then the *general* term, whereas *function* is the mathematical appro
 | Dynamic function | Function that takes a moment as parameter and returns an unique value | CEO of a company |
 
 
+Code defines an interface for this part. 
+Note that **there is no set** : just an iterator over couples of periods and values. 
+Semantic is the same : 
+1. With a set : a given time would return the set of matching elements
+2. With an iterator : we iterate over the couples of periods and values, periods may reappear
 
-### The image sets of mappings 
 
-To describe an information, we use dynamic mappings of values. 
+### The codomains of mappings 
+
+To describe information, we use dynamic mappings of values. 
 Values may be : 
 * **primitive** and then describe information such as local content : an age, a name, an address. 
 * **references** and then point to identifiable information : a person, a company, a product. 
