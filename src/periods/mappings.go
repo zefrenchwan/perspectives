@@ -162,19 +162,24 @@ func (vh *valuesHandler[T]) Equals(other DynamicMapping[T]) bool {
 		return true
 	}
 
-	counter := 0
-	for period, value := range other.Range() {
-		counter++
+	// basically, it is checking that two lists are equals with iterators...
+	counter := 0 // how many match, to compare to len(vh.values)
+	for _, content := range vh.values {
+		referencePeriod := content.matchingPeriod
+		referenceItem := content.value
+		// find it in the other iterator
 		found := false
-		for _, matching := range vh.values {
-			if period.Equals(matching.matchingPeriod) {
-				found = true
-				if !vh.equals(matching.value, value) {
-					return false
+		for otherPeriod, otherValue := range other.Range() {
+			if referencePeriod.Equals(otherPeriod) {
+				if vh.equals(referenceItem, otherValue) {
+					found = true
+					counter++
+					break
 				}
 			}
 		}
 
+		// No local match => exclude directly
 		if !found {
 			return false
 		}
@@ -263,7 +268,12 @@ func (vh *valuesHandler[T]) DataType() string {
 func (vh *valuesHandler[T]) clone() *valuesHandler[T] {
 	result := make([]valueNode[T], len(vh.values))
 	copy(result, vh.values)
-	return &valuesHandler[T]{values: result, storedType: vh.storedType, equals: vh.equals}
+	return &valuesHandler[T]{
+		values:     result,
+		storedType: vh.storedType,
+		equals:     vh.equals,
+		isFunction: vh.isFunction,
+	}
 }
 
 // Remove removes the given period from the valuesHandler and all related values

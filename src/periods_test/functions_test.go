@@ -128,3 +128,19 @@ func TestFunctionAdd(t *testing.T) {
 		t.Errorf("Expected Bob's period to be %s, got %s", expectedBobPeriod.AsRawString(), bobPeriod.AsRawString())
 	}
 }
+
+func TestCopyFunctions(t *testing.T) {
+	f := periods.NewTimeFunction[int]("int", func(a, b int) bool { return a == b })
+	f.Add(10, periods.NewFullPeriod())
+	fCopy := f.Copy()
+	if value, has := fCopy.At(time.Now()); !has || value != 10 {
+		t.Errorf("Expected fCopy.At() to be 10, got %d", value)
+	} else if !f.Equals(fCopy) {
+		t.Errorf("Expected f to be equal to its copy")
+	}
+
+	f.Remove(periods.NewFullPeriod())
+	if value, has := fCopy.At(time.Now()); !has || value != 10 {
+		t.Errorf("Expected fCopy.At() to be 10, got %d", value)
+	}
+}

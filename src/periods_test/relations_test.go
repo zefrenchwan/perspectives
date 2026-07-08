@@ -142,3 +142,37 @@ func TestTimeRelationRange(t *testing.T) {
 		t.Errorf("Expected At iterator to stop after 3 iteration, but ran %d times", counterAt)
 	}
 }
+
+func TestTimeRelationCopy(t *testing.T) {
+	r := periods.NewTimeRelation[int]("int", func(a, b int) bool { return a == b })
+	r.Add(10, periods.NewFullPeriod())
+	r.Add(20, periods.NewFullPeriod())
+
+	if v, has := r.At(time.Now()); !has {
+		t.Errorf("Expected to have elements at now")
+	} else if values := slices.Collect(v); values == nil {
+		t.Errorf("Expected iterator to not be nil")
+	} else if len(values) != 2 {
+		t.Errorf("Expected iterator to have 2 values, but had %d", len(values))
+	}
+
+	rCopy := r.Copy()
+	if !r.Equals(rCopy) {
+		t.Errorf("Expected r to be equal to its copy")
+	} else if v, has := rCopy.At(time.Now()); !has {
+		t.Errorf("Expected to have elements at now")
+	} else if values := slices.Collect(v); values == nil {
+		t.Errorf("Expected iterator to not be nil")
+	} else if len(values) != 2 {
+		t.Errorf("Expected iterator to have 2 values, but had %d", len(values))
+	}
+
+	r.Remove(periods.NewFullPeriod())
+	if v, has := rCopy.At(time.Now()); !has {
+		t.Errorf("Expected to have elements at now")
+	} else if values := slices.Collect(v); values == nil {
+		t.Errorf("Expected iterator to not be nil")
+	} else if len(values) != 2 {
+		t.Errorf("Expected iterator to have 2 values, but had %d", len(values))
+	}
+}

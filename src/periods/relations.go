@@ -17,7 +17,7 @@ func (tr *timeRelation[T]) At(moment time.Time) (iter.Seq[T], bool) {
 	return tr.all(moment)
 }
 
-// Copy returns a copy of current relation.
+// Copy returns a copy of the current relation.
 func (tr *timeRelation[T]) Copy() DynamicRelation[T] {
 	return &timeRelation[T]{
 		valuesHandler: tr.clone(),
