@@ -12,8 +12,9 @@ import (
 type Timeline[T any] interface {
 	// Identifiable to load or use the current timeline
 	commons.Identifiable
-	// AsOf returns what we knew about the system at the given date, as a snapshot
-	AsOf(time.Time) Snapshot[T]
+	// AsOf returns what we knew about the system at the given date, as a snapshot.
+	// When no data exists, just return false.
+	AsOf(time.Time) (Snapshot[T], bool)
 	// Snapshots returns all the snapshots of the timeline, in chronological order
 	Snapshots() iter.Seq2[time.Time, Snapshot[T]]
 }

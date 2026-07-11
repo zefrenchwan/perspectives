@@ -13,6 +13,8 @@ type Layer[T any] interface {
 	commons.Identifiable
 	// Parent returns the parent layer, assuming to be unique.
 	Parent() Layer[T]
+	// Import loads the content of another layer into this layer.
+	Import(layer Layer[T])
 	// Flatten returns the flattened content of the full hierarchy of layers.
 	Flatten() T
 }
