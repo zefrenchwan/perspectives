@@ -13,10 +13,12 @@ type Layer[T any] interface {
 	commons.Identifiable
 	// Parent returns the parent layer, assuming to be unique.
 	Parent() Layer[T]
-	// Import loads the content of another layer into this layer.
-	Import(layer Layer[T])
 	// Flatten returns the flattened content of the full hierarchy of layers.
 	Flatten() T
+	// Import loads the content of another layer into this layer.
+	// It is NOT A GOOD IDEA : we will import PARTIAL CONTENT OF A LAYER.
+	// For instance, on graphs, we will import a graph, not a layer.
+	// Import(layer Layer[T])
 }
 
 // SnapshotLayer builds a snapshot as a combination of layers.
