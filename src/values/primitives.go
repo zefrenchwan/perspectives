@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
 // PrimitiveValue decorates primitives types allowed on entities.
@@ -19,6 +21,8 @@ type PrimitiveValue struct {
 	// serialized is the string representation of the primitive value.
 	// It is calculated once and will be used extensively in hashing and serialization.
 	serialized string
+	// hashString is hashed value of serialized
+	hashString string
 }
 
 // isReference forces sealed interface
@@ -48,6 +52,11 @@ func serializeContent(p PrimitiveValue) string {
 // Serialize returns the serialized representation of the PrimitiveValue.
 func (p PrimitiveValue) Serialize() string {
 	return p.serialized
+}
+
+// HashString returns the hash of the serialized representation of the PrimitiveValue.
+func (p PrimitiveValue) HashString() string {
+	return p.hashString
 }
 
 // Datatype returns the data type of the PrimitiveValue.
@@ -88,6 +97,7 @@ func NewBool(value bool) PrimitiveValue {
 	}
 
 	result.serialized = serializeContent(result)
+	result.hashString = commons.HashString(result.serialized)
 	return result
 }
 
@@ -99,6 +109,7 @@ func NewInt(value int) PrimitiveValue {
 	}
 
 	result.serialized = serializeContent(result)
+	result.hashString = commons.HashString(result.serialized)
 	return result
 }
 
@@ -110,6 +121,7 @@ func NewString(value string) PrimitiveValue {
 	}
 
 	result.serialized = serializeContent(result)
+	result.hashString = commons.HashString(result.serialized)
 	return result
 }
 
@@ -121,6 +133,7 @@ func NewTime(value time.Time) PrimitiveValue {
 	}
 
 	result.serialized = serializeContent(result)
+	result.hashString = commons.HashString(result.serialized)
 	return result
 }
 
@@ -132,6 +145,7 @@ func NewFloat(value float64) PrimitiveValue {
 	}
 
 	result.serialized = serializeContent(result)
+	result.hashString = commons.HashString(result.serialized)
 	return result
 }
 

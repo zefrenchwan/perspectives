@@ -1,6 +1,10 @@
 package values
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/zefrenchwan/perspectives.git/commons"
+)
 
 // ReferenceValue is a reference to an id.
 // For instance, on a given entity.
@@ -9,6 +13,8 @@ type ReferenceValue struct {
 	referenceId string
 	// serialized is the serialized form of the reference.
 	serialized string
+	// hashString is the hash of the serialized form of the reference.
+	hashString string
 }
 
 // isReference forces sealed interface
@@ -34,6 +40,11 @@ func (r ReferenceValue) Equals(other any) bool {
 	}
 }
 
+// HashString returns the hash of the serialized representation of the ReferenceValue.
+func (r ReferenceValue) HashString() string {
+	return r.hashString
+}
+
 // Content returns the underlying value : the reference id.
 func (r ReferenceValue) Content() any {
 	return r.referenceId
@@ -48,5 +59,6 @@ func (r ReferenceValue) Serialize() string {
 func NewReference(otherId string) ReferenceValue {
 	result := ReferenceValue{referenceId: otherId}
 	result.serialized = REFERENCE_TYPE + "|" + strconv.Itoa(len(otherId)) + "|" + otherId
+	result.hashString = commons.HashString(result.serialized)
 	return result
 }
