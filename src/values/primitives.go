@@ -54,8 +54,8 @@ func (p PrimitiveValue) Serialize() string {
 	return p.serialized
 }
 
-// HashString returns the hash of the serialized representation of the PrimitiveValue.
-func (p PrimitiveValue) HashString() string {
+// ToHashString returns the hash of the serialized representation of the PrimitiveValue.
+func (p PrimitiveValue) ToHashString() string {
 	return p.hashString
 }
 

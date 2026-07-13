@@ -17,3 +17,18 @@ func TestReferences(t *testing.T) {
 		t.Errorf("same content, should be true")
 	}
 }
+
+func TestReferenceHash(t *testing.T) {
+	ref := values.NewReference("id")
+	same := values.NewReference("id")
+	other := values.NewReference("not it")
+	if ref.ToHashString() != same.ToHashString() {
+		t.Errorf("same content, should be true")
+	} else if ref.ToHashString() == other.ToHashString() {
+		t.Errorf("different content, should be false")
+	} else if ref.Equals(other) {
+		t.Errorf("different content, should be false")
+	} else if !ref.Equals(same) {
+		t.Errorf("same content, should be true")
+	}
+}

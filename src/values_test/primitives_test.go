@@ -70,7 +70,7 @@ func TestPrimitiveBool(t *testing.T) {
 		t.Error("expected bool values NOT to be equal")
 	} else if !a.Equals(a) {
 		t.Error("expected bool values to be equal")
-	} else if a.HashString() == b.HashString() {
+	} else if a.ToHashString() == b.ToHashString() {
 		t.Error("expected different bool values NOT to have the same hash")
 	}
 }
@@ -86,7 +86,7 @@ func TestPrimitiveInt(t *testing.T) {
 		t.Error("expected datatype to be string")
 	} else if a.Equals(b) {
 		t.Error("expected int values NOT to be equal")
-	} else if a.HashString() == b.HashString() {
+	} else if a.ToHashString() == b.ToHashString() {
 		t.Error("expected different int values NOT to have the same hash")
 	} else if a.Equals(s) {
 		t.Error("expected int and string values NOT to be equal")
@@ -108,14 +108,14 @@ func TestPrimitiveFloat(t *testing.T) {
 	same := values.NewFloat(1.0)
 	if !f.Equals(same) {
 		t.Error("expected float values to be equal")
-	} else if f.HashString() != same.HashString() {
+	} else if f.ToHashString() != same.ToHashString() {
 		t.Error("expected equal float values to have the same hash")
 	}
 
 	different := values.NewFloat(2.0)
 	if f.Equals(different) {
 		t.Error("expected float values NOT to be equal")
-	} else if f.HashString() == different.HashString() {
+	} else if f.ToHashString() == different.ToHashString() {
 		t.Error("expected different float values NOT to have the same hash")
 	}
 }
@@ -129,11 +129,11 @@ func TestPrimitiveString(t *testing.T) {
 		t.Error("expected datatype to be string")
 	} else if a.Equals(b) {
 		t.Error("expected string values NOT to be equal")
-	} else if a.HashString() == b.HashString() {
+	} else if a.ToHashString() == b.ToHashString() {
 		t.Error("expected different string values NOT to have the same hash")
 	} else if !a.Equals(s) {
 		t.Error("expected string values to be equal")
-	} else if a.HashString() != s.HashString() {
+	} else if a.ToHashString() != s.ToHashString() {
 		t.Error("expected equal string values to have the same hash")
 	} else if a.Content() != "a" {
 		t.Error("same content, should be true")

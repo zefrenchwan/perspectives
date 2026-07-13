@@ -40,8 +40,8 @@ func (r ReferenceValue) Equals(other any) bool {
 	}
 }
 
-// HashString returns the hash of the serialized representation of the ReferenceValue.
-func (r ReferenceValue) HashString() string {
+// ToHashString returns the hash of the serialized representation of the ReferenceValue.
+func (r ReferenceValue) ToHashString() string {
 	return r.hashString
 }
 
