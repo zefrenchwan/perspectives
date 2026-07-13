@@ -111,13 +111,13 @@ func HashDynamicMapping[T any](dv DynamicMapping[T], isFunction bool) string {
 }
 
 // HashDynamicFunction returns a hash of the given dynamic function.
-func HashDynamicFunction[T any](p DynamicFunction[T]) string {
-	return HashDynamicMapping(p, true)
+func HashDynamicFunction[T any](f DynamicFunction[T]) string {
+	return HashDynamicMapping(f, true)
 }
 
 // HashDynamicRelation returns a hash of the given dynamic relation.
-func HashDynamicRelation[T any](p DynamicFunction[T]) string {
-	return HashDynamicMapping(p, false)
+func HashDynamicRelation[T any](r DynamicRelation[T]) string {
+	return HashDynamicMapping(r, false)
 }
 
 // =========================================================================
