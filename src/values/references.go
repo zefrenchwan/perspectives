@@ -40,6 +40,11 @@ func (r ReferenceValue) Equals(other any) bool {
 	}
 }
 
+// EqualReferences returns true if the two references are equal.
+func EqualReferences(a, b ReferenceValue) bool {
+	return a.Equals(b)
+}
+
 // ToHashString returns the hash of the serialized representation of the ReferenceValue.
 func (r ReferenceValue) ToHashString() string {
 	return r.hashString

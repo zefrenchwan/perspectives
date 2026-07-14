@@ -26,6 +26,11 @@ type PrimitiveValue struct {
 	hashString string
 }
 
+// EqualPrimitiveValue compares two PrimitiveValue for equality.
+func EqualPrimitiveValue(a, b PrimitiveValue) bool {
+	return a.Equals(b)
+}
+
 // isReference forces sealed interface
 func (p PrimitiveValue) isReference() bool {
 	return false
