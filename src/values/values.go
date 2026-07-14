@@ -1,11 +1,13 @@
 package values
 
-import "github.com/zefrenchwan/perspectives.git/commons"
+import (
+	"github.com/zefrenchwan/perspectives.git/commons"
+)
 
 const PRIMITIVE_TYPE_BOOL = "bool"
 const PRIMITIVE_TYPE_INT = "int"
 const PRIMITIVE_TYPE_STRING = "string"
-const PRIMITIVE_TYPE_TIME = "time"
+const PRIMITIVE_TYPE_TIME = "time.Time"
 const PRIMITIVE_TYPE_FLOAT = "float64"
 const REFERENCE_TYPE = "reference"
 
@@ -13,7 +15,7 @@ const REFERENCE_TYPE = "reference"
 type Value interface {
 	// Hashable to build hash on upper containers
 	commons.Hashable
-	// Datatype returns the type of the value.
+	// Datatype returns the type of the UNDERLYING value.
 	Datatype() string
 	// Equals compares value with other.
 	// If true, it means same type and content.
@@ -24,4 +26,10 @@ type Value interface {
 	Serialize() string
 	// isReference forces sealed interface
 	isReference() bool
+}
+
+// EqualsValue compares two values for equality.
+// Useful as parameters for equals functions
+func EqualsValue(a Value, b Value) bool {
+	return a.Equals(b)
 }

@@ -12,9 +12,9 @@ import (
 // Property defines a characteristic of an element.
 // It might be its age, the links it is related to, or any other attribute or role.
 type Property[V values.Value] interface {
-	// Property is immutable, so we have a hash on it.
+	// Hashable because Property is immutable, so we have a hash on it.
 	commons.Hashable
-	// Name of the property : a role, or an attribute ("height", "age", "name", etc.)
+	// Name of the property: a role, or an attribute ("height", "age", "name", etc.)
 	Name() string
 	// Values of the property, as a sequence of periods and values.
 	// It allows multi values and single value at a given time.

@@ -57,6 +57,33 @@ func TestIsPrimitiveTypeName(t *testing.T) {
 	}
 }
 
+func TestGetPrimitiveType(t *testing.T) {
+	now := time.Now()
+	if _, has := values.GetPrimitiveType(nil); has {
+		t.Error("expected nil NOT to be a valid primitive type")
+	} else if s, has := values.GetPrimitiveType("popo"); !has {
+		t.Error("expected string to be a valid primitive type")
+	} else if s != values.PRIMITIVE_TYPE_STRING {
+		t.Errorf("expected string to be a valid primitive type, got %v", s)
+	} else if b, has := values.GetPrimitiveType(true); !has {
+		t.Error("expected bool to be a valid primitive type")
+	} else if b != values.PRIMITIVE_TYPE_BOOL {
+		t.Errorf("expected bool to be a valid primitive type, got %v", b)
+	} else if i, has := values.GetPrimitiveType(1); !has {
+		t.Error("expected int to be a valid primitive type")
+	} else if i != values.PRIMITIVE_TYPE_INT {
+		t.Errorf("expected int to be a valid primitive type, got %v", i)
+	} else if f, has := values.GetPrimitiveType(1.0); !has {
+		t.Error("expected float to be a valid primitive type")
+	} else if f != values.PRIMITIVE_TYPE_FLOAT {
+		t.Errorf("expected float to be a valid primitive type, got %v", f)
+	} else if tt, has := values.GetPrimitiveType(now); !has {
+		t.Error("expected time to be a valid primitive type")
+	} else if tt != values.PRIMITIVE_TYPE_TIME {
+		t.Errorf("expected time to be a valid primitive type, got %v", tt)
+	}
+}
+
 func TestPrimitiveBool(t *testing.T) {
 	b := values.NewBool(true)
 	if b.Datatype() != values.PRIMITIVE_TYPE_BOOL {
@@ -168,5 +195,42 @@ func TestPrimitiveTime(t *testing.T) {
 
 	if value.Datatype() != values.PRIMITIVE_TYPE_TIME {
 		t.Error("expected datatype to be time")
+	}
+}
+
+func TestBuilder(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	if _, err := values.BuildPrimitiveValue(nil); err == nil {
+		t.Error("expected error when building primitive value from nil")
+	} else if i, err := values.BuildPrimitiveValue(10); err != nil {
+		t.Error("expected no error when building primitive value from int")
+	} else if i.Datatype() != values.PRIMITIVE_TYPE_INT {
+		t.Error("expected datatype to be int")
+	} else if i.Content() != 10 {
+		t.Error("expected content to be 10")
+	} else if b, err := values.BuildPrimitiveValue(true); err != nil {
+		t.Error("expected no error when building primitive value from bool")
+	} else if b.Datatype() != values.PRIMITIVE_TYPE_BOOL {
+		t.Error("expected datatype to be bool")
+	} else if b.Content() != true {
+		t.Error("expected content to be true")
+	} else if s, err := values.BuildPrimitiveValue("hello"); err != nil {
+		t.Error("expected no error when building primitive value from string")
+	} else if s.Datatype() != values.PRIMITIVE_TYPE_STRING {
+		t.Error("expected datatype to be string")
+	} else if s.Content() != "hello" {
+		t.Error("expected content to be hello")
+	} else if f, err := values.BuildPrimitiveValue(10.5); err != nil {
+		t.Error("expected no error when building primitive value from float")
+	} else if f.Datatype() != values.PRIMITIVE_TYPE_FLOAT {
+		t.Error("expected datatype to be float")
+	} else if f.Content() != 10.5 {
+		t.Error("expected content to be 10.5")
+	} else if tt, err := values.BuildPrimitiveValue(now); err != nil {
+		t.Error("expected no error when building primitive value from time")
+	} else if tt.Datatype() != values.PRIMITIVE_TYPE_TIME {
+		t.Error("expected datatype to be time")
+	} else if tt.Content() != now {
+		t.Error("expected content to be time")
 	}
 }

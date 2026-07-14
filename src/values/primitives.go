@@ -1,6 +1,7 @@
 package values
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -149,39 +150,75 @@ func NewFloat(value float64) PrimitiveValue {
 	return result
 }
 
+// BuildPrimitiveValue creates a new PrimitiveValue from the given value.
+// It supports bool, int, string, time.Time, and float64 types.
+// Otherwise, it returns an error.
+func BuildPrimitiveValue(v any) (PrimitiveValue, error) {
+	var empty PrimitiveValue
+	if v == nil {
+		return empty, errors.New("nil value, not a primitive type")
+	}
+	switch v.(type) {
+	case bool:
+		b, _ := v.(bool)
+		return NewBool(b), nil
+	case int:
+		i, _ := v.(int)
+		return NewInt(i), nil
+	case string:
+		s, _ := v.(string)
+		return NewString(s), nil
+	case time.Time:
+		t, _ := v.(time.Time)
+		return NewTime(t), nil
+	case float64:
+		f, _ := v.(float64)
+		return NewFloat(f), nil
+	default:
+		return empty, errors.New("unsupported value, not a primitive type")
+	}
+}
+
 // IsPrimitiveValue checks if the given value is a PrimitiveValue.
 func IsPrimitiveValue(v any) bool {
+	_, ok := GetPrimitiveType(v)
+	return ok
+}
+
+// GetPrimitiveType returns the type name of the given value if it is a PrimitiveValue, otherwise, empty string and false.
+func GetPrimitiveType(v any) (string, bool) {
+	var empty string
 	if v == nil {
-		return false
+		return empty, false
 	}
 	switch v.(type) {
 	case int:
-		return true
+		return PRIMITIVE_TYPE_INT, true
 	case float64:
-		return true
+		return PRIMITIVE_TYPE_FLOAT, true
 	case string:
-		return true
+		return PRIMITIVE_TYPE_STRING, true
 	case bool:
-		return true
+		return PRIMITIVE_TYPE_BOOL, true
 	case time.Time:
-		return true
+		return PRIMITIVE_TYPE_TIME, true
 	default:
-		return false
+		return empty, false
 	}
 }
 
 // IsPrimitiveTypeName checks if the given name is a valid PrimitiveValue type name.
 func IsPrimitiveTypeName(name string) bool {
 	switch name {
-	case "int":
+	case PRIMITIVE_TYPE_INT:
 		return true
-	case "float64":
+	case PRIMITIVE_TYPE_FLOAT:
 		return true
-	case "string":
+	case PRIMITIVE_TYPE_STRING:
 		return true
-	case "bool":
+	case PRIMITIVE_TYPE_BOOL:
 		return true
-	case "time.Time":
+	case PRIMITIVE_TYPE_TIME:
 		return true
 	default:
 		return false
