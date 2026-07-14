@@ -27,9 +27,3 @@ type Value interface {
 	// isReference forces sealed interface
 	isReference() bool
 }
-
-// EqualsValue compares two values for equality.
-// Useful as parameters for equals functions
-func EqualsValue(a Value, b Value) bool {
-	return a.Equals(b)
-}
