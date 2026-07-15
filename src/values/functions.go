@@ -2,36 +2,49 @@ package values
 
 import (
 	"fmt"
+	"iter"
 	"time"
 
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
-// PrimitiveTimeFunction represents a time-based primitive function.
-type PrimitiveTimeFunction struct {
-	// primitiveMapping is the mapping reduced to functions (applied to primitive values)
-	primitiveMapping[periods.DynamicFunction[PrimitiveValue]]
+type ValuesDynamicFunction[V Value] interface {
+	Datatype() string
+	Domain() periods.Period
+	IsEmpty() bool
+	Range() iter.Seq2[periods.Period, V]
+	At(time time.Time) (V, bool)
 }
 
-// Equals returns true if the two primitive time functions are equal.
-func (pf *PrimitiveTimeFunction) Equals(other PrimitiveTimeFunction) bool {
-	return pf.primitiveMapping.Equals(other.primitiveMapping)
+type valuesFunction[V Value] struct {
+	valuesMapping[V, periods.DynamicFunction[V]]
 }
 
-// At returns the value of the primitive function at the given time.
-func (pf *PrimitiveTimeFunction) At(time time.Time) (PrimitiveValue, bool) {
-	// instead of "return pf.primitiveMapping.valuesMapping.mapper.At(time)", just use promotion
-	return pf.mapper.At(time)
+func (vf *valuesFunction[V]) Equals(other valuesFunction[V]) bool {
+	return vf.valuesMapping.Equals(other.valuesMapping)
 }
 
-// Value returns the underlying value of the primitive function at the given time
-func (pf *PrimitiveTimeFunction) Value(time time.Time) (any, bool) {
-	result, has := pf.mapper.At(time)
+func (vf *valuesFunction[V]) At(time time.Time) (V, bool) {
+	return vf.mapper.At(time)
+}
+
+func (vf *valuesFunction[V]) Value(time time.Time) (any, bool) {
+	result, has := vf.mapper.At(time)
 	if !has {
 		return nil, false
 	}
 
-	return result.value, has
+	return result.Content(), has
+}
+
+// PrimitiveTimeFunction represents a time-based primitive function.
+type PrimitiveTimeFunction struct {
+	valuesFunction[PrimitiveValue]
+}
+
+// Equals returns true if the two primitive time functions are equal.
+func (pf *PrimitiveTimeFunction) Equals(other PrimitiveTimeFunction) bool {
+	return pf.mapper.Equals(other.mapper)
 }
 
 // Copy returns a copy of the primitive time function
@@ -40,13 +53,27 @@ func (pf *PrimitiveTimeFunction) Copy() PrimitiveTimeFunction {
 		mapper: pf.mapper.Copy(),
 	}
 
-	primitiveMapper := primitiveMapping[periods.DynamicFunction[PrimitiveValue]]{
+	function := valuesFunction[PrimitiveValue]{
 		valuesMapping: base,
 	}
 
 	return PrimitiveTimeFunction{
-		primitiveMapping: primitiveMapper,
+		valuesFunction: function,
 	}
+}
+
+// Add adds a value for that given period: it creates the primitive value and adds it to the mapping.
+func (pm *PrimitiveTimeFunction) Add(value any, period periods.Period) error {
+	expectedType := pm.mapper.DataType()
+	newValue, errBuild := BuildPrimitiveValue(value)
+	if errBuild != nil {
+		return errBuild
+	} else if realType := newValue.Datatype(); realType != expectedType {
+		return fmt.Errorf("value type %s does not match expected type %s", realType, expectedType)
+	}
+
+	pm.mapper.Add(newValue, period)
+	return nil
 }
 
 // buildPrimitiveTimeFunction is private by design.
@@ -56,13 +83,14 @@ func buildPrimitiveTimeFunction(expectedType string) PrimitiveTimeFunction {
 		mapper: periods.NewTimeFunction(expectedType, EqualPrimitiveValue),
 	}
 
-	primitiveMapper := primitiveMapping[periods.DynamicFunction[PrimitiveValue]]{
+	function := valuesFunction[PrimitiveValue]{
 		valuesMapping: base,
 	}
 
 	return PrimitiveTimeFunction{
-		primitiveMapping: primitiveMapper,
+		valuesFunction: function,
 	}
+
 }
 
 // NewPrimitiveTimeFunction builds a new primitive time function for a given primitive type.
@@ -88,13 +116,18 @@ func NewStringTimeFunction() PrimitiveTimeFunction {
 
 // ReferenceTimeFunction represents a time function for reference values.
 type ReferenceTimeFunction struct {
-	// referenceMapping is a function of periods that operate on reference values.
-	referenceMapping[periods.DynamicFunction[ReferenceValue]]
+	valuesFunction[ReferenceValue]
 }
 
 // Equals checks if two ReferenceTimeFunction instances are equal.
 func (rf *ReferenceTimeFunction) Equals(other ReferenceTimeFunction) bool {
-	return rf.referenceMapping.Equals(other.referenceMapping)
+	return rf.mapper.Equals(other.mapper)
+}
+
+// Add adds a reference (as a string) for that given period: it creates the reference value and adds it to the mapping.
+func (rf *ReferenceTimeFunction) Add(reference string, period periods.Period) {
+	referenceValue := NewReference(reference)
+	rf.mapper.Add(referenceValue, period)
 }
 
 // At returns the reference value at the given time.
@@ -119,11 +152,26 @@ func (rf *ReferenceTimeFunction) Copy() ReferenceTimeFunction {
 		mapper: rf.mapper.Copy(),
 	}
 
-	referenceMapper := referenceMapping[periods.DynamicFunction[ReferenceValue]]{
+	function := valuesFunction[ReferenceValue]{
 		valuesMapping: base,
 	}
 
 	return ReferenceTimeFunction{
-		referenceMapping: referenceMapper,
+		valuesFunction: function,
+	}
+}
+
+// NewReferenceTimeFunction creates a new time dependent function of references.
+func NewReferenceTimeFunction() ReferenceTimeFunction {
+	base := valuesMapping[ReferenceValue, periods.DynamicFunction[ReferenceValue]]{
+		mapper: periods.NewTimeFunction(REFERENCE_TYPE, EqualReferences),
+	}
+
+	function := valuesFunction[ReferenceValue]{
+		valuesMapping: base,
+	}
+
+	return ReferenceTimeFunction{
+		valuesFunction: function,
 	}
 }

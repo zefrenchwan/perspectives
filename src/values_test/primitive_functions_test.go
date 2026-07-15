@@ -138,3 +138,33 @@ func TestPrimitiveFunctionRange(t *testing.T) {
 		}
 	}
 }
+
+func TestPrimitiveFunctionEqualsCopy(t *testing.T) {
+	f := values.NewIntTimeFunction()
+	g := values.NewStringTimeFunction()
+	h := values.NewIntTimeFunction()
+
+	if !f.Equals(f.Copy()) {
+		t.Errorf("Expected function to be equal to its copy")
+	}
+
+	if f.Equals(g) {
+		t.Errorf("Expected function to not be equal to another function of different type")
+	}
+
+	if !g.Equals(g.Copy()) {
+		t.Errorf("Expected function to be equal to its copy")
+	}
+
+	h.Add(10, periods.NewFullPeriod())
+	if !h.Equals(h.Copy()) {
+		t.Errorf("Expected function to be equal to its copy")
+	} else if f.Equals(h) {
+		t.Errorf("Expected function to not be equal to another function with more content")
+	}
+
+	c := h.Copy()
+	if value, has := c.Value(time.Now()); value != 10 || !has {
+		t.Errorf("Expected value to be 10")
+	}
+}

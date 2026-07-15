@@ -1,7 +1,6 @@
 package values
 
 import (
-	"fmt"
 	"iter"
 
 	"github.com/zefrenchwan/perspectives.git/periods"
@@ -59,44 +58,4 @@ func (vm *valuesMapping[V, M]) Values() iter.Seq2[periods.Period, any] {
 // Remove removes all the values for the given period.
 func (vm *valuesMapping[V, M]) Remove(period periods.Period) {
 	vm.mapper.Remove(period)
-}
-
-// primitiveMapping is a mapping that only contains primitive values.
-type primitiveMapping[M periods.DynamicMapping[PrimitiveValue]] struct {
-	valuesMapping[PrimitiveValue, M]
-}
-
-// Equals returns true if the two mappings are equal.
-func (pm *primitiveMapping[M]) Equals(other primitiveMapping[M]) bool {
-	return pm.valuesMapping.Equals(other.valuesMapping)
-}
-
-// Add adds a value for that given period: it creates the primitive value and adds it to the mapping.
-func (pm *primitiveMapping[M]) Add(value any, period periods.Period) error {
-	expectedType := pm.mapper.DataType()
-	newValue, errBuild := BuildPrimitiveValue(value)
-	if errBuild != nil {
-		return errBuild
-	} else if realType := newValue.Datatype(); realType != expectedType {
-		return fmt.Errorf("value type %s does not match expected type %s", realType, expectedType)
-	}
-
-	pm.valuesMapping.mapper.Add(newValue, period)
-	return nil
-}
-
-// referenceMapping is a mapping that only contains reference values.
-type referenceMapping[M periods.DynamicMapping[ReferenceValue]] struct {
-	valuesMapping[ReferenceValue, M]
-}
-
-// Add adds a reference (as a string) for that given period: it creates the reference value and adds it to the mapping.
-func (rm *referenceMapping[M]) Add(reference string, period periods.Period) {
-	referenceValue := NewReference(reference)
-	rm.valuesMapping.mapper.Add(referenceValue, period)
-}
-
-// Equals returns true if the two mappings are equal.
-func (rm *referenceMapping[M]) Equals(other referenceMapping[M]) bool {
-	return rm.valuesMapping.Equals(other.valuesMapping)
 }

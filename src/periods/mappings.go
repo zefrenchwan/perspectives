@@ -158,6 +158,8 @@ func (vh *valuesHandler[T]) Equals(other DynamicMapping[T]) bool {
 		return false
 	} else if other.isFunctionalMapping() != vh.isFunctionalMapping() {
 		return false
+	} else if vh.DataType() != other.DataType() {
+		return false
 	} else if other.IsEmpty() && vh.IsEmpty() {
 		return true
 	}
