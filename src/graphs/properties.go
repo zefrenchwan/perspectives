@@ -15,9 +15,9 @@ type Property[V values.Value] interface {
 	commons.Hashable
 	// Name of the property: a role, or an attribute ("height", "age", "name", etc.)
 	Name() string
-	// Values of the property, as a sequence of periods and values.
+	// Range to iterate over the values of the property, as a sequence of periods and values.
 	// It allows multi values and single value at a given time.
-	Values() iter.Seq2[periods.Period, V]
+	Range() iter.Seq2[periods.Period, V]
 }
 
 // Attribute describes a state for an element via a primitive value.
