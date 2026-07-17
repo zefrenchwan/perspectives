@@ -1,6 +1,24 @@
 package periods
 
-import "time"
+import (
+	"time"
+)
+
+// DynamicFunction defines a dynamic mapping with ONE value maximum at a given period.
+// It is a mapping of values, each value being valid during a specific period.
+type DynamicFunction[T any] interface {
+	// DynamicMapping to regroup the common methods.
+	DynamicMapping[T]
+	// At returns the unique element (if any) matching the given moment.
+	At(moment time.Time) (T, bool)
+	// Copy returns a copy of the dynamic function.
+	Copy() DynamicFunction[T]
+}
+
+// HashDynamicFunction returns a hash of the given dynamic function.
+func HashDynamicFunction[T any](f DynamicFunction[T]) string {
+	return HashDynamicMapping(f, true)
+}
 
 // timeFunction is a dynamic partition per period : one value per period.
 // Then, as a function, it picks the unique (if any) element matching the given moment.

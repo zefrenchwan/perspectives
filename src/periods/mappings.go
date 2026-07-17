@@ -41,29 +41,6 @@ type DynamicMapping[T any] interface {
 	isFunctionalMapping() bool
 }
 
-// DynamicRelation is a dynamic mapping with possibly multiple values per period.
-// At returns an iterator over the values, there may be many values per period.
-type DynamicRelation[T any] interface {
-	// DynamicMapping to regroup the common methods.
-	DynamicMapping[T]
-	// At returns the elements at a given moment (if any).
-	// If none matches, the iterator is empty and the second result is then false
-	At(moment time.Time) (iter.Seq[T], bool)
-	// Copy returns a copy of the dynamic relation.
-	Copy() DynamicRelation[T]
-}
-
-// DynamicFunction defines a dynamic mapping with ONE value maximum at a given period.
-// It is a mapping of values, each value being valid during a specific period.
-type DynamicFunction[T any] interface {
-	// DynamicMapping to regroup the common methods.
-	DynamicMapping[T]
-	// At returns the unique element (if any) matching the given moment.
-	At(moment time.Time) (T, bool)
-	// Copy returns a copy of the dynamic function.
-	Copy() DynamicFunction[T]
-}
-
 // ===================================================
 // HASHING FUNCTION TO CALCULATE EQUALS AND CHANGES ==
 // ===================================================
@@ -108,16 +85,6 @@ func HashDynamicMapping[T any](dv DynamicMapping[T], isFunction bool) string {
 	builder.WriteString(strings.Join(elements, "|"))
 
 	return commons.HashString(builder.String())
-}
-
-// HashDynamicFunction returns a hash of the given dynamic function.
-func HashDynamicFunction[T any](f DynamicFunction[T]) string {
-	return HashDynamicMapping(f, true)
-}
-
-// HashDynamicRelation returns a hash of the given dynamic relation.
-func HashDynamicRelation[T any](r DynamicRelation[T]) string {
-	return HashDynamicMapping(r, false)
 }
 
 // =========================================================================
