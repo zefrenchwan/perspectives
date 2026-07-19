@@ -15,11 +15,6 @@ type DynamicFunction[T any] interface {
 	Copy() DynamicFunction[T]
 }
 
-// HashDynamicFunction returns a hash of the given dynamic function.
-func HashDynamicFunction[T any](f DynamicFunction[T]) string {
-	return HashDynamicMapping(f, true)
-}
-
 // timeFunction is a dynamic partition per period : one value per period.
 // Then, as a function, it picks the unique (if any) element matching the given moment.
 type timeFunction[T any] struct {

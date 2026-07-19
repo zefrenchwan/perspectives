@@ -17,11 +17,6 @@ type DynamicRelation[T any] interface {
 	Copy() DynamicRelation[T]
 }
 
-// HashDynamicRelation returns a hash of the given dynamic relation.
-func HashDynamicRelation[T any](r DynamicRelation[T]) string {
-	return HashDynamicMapping(r, false)
-}
-
 // timeRelation is a time-dependent relation : multiple values per period.
 type timeRelation[T any] struct {
 	// underlying values handler to regroup code as much as possible.

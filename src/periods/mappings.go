@@ -41,6 +41,27 @@ type DynamicMapping[T any] interface {
 	isFunctionalMapping() bool
 }
 
+// ========================================================
+// CLONING MECHANISM BASED ON SEALED INTERFACE MECHANISM ==
+// ========================================================
+
+// DynamicMappingCopy returns a copy of the given mapping.
+// It assumes that the mapping is either a relation or a function.
+// And due to the sealed interface mechanism, it should be the case.
+func DynamicMappingCopy[T any](original DynamicMapping[T]) DynamicMapping[T] {
+	if original == nil {
+		return nil
+	}
+
+	if original.isFunctionalMapping() {
+		otherFunction := original.(DynamicFunction[T])
+		return otherFunction.Copy()
+	} else {
+		otherRelation := original.(DynamicRelation[T])
+		return otherRelation.Copy()
+	}
+}
+
 // ===================================================
 // HASHING FUNCTION TO CALCULATE EQUALS AND CHANGES ==
 // ===================================================
@@ -51,7 +72,8 @@ type DynamicMapping[T any] interface {
 
 // HashDynamicMapping calculates a hash for a dynamic mapping.
 // Parameter isFunction indicates whether the mapping is a function (to distinguish the same content, different type)
-func HashDynamicMapping[T any](dv DynamicMapping[T], isFunction bool) string {
+func HashDynamicMapping[T any](dv DynamicMapping[T]) string {
+	isFunction := dv.isFunctionalMapping()
 	if dv == nil || dv.IsEmpty() {
 		value := fmt.Sprintf("Dynamic mapping of %s with functional %t", dv.DataType(), isFunction)
 		return commons.HashString(value)
