@@ -75,7 +75,7 @@ We extensively use time and a bitemporal model.
 ## Periods to ease time management
 
 The *age* of a person is basically a function that takes a date and returns an integer. 
-Altought it is true, we usually think in term of periods : when we had that job, when we got married, etc. 
+Althought it is true, we usually think in term of periods : when we had that job, when we got married, etc. 
 A **period** is a finite union of time intervals.
 For instance, the period `[2020-01-01, 2020-01-02]` is a period of two days.
 For instance, a president's mandate may be `[2016, 2020] UNION [2024, 2028]`.
@@ -140,17 +140,36 @@ We will not apply standard SQL vocabulary: [this source](https://martinfowler.co
 Then, given a record date, we want to distinguish between an element of the system that may change, and its current state. 
 State is an information that changes over time, but entity keeps being. 
 Entity is an element of the system that may change, and state is its current information. 
-An event arrives and notifies a state change such as :
-* entity creation, end of life
-* state change for that entity
-* link creation between entities, link deactivation, state change for that link
 
-| Name | Definition                                             |
-| --- |--------------------------------------------------------|
-| Entity | An element of the system that may change               |
-| State | The current information of an entity                   |
-| Link | A relationship between entities that evolves over time |
-| Link state | The current information of a link                      |
-| Event | A notification of a state change (local or global)     |
-| Record date | The date an event notified a change happened           |
-| Actual date | The date the actual change happened                    |
+### No link, no node, just entities
+
+Information is stored as graphs. 
+Usually, on a graph, we expect nodes and links. 
+For instance, `Martin == likes ==> pizza`. 
+We reify those links, too. 
+`Marie knows that (Martin == likes ==> pizza)`. 
+So, distinction between nodes and links is not always clear.
+A common definition is an **Entity**. 
+An entity is a node and a link at the same time. 
+
+To represent it, an entity is : 
+* a lifetime
+* a mapping from time to primitive values (the nodes part)
+* a mapping from time to other entities (the links part)
+
+Here is an example :
+
+| Name | Type | As node                | As link                 | 
+|---------------|--------|------------------------|-------------------------|
+| Martin | Entity | Age = 30               |                         |
+| Pizza | Entity | Price = 10             |                         |
+| Loves | Entity | Intensity = "very much" | Role: subject => Martin |
+|        |       |                        | Role: object => Pizza   |
+
+### State of an entity
+
+If we use entities, it is clear that they vary over time. 
+John was born in 1990, is alive now, will die in 2050. 
+When asked now about its state, he is alive, 32 years old, likes pizza. 
+In 2060, when asked about its state, he will be dead, 70 years old. 
+**Entities are elements that exist for sure, and state is factual information about them.**

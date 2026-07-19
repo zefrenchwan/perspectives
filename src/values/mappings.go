@@ -17,9 +17,13 @@ func EnsureValuesMappingInvariant[V Value](rawMapping periods.DynamicMapping[V])
 		}
 	}
 
-	// No element ? OK so far
+	if expectedType == "" {
+		// no element, so ok so far
+		return true
+	}
+
 	// ALl elements have the same type and it is what we expect ? OK
-	return expectedType == "" || (expectedType == rawMapping.DataType())
+	return expectedType == rawMapping.DataType()
 }
 
 type ImmutableValuesMapping[V Value] interface {
