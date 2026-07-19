@@ -8,8 +8,12 @@ import (
 	"github.com/zefrenchwan/perspectives.git/values"
 )
 
+// State is the immutable description of an entity at a given time.
 type State interface {
+	// Identifiable to define a unique identifier for the state.
 	commons.Identifiable
+	// Hashable to get the hash of the state.
+	// States are immutables, so hash sums up the current state.
 	commons.Hashable
 	// TimeBounded to define a time period during which the entity exists.
 	// It may vary, because, for instance, X is alive so far, until death (and then end of period).

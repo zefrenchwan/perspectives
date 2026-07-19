@@ -6,7 +6,8 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-// Entity is an immutable graph element.
+// Entity is a graph element.
+// It exists for sure but its state might change over time.
 type Entity interface {
 	// Identifiable provides a unique identifier for the entity.
 	commons.Identifiable
