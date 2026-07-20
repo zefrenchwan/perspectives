@@ -35,25 +35,23 @@ type DynamicMapping[T any] interface {
 	Remove(period Period)
 	// DataType returns the type of the values stored in the mapping.
 	DataType() string
-	// isFunctionalMapping returns true if the mapping is a function.
-	// It is true if, given a moment, there is only one value.
-	// It means a sealed interface.
-	isFunctionalMapping() bool
+	// IsFunction returns true if the mapping is a function.
+	IsFunction() bool
 }
 
-// ========================================================
-// CLONING MECHANISM BASED ON SEALED INTERFACE MECHANISM ==
-// ========================================================
+// ====================================================================================
+// CLONING MECHANISM  (it assumes that a mapping is either a function or a relation) ==
+// ====================================================================================
 
 // DynamicMappingCopy returns a copy of the given mapping.
 // It assumes that the mapping is either a relation or a function.
-// And due to the sealed interface mechanism, it should be the case.
+// It should be the case: mathematically, there is no other option.
 func DynamicMappingCopy[T any](original DynamicMapping[T]) DynamicMapping[T] {
 	if original == nil {
 		return nil
 	}
 
-	if original.isFunctionalMapping() {
+	if original.IsFunction() {
 		otherFunction := original.(DynamicFunction[T])
 		return otherFunction.Copy()
 	} else {
@@ -73,7 +71,7 @@ func DynamicMappingCopy[T any](original DynamicMapping[T]) DynamicMapping[T] {
 // HashDynamicMapping calculates a hash for a dynamic mapping.
 // Parameter isFunction indicates whether the mapping is a function (to distinguish the same content, different type)
 func HashDynamicMapping[T any](dv DynamicMapping[T]) string {
-	isFunction := dv.isFunctionalMapping()
+	isFunction := dv.IsFunction()
 	if dv == nil || dv.IsEmpty() {
 		value := fmt.Sprintf("Dynamic mapping of %s with functional %t", dv.DataType(), isFunction)
 		return commons.HashString(value)
@@ -145,7 +143,7 @@ func (vh *valuesHandler[T]) Equals(other DynamicMapping[T]) bool {
 		return false
 	} else if vh.IsEmpty() != other.IsEmpty() {
 		return false
-	} else if other.isFunctionalMapping() != vh.isFunctionalMapping() {
+	} else if other.IsFunction() != vh.IsFunction() {
 		return false
 	} else if vh.DataType() != other.DataType() {
 		return false
@@ -342,6 +340,6 @@ func (vh *valuesHandler[T]) Add(value T, period Period) {
 }
 
 // isFunctionalMapping returns true if the mapping is functional or false for relational
-func (vh *valuesHandler[T]) isFunctionalMapping() bool {
+func (vh *valuesHandler[T]) IsFunction() bool {
 	return vh.isFunction
 }
