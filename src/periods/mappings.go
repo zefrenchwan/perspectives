@@ -14,6 +14,9 @@ import (
 // DynamicMapping is a mapping of values that can change over time.
 // For instance, given a company, CEO is a role that may be X during a given period, then Y, then...
 // The CEO role would be a DYNAMIC mapping over time.
+//
+// IMPORTANT DESIGN ASSUMPTION:
+// EITHER MAPPING IS A FUNCTION OR A RELATION.
 type DynamicMapping[T any] interface {
 	// Domain is the union of periods linked to at least one value.
 	Domain() Period
