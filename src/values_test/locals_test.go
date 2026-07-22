@@ -8,7 +8,7 @@ import (
 	"github.com/zefrenchwan/perspectives.git/values"
 )
 
-// TestMappingLocalConcept tests the concept of local mapping.
+// TestMappingLocalConcept tests the concept of local mapping : easy to read ?
 func TestMappingLocalConcept(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 	beforePeriod := periods.NewPeriodUntil(now, true)
@@ -30,5 +30,37 @@ func TestMappingLocalConcept(t *testing.T) {
 		} else {
 			t.Errorf("Unexpected value: %v", value)
 		}
+	}
+}
+
+func TestMappingLocalHash(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	beforePeriod := periods.NewPeriodUntil(now, true)
+	afterPeriod := periods.NewPeriodSince(now, false)
+
+	resultBeforeAfter := values.NewStringLocalMapping(map[string]periods.Period{
+		"before": beforePeriod,
+		"after":  afterPeriod,
+	})
+
+	resultAfter := values.NewStringLocalMapping(map[string]periods.Period{
+		"after": afterPeriod,
+	})
+
+	resultBefore := values.NewStringLocalMapping(map[string]periods.Period{
+		"before": beforePeriod,
+	})
+
+	resultAfterBefore := values.NewStringLocalMapping(map[string]periods.Period{
+		"after":  afterPeriod,
+		"before": beforePeriod,
+	})
+
+	if resultBeforeAfter.ToHashString() != resultAfterBefore.ToHashString() {
+		t.Errorf("Expected hash of resultBeforeAfter to be equal to resultAfterBefore")
+	} else if resultAfter.ToHashString() == resultBefore.ToHashString() {
+		t.Errorf("Expected hash of resultAfter to be different to resultBefore")
+	} else if resultAfter.ToHashString() == resultAfterBefore.ToHashString() {
+		t.Errorf("Expected hash of resultAfter to be different to resultAfterBefore")
 	}
 }
