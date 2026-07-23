@@ -119,3 +119,11 @@ func NewStringLocalMapping(values map[string]periods.Period) ImmutableValuesMapp
 		return NewString(value)
 	})
 }
+
+// NewReferenceLocalMapping builds a new immutable local mapping for references linked to periods
+// Note that values matching empty periods are not stored in the local mapping.
+func NewReferenceLocalMapping(values map[string]periods.Period) ImmutableValuesMapping[ReferenceValue] {
+	return newLocalMapping[ReferenceValue, string](REFERENCE_TYPE, values, func(value string) ReferenceValue {
+		return NewReference(value)
+	})
+}
