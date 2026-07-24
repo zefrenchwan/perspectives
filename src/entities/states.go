@@ -1,4 +1,4 @@
-package values
+package entities
 
 import (
 	"iter"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/zefrenchwan/perspectives.git/commons"
 	"github.com/zefrenchwan/perspectives.git/periods"
+	"github.com/zefrenchwan/perspectives.git/values"
 )
 
 // State is the immutable description of an entity at a given time.
@@ -22,10 +23,10 @@ type State interface {
 	periods.TimeBounded
 	// Attributes describe the state of an element.
 	// Keys are names, and values are attributes (basically a map[period]primitives)
-	Attributes() iter.Seq2[string, ImmutableValuesMapping[PrimitiveValue]]
+	Attributes() iter.Seq2[string, values.ImmutableValuesMapping[values.PrimitiveValue]]
 	// Roles describe the relationships between elements.
 	// Keys are names, and values are roles (basically a map[period]references)
-	Roles() iter.Seq2[string, ImmutableValuesMapping[ReferenceValue]]
+	Roles() iter.Seq2[string, values.ImmutableValuesMapping[values.ReferenceValue]]
 }
 
 // localState is the in memory implementation of states.
@@ -37,10 +38,10 @@ type localState struct {
 	activity periods.Period
 	// attributes as a map of names and related values as a mapping.
 	// Values are primitives.
-	attributes map[string]ImmutableValuesMapping[PrimitiveValue]
+	attributes map[string]values.ImmutableValuesMapping[values.PrimitiveValue]
 	// roles as a map of names and related values as a mapping.
 	// Values are references to other entities.
-	roles map[string]ImmutableValuesMapping[ReferenceValue]
+	roles map[string]values.ImmutableValuesMapping[values.ReferenceValue]
 	// hashString is the hash of the state, calculated once
 	hashString string
 }
@@ -62,8 +63,8 @@ func (l localState) Activity() periods.Period {
 }
 
 // Attributes of the state as an iterator (to avoid defensive copies)
-func (l localState) Attributes() iter.Seq2[string, ImmutableValuesMapping[PrimitiveValue]] {
-	return func(yield func(string, ImmutableValuesMapping[PrimitiveValue]) bool) {
+func (l localState) Attributes() iter.Seq2[string, values.ImmutableValuesMapping[values.PrimitiveValue]] {
+	return func(yield func(string, values.ImmutableValuesMapping[values.PrimitiveValue]) bool) {
 		for attr, mapper := range l.attributes {
 			if !yield(attr, mapper) {
 				return
@@ -75,8 +76,8 @@ func (l localState) Attributes() iter.Seq2[string, ImmutableValuesMapping[Primit
 }
 
 // Roles of the state as an iterator (to avoid defensive copies)
-func (l localState) Roles() iter.Seq2[string, ImmutableValuesMapping[ReferenceValue]] {
-	return func(yield func(string, ImmutableValuesMapping[ReferenceValue]) bool) {
+func (l localState) Roles() iter.Seq2[string, values.ImmutableValuesMapping[values.ReferenceValue]] {
+	return func(yield func(string, values.ImmutableValuesMapping[values.ReferenceValue]) bool) {
 		for role, mapper := range l.roles {
 			if !yield(role, mapper) {
 				return
@@ -155,8 +156,8 @@ func localStateHash(l *localState) string {
 func NewLocalState(
 	id string, // id of the state
 	activity periods.Period, // activity period : when is the state valid
-	attributes map[string]ImmutableValuesMapping[PrimitiveValue], // name of attributes linked to immutable values
-	roles map[string]ImmutableValuesMapping[ReferenceValue], // name of roles linked to immutable references
+	attributes map[string]values.ImmutableValuesMapping[values.PrimitiveValue], // name of attributes linked to immutable values
+	roles map[string]values.ImmutableValuesMapping[values.ReferenceValue], // name of roles linked to immutable references
 ) State {
 	result := localState{
 		id:         id,

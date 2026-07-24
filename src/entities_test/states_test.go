@@ -1,9 +1,10 @@
-package values_test
+package entities_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/zefrenchwan/perspectives.git/entities"
 	"github.com/zefrenchwan/perspectives.git/periods"
 	"github.com/zefrenchwan/perspectives.git/values"
 )
@@ -12,7 +13,7 @@ func TestLocalState(t *testing.T) {
 	lastName := values.NewStringLocalMapping(map[string]periods.Period{"Doe": periods.NewFullPeriod()})
 	firstName := values.NewStringLocalMapping(map[string]periods.Period{"John": periods.NewFullPeriod()})
 	attributes := map[string]values.ImmutableValuesMapping[values.PrimitiveValue]{"firstName": firstName, "lastName": lastName}
-	state := values.NewLocalState("id", periods.NewFullPeriod(), attributes, nil)
+	state := entities.NewLocalState("id", periods.NewFullPeriod(), attributes, nil)
 
 	full := periods.NewFullPeriod()
 	if state.Id() != "id" {
@@ -66,10 +67,10 @@ func TestLocalStateHash(t *testing.T) {
 	attributes := map[string]values.ImmutableValuesMapping[values.PrimitiveValue]{"firstName": firstName, "lastName": lastName}
 	roles := map[string]values.ImmutableValuesMapping[values.ReferenceValue]{"firstName": firstNameRole, "lastName": lastNameRole}
 
-	emptyState := values.NewLocalState("id", periods.NewFullPeriod(), nil, nil)
-	partialState := values.NewLocalState("id", periods.NewPeriodSince(now, true), nil, nil)
-	attributesState := values.NewLocalState("id", periods.NewFullPeriod(), attributes, nil)
-	roleState := values.NewLocalState("id", periods.NewFullPeriod(), nil, roles)
+	emptyState := entities.NewLocalState("id", periods.NewFullPeriod(), nil, nil)
+	partialState := entities.NewLocalState("id", periods.NewPeriodSince(now, true), nil, nil)
+	attributesState := entities.NewLocalState("id", periods.NewFullPeriod(), attributes, nil)
+	roleState := entities.NewLocalState("id", periods.NewFullPeriod(), nil, roles)
 
 	// distinguish periods
 	if emptyState.ToHashString() == partialState.ToHashString() {

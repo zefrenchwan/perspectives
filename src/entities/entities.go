@@ -1,10 +1,9 @@
-package graphs
+package entities
 
 import (
 	"time"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
-	"github.com/zefrenchwan/perspectives.git/values"
 )
 
 // Entity is a graph element.
@@ -15,5 +14,5 @@ type Entity interface {
 	// CreationDate returns the moment the entity was created.
 	CreationDate() time.Time
 	// AsOf returns the state of the entity at the given observation time.
-	AsOf(time time.Time) (values.State, bool)
+	AsOf(time time.Time) (State, bool)
 }
