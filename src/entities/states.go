@@ -160,7 +160,7 @@ func NewLocalState(
 		activity:   activity,
 		attributes: attributes,
 		roles:      roles,
-		hashString: "",
+		hashString: "", // set just below
 	}
 
 	// hash calculation once content is set

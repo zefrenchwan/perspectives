@@ -45,7 +45,7 @@ func serializeContent(p PrimitiveValue) string {
 	buffer.WriteString("|")
 	var content string
 	if asTime, ok := p.value.(time.Time); ok {
-		content = asTime.Format(time.RFC3339Nano)
+		content = asTime.UTC().Format(time.RFC3339Nano)
 	} else {
 		content = fmt.Sprintf("%v", p.value)
 	}
