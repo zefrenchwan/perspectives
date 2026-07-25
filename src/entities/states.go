@@ -70,8 +70,6 @@ func (l localState) Attributes() iter.Seq2[string, values.ImmutableValuesMapping
 				return
 			}
 		}
-
-		return
 	}
 }
 
@@ -83,8 +81,6 @@ func (l localState) Roles() iter.Seq2[string, values.ImmutableValuesMapping[valu
 				return
 			}
 		}
-
-		return
 	}
 }
 
