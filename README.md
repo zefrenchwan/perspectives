@@ -173,3 +173,10 @@ John was born in 1990, is alive now, will die in 2050.
 When asked now about its state, he is alive, 32 years old, likes pizza. 
 In 2060, when asked about its state, he will be dead, 70 years old. 
 **Entities are elements that exist for sure, and state is factual information about them.**
+
+### Types of events 
+
+Allowed events are :
+* **create an event with an initial state** : not only do we define values, we also set the type of each property (relation, function)
+* **update role or attribute event** : we can change the value of a property of an entity during a given time. Note that using empty period excludes the property
+* **update the validity of an entity** : we can change the activity of an entity. Note that using empty period excludes the entity

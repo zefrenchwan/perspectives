@@ -12,6 +12,9 @@ import (
 )
 
 // State is the immutable description of an entity at a given time.
+// We want to insist on the semantic part : IT MAKES SENSE TO SPLIT ROLES AND ATTRIBUTES.
+// Another implementation might melt roles and attributes, claiming they are valued links to values (as a whole).
+// Nope : attributes are about local properties of the entity, roles are about the topology of the system.
 type State interface {
 	// Identifiable to define a unique identifier for the state.
 	commons.Identifiable
