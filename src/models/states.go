@@ -1,7 +1,8 @@
-package entities
+package models
 
 import (
 	"iter"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -158,11 +159,17 @@ func NewLocalState(
 	attributes map[string]values.ImmutableValuesMapping[values.PrimitiveValue], // name of attributes linked to immutable values
 	roles map[string]values.ImmutableValuesMapping[values.ReferenceValue], // name of roles linked to immutable references
 ) State {
+
+	rolesCopy := make(map[string]values.ImmutableValuesMapping[values.ReferenceValue], len(roles))
+	maps.Copy(rolesCopy, roles)
+	attributesCopy := make(map[string]values.ImmutableValuesMapping[values.PrimitiveValue], len(attributes))
+	maps.Copy(attributesCopy, attributes)
+
 	result := localState{
 		id:         id,
 		activity:   activity,
-		attributes: attributes,
-		roles:      roles,
+		attributes: attributesCopy,
+		roles:      rolesCopy,
 		hashString: "", // set just below
 	}
 

@@ -10,8 +10,8 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-// PrimitiveValue decorates primitives types allowed on entities.
-// It is a mandatory gate keeper to use and then ensure entities have good properties (serde for instance).
+// PrimitiveValue decorates primitives types allowed on models.
+// It is a mandatory gate keeper to use and then ensure models have good properties (serde for instance).
 type PrimitiveValue struct {
 	// dataType as listed in values/values.go
 	dataType string

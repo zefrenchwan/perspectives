@@ -7,6 +7,17 @@ MIT license
 
 An event manager that registers incoming data to build a bitemporal history of information.
 
+## Problem to solve
+
+This is a project to test ideas.
+In particular, it eludes all distributed time management.
+There is no Lamport clock, just basic time to work on.
+Question to answer is :
+* how a single system may represent information coming from outside into a memory we may load and export ?
+* is it possible to use a reified graph for NLP tasks ? What are the limits ? 
+* Once pure information is loaded, what are concrete reasoning cases that solution may solve ? 
+
+
 ## Introduction
 
 Events arrive about information changes: creating new elements, deleting some, or changing others.

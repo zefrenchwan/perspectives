@@ -1,10 +1,10 @@
-package entities_test
+package models_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/entities"
+	"github.com/zefrenchwan/perspectives.git/models"
 	"github.com/zefrenchwan/perspectives.git/periods"
 	"github.com/zefrenchwan/perspectives.git/values"
 )
@@ -12,7 +12,7 @@ import (
 func TestActivityChangeEvent(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	full := periods.NewFullPeriod()
-	event := entities.UpdateActivityEvent(
+	event := models.UpdateActivityEvent(
 		"id",
 		"entity id",
 		now,
@@ -35,7 +35,7 @@ func TestActivityChangeEvent(t *testing.T) {
 func TestUpdateAttributeEvent(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	full := periods.NewFullPeriod()
-	event := entities.UpdateAttributeEvent("id", "entity id", now, "name", values.NewString("value"), full)
+	event := models.UpdateAttributeEvent("id", "entity id", now, "name", values.NewString("value"), full)
 
 	if event.Id() != "id" {
 		t.Errorf("Expected event id to be id")
@@ -55,7 +55,7 @@ func TestUpdateAttributeEvent(t *testing.T) {
 func TestUpdateRoleEvent(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	full := periods.NewFullPeriod()
-	event := entities.UpdateRoleEvent("id", "entity id", now,
+	event := models.UpdateRoleEvent("id", "entity id", now,
 		"subject", values.NewReference("id of an entity"), full)
 
 	if event.Id() != "id" {

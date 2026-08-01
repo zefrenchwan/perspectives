@@ -1,10 +1,10 @@
-package entities_test
+package models_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/zefrenchwan/perspectives.git/entities"
+	"github.com/zefrenchwan/perspectives.git/models"
 	"github.com/zefrenchwan/perspectives.git/periods"
 	"github.com/zefrenchwan/perspectives.git/values"
 )
@@ -15,9 +15,9 @@ func TestCreateEntityEvent(t *testing.T) {
 
 	name := values.NewStringLocalMapping(map[string]periods.Period{"Name of the entity": periods.NewFullPeriod()})
 	attributes := map[string]values.ImmutableValuesMapping[values.PrimitiveValue]{"name": name}
-	state := entities.NewLocalState("state id", periods.NewFullPeriod(), attributes, nil)
+	state := models.NewLocalState("state id", periods.NewFullPeriod(), attributes, nil)
 
-	event := entities.CreateEntityEvent(
+	event := models.CreateEntityEvent(
 		"event1",
 		"entity1",
 		now,
