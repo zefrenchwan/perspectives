@@ -3,15 +3,7 @@ package commons
 import (
 	"cmp"
 	"slices"
-
-	"github.com/google/uuid"
 )
-
-// NewId builds a new unique id.
-// Two different calls should return two different values.
-func NewId() string {
-	return uuid.NewString()
-}
 
 // SliceCopy just copies a slice
 func SliceCopy[T any](original []T) []T {
@@ -146,14 +138,21 @@ func SlicesContainsAllFunc[T any](base []T, other []T, equals func(a, b T) bool)
 	return true
 }
 
-// SlicesFilter returns a new slice containing only  elements that match the predicate
+// SlicesFilter returns a new slice containing only elements that match the predicate
 func SlicesFilter[T any](base []T, keepPredicate func(T) bool) []T {
-	var result []T
+	if keepPredicate == nil {
+		return base
+	}
+
+	result := make([]T, 0, len(base))
+
 	for _, element := range base {
-		if keepPredicate == nil || keepPredicate(element) {
+		if keepPredicate(element) {
 			result = append(result, element)
 		}
 	}
 
+	// remove extra space between elements and actual capacity
+	result = slices.Clip(result)
 	return result
 }

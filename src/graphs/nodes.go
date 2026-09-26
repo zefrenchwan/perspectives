@@ -6,11 +6,10 @@ type Node interface {
 	commons.Identifiable
 }
 
-type GenericNode[V any] struct {
-	Identifier string
-	Value      V
+type IdentifiableNode struct {
+	Identifer string
 }
 
-func (n *GenericNode[V]) Id() string {
-	return n.Identifier
+func (n IdentifiableNode) Id() string {
+	return n.Identifer
 }

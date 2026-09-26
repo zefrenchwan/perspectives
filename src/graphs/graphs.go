@@ -9,7 +9,8 @@ type Graph[N Node] interface {
 	// SetNode upserts a node.
 	// If node already exists, it changes its value.
 	SetNode(N) error
-	// RemoveNode a node if isolated (not linked to any other node)
+	// RemoveNode a node and all its links around.
+	// If node does not exist, it raises an error.
 	RemoveNode(N) error
 	// Nodes return the nodes within the graph
 	Nodes() iter.Seq[N]

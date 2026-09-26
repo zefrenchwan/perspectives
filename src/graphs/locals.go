@@ -3,99 +3,266 @@ package graphs
 import (
 	"errors"
 	"iter"
-	"maps"
+	"slices"
 	"sync"
+
+	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
-// localGraph defines a weighted graph that stores nodes and links locally.
-// Each node has a value of type V.
-// Implementation stores the values per identifier, then manages the ids only.
+type localEdge[V any] struct {
+	destination string
+	value       V
+}
+
+type readOnlyEdge[N Node, V any] struct {
+	destination N
+	value       V
+}
+
 type localGraph[N Node, V any] struct {
-	// mutex to prevent concurrent access to the nodes and links maps.
-	mutex sync.RWMutex
-	// nodes stores the nodes of the graph by id
-	nodes map[string]N
-	// links stores the links of the graph by source id and target id
-	links map[string]map[string]V
+	synchronizer sync.RWMutex
+	edges        map[string][]localEdge[V]
+	nodes        map[string]N
 }
 
-// newLocalGraph creates a new localGraph instance.
-func newLocalGraph[N Node, V any]() *localGraph[N, V] {
-	return &localGraph[N, V]{
+func newLocalGraph[N Node, V any]() localGraph[N, V] {
+	return localGraph[N, V]{
+		edges: make(map[string][]localEdge[V]),
 		nodes: make(map[string]N),
-		links: make(map[string]map[string]V),
 	}
 }
 
-// upsertNode adds a node to the graph.
-func (g *localGraph[N, V]) upsertNode(node N) {
-	if node != nil {
-		g.mutex.Lock()
-		defer g.mutex.Unlock()
-		id := node.Id()
-		g.nodes[id] = node
-	}
+func (g *localGraph[N, V]) hasNode(nodeId string) bool {
+	g.synchronizer.RLock()
+	defer g.synchronizer.RUnlock()
+	_, has := g.nodes[nodeId]
+	return has
 }
 
-// removeNode removes a node from the graph.
-func (g *localGraph[N, V]) removeNode(node N) {
-	if node != nil {
-		id := node.Id()
-		g.mutex.Lock()
-		defer g.mutex.Unlock()
-		delete(g.nodes, id)
-		for _, linksMap := range g.links {
-			delete(linksMap, id)
-		}
-		delete(g.links, id)
-	}
-}
+func (g *localGraph[N, V]) upsertNode(node N) error {
+	g.synchronizer.Lock()
+	defer g.synchronizer.Unlock()
 
-// hasNode checks if a node exists in the graph
-func (g *localGraph[N, V]) hasNode(node N) bool {
-	if node != nil {
-		g.mutex.RLock()
-		defer g.mutex.RUnlock()
-		id := node.Id()
-		_, ok := g.nodes[id]
-		return ok
-	}
-
-	return false
-}
-
-// allNodes returns all nodes in the graph as a sequence
-func (g *localGraph[N, V]) allNodes() iter.Seq[N] {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
-
-	return maps.Values(g.nodes)
-}
-
-// linkNodesWithValue links two nodes in the graph with a value
-func (g *localGraph[N, V]) linkNodesWithValue(source, destination N, value V) error {
-	if source == nil || destination == nil {
-		return errors.New("source and destination nodes cannot be nil")
-	}
-
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
-	if _, hasSource := g.nodes[source.Id()]; !hasSource {
-		return errors.New("source should exist in graph")
-	} else if _, hasDest := g.nodes[destination.Id()]; !hasDest {
-		return errors.New("destination should exist in graph")
-	}
-
-	if _, has := g.links[source.Id()]; !has {
-		g.links[source.Id()] = make(map[string]V)
-	}
-
-	g.links[source.Id()][destination.Id()] = value
+	g.nodes[node.Id()] = node
 	return nil
 }
 
-// linkNodes links two nodes in the graph with an empty value so that it works as an unweighted link
-func (g *localGraph[N, V]) linkNodes(source, destination N) error {
+func (g *localGraph[N, V]) removeNode(nodeId string) error {
+	g.synchronizer.Lock()
+	defer g.synchronizer.Unlock()
+
+	if _, has := g.nodes[nodeId]; !has {
+		return errors.New("node does not exist")
+	}
+
+	delete(g.nodes, nodeId)
+	delete(g.edges, nodeId)
+
+	filterFunc := func(e localEdge[V]) bool {
+		return e.destination != nodeId
+	}
+
+	for key, values := range g.edges {
+		filteredValues := commons.SlicesFilter(values, filterFunc)
+		g.edges[key] = filteredValues
+	}
+
+	return nil
+}
+
+func (g *localGraph[N, V]) nodesIterator() iter.Seq[N] {
+	g.synchronizer.RLock()
+	defer g.synchronizer.RUnlock()
+
+	localCopy := make([]N, len(g.nodes))
+	i := 0
+	for _, node := range g.nodes {
+		localCopy[i] = node
+		i++
+	}
+
+	return slices.Values(localCopy)
+}
+
+func (g *localGraph[N, V]) linkNodes(source, destination string, value V) error {
+	g.synchronizer.Lock()
+	defer g.synchronizer.Unlock()
+
+	if _, hasSource := g.nodes[source]; !hasSource {
+		return errors.New("source node does not exist")
+	} else if _, hasDestination := g.nodes[destination]; !hasDestination {
+		return errors.New("destination node does not exist")
+	}
+
+	found := false
+	sourceEdges := g.edges[source]
+	for index, currentEdge := range sourceEdges {
+		if currentEdge.destination == destination {
+			found = true
+			g.edges[source][index].value = value
+			break
+		}
+	}
+
+	if !found {
+		g.edges[source] = append(g.edges[source], localEdge[V]{destination, value})
+	}
+
+	return nil
+}
+
+func (g *localGraph[N, V]) unlinkNodes(source, destination string) error {
+	g.synchronizer.Lock()
+	defer g.synchronizer.Unlock()
+
+	if _, hasSource := g.nodes[source]; !hasSource {
+		return errors.New("source node does not exist")
+	} else if _, hasDestination := g.nodes[destination]; !hasDestination {
+		return errors.New("destination node does not exist")
+	}
+
+	found := false
+	matchingIndex := 0
+	sourceEdges := g.edges[source]
+	for index, currentEdge := range sourceEdges {
+		if currentEdge.destination == destination {
+			found = true
+			matchingIndex = index
+			break
+		}
+	}
+
+	if found {
+		size := len(sourceEdges)
+		sourceEdges[matchingIndex] = sourceEdges[size-1]
+		g.edges[source] = sourceEdges[:size-1]
+	}
+
+	if len(g.edges[source]) == 0 {
+		delete(g.edges, source)
+	}
+
+	return nil
+}
+
+func (g *localGraph[N, V]) hasLink(source, destination string) (V, bool) {
+	g.synchronizer.RLock()
+	defer g.synchronizer.RUnlock()
+
 	var empty V
-	return g.linkNodesWithValue(source, destination, empty)
+	if _, hasSource := g.nodes[source]; !hasSource {
+		return empty, false
+	} else if _, hasDest := g.nodes[destination]; !hasDest {
+		return empty, false
+	}
+
+	for _, currentEdge := range g.edges[source] {
+		if currentEdge.destination == destination {
+			return currentEdge.value, true
+		}
+	}
+
+	return empty, false
+}
+
+func (g *localGraph[N, V]) nodeNeighbors(source string) iter.Seq[N] {
+	g.synchronizer.RLock()
+	defer g.synchronizer.RUnlock()
+
+	if _, hasSource := g.nodes[source]; !hasSource {
+		return nil
+	}
+
+	currentEdges := g.edges[source]
+	copyValues := make([]N, len(currentEdges))
+	index := 0
+	for _, edge := range currentEdges {
+		node := g.nodes[edge.destination]
+		copyValues[index] = node
+		index++
+	}
+
+	return slices.Values(copyValues)
+}
+
+func (g *localGraph[N, V]) valuedNeighbors(source string) iter.Seq2[N, V] {
+	return func(yield func(N, V) bool) {
+		g.synchronizer.RLock()
+		// unlock dealt manually, before end of function
+		if _, hasSource := g.nodes[source]; !hasSource {
+			g.synchronizer.RUnlock()
+			return
+		}
+
+		// make a copy of neighbors as a snapshot
+		currentEdges := g.edges[source]
+		snapshot := make([]readOnlyEdge[N, V], 0, len(currentEdges))
+
+		for _, edge := range currentEdges {
+			if destNode, exists := g.nodes[edge.destination]; exists {
+				snapshot = append(snapshot, readOnlyEdge[N, V]{
+					destination: destNode,
+					value:       edge.value,
+				})
+			}
+		}
+
+		// copy done, unlock
+		g.synchronizer.RUnlock()
+
+		// iterator on snapshot, no race issue
+		for _, roEdge := range snapshot {
+			if !yield(roEdge.destination, roEdge.value) {
+				return
+			}
+		}
+	}
+}
+
+/////////////////////////////////////
+// LINK TO GENERAL IMPLEMENTATIONS //
+/////////////////////////////////////
+
+type directedUnweightedGraph[N Node] struct {
+	adapter localGraph[N, struct{}]
+}
+
+func NewDGraph[N Node]() DGraph[N] {
+	return &directedUnweightedGraph[N]{
+		adapter: newLocalGraph[N, struct{}](),
+	}
+}
+
+func (g *directedUnweightedGraph[N]) SetNode(node N) error {
+	return g.adapter.upsertNode(node)
+}
+
+func (g *directedUnweightedGraph[N]) RemoveNode(node N) error {
+	return g.adapter.removeNode(node.Id())
+}
+
+func (g *directedUnweightedGraph[N]) Nodes() iter.Seq[N] {
+	return g.adapter.nodesIterator()
+}
+
+func (g *directedUnweightedGraph[N]) HasNode(node N) bool {
+	return g.adapter.hasNode(node.Id())
+}
+
+func (g *directedUnweightedGraph[N]) Link(source, destination N) error {
+	empty := struct{}{}
+	return g.adapter.linkNodes(source.Id(), destination.Id(), empty)
+}
+
+func (g *directedUnweightedGraph[N]) Unlink(source, destination N) error {
+	return g.adapter.unlinkNodes(source.Id(), destination.Id())
+}
+
+func (g *directedUnweightedGraph[N]) Successors(source N) iter.Seq[N] {
+	return g.adapter.nodeNeighbors(source.Id())
+}
+
+func (g *directedUnweightedGraph[N]) HasLink(source, destination N) bool {
+	_, has := g.adapter.hasLink(source.Id(), destination.Id())
+	return has
 }
