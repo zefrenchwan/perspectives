@@ -141,7 +141,7 @@ func SlicesContainsAllFunc[T any](base []T, other []T, equals func(a, b T) bool)
 // SlicesFilter returns a new slice containing only elements that match the predicate
 func SlicesFilter[T any](base []T, keepPredicate func(T) bool) []T {
 	if keepPredicate == nil {
-		return base
+		return slices.Clone(base)
 	}
 
 	result := make([]T, 0, len(base))
@@ -153,6 +153,6 @@ func SlicesFilter[T any](base []T, keepPredicate func(T) bool) []T {
 	}
 
 	// remove extra space between elements and actual capacity
-	result = slices.Clip(result)
+	result = slices.Clone(result)
 	return result
 }
