@@ -9,20 +9,28 @@ import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 )
 
+// localEdge is inner structure for edges : destination and value
 type localEdge[V any] struct {
+	// destination of the edge (source is stored in map)
 	destination string
-	value       V
+	// value of the edge
+	value V
 }
 
+// readOnlyEdge is a struct used for read-only access to edges when building sequences
 type readOnlyEdge[N Node, V any] struct {
 	destination N
 	value       V
 }
 
+// localGraph is a graph implementation that stores edges and nodes locally as a map of edges and nodes
 type localGraph[N Node, V any] struct {
+	// synchronizer is used as a read-write lock to ensure thread safety when accessing the graph
 	synchronizer sync.RWMutex
-	edges        map[string][]localEdge[V]
-	nodes        map[string]N
+	// edges of the graph by source node id
+	edges map[string][]localEdge[V]
+	// nodes of the graph by node id (to have content once)
+	nodes map[string]N
 }
 
 func newLocalGraph[N Node, V any]() localGraph[N, V] {
