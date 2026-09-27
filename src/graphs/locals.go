@@ -233,6 +233,10 @@ func (g *localGraph[N, V]) valuedNeighbors(source string) iter.Seq2[N, V] {
 // LINK TO GENERAL IMPLEMENTATIONS //
 /////////////////////////////////////
 
+////////////////////////////////
+// DIRECTED UNWEIGHTED GRAPHS //
+////////////////////////////////
+
 type directedUnweightedGraph[N Node] struct {
 	adapter localGraph[N, struct{}]
 }
@@ -243,36 +247,112 @@ func NewDGraph[N Node]() DGraph[N] {
 	}
 }
 
+// SetNode adds a node to the graph or change its status.
+// It does not raise any error.
 func (g *directedUnweightedGraph[N]) SetNode(node N) error {
 	return g.adapter.upsertNode(node)
 }
 
+// RemoveNode removes the node by id.
+// It raises an error if the node does not exist.
 func (g *directedUnweightedGraph[N]) RemoveNode(node N) error {
 	return g.adapter.removeNode(node.Id())
 }
 
+// Nodes iterates over all the nodes.
+// It guarantees that the nodes are returned once only.
 func (g *directedUnweightedGraph[N]) Nodes() iter.Seq[N] {
 	return g.adapter.nodesIterator()
 }
 
+// HasNode returns true if the node exists in the graph (based on id).
 func (g *directedUnweightedGraph[N]) HasNode(node N) bool {
 	return g.adapter.hasNode(node.Id())
 }
 
+// Link adds a link (if no one existed).
+// It returns an error if the nodes do not exist.
+// It has no effect if the link already exists.
 func (g *directedUnweightedGraph[N]) Link(source, destination N) error {
 	empty := struct{}{}
 	return g.adapter.linkNodes(source.Id(), destination.Id(), empty)
 }
 
+// Unlink removes a link between two nodes if any.
+// It returns an error if the nodes do not exist.
 func (g *directedUnweightedGraph[N]) Unlink(source, destination N) error {
 	return g.adapter.unlinkNodes(source.Id(), destination.Id())
 }
 
+// Successors returns the successors of the node.
+// It performs a defensive copy to avoid locking while iterating.
 func (g *directedUnweightedGraph[N]) Successors(source N) iter.Seq[N] {
 	return g.adapter.nodeNeighbors(source.Id())
 }
 
+// HasLink returns true if the link exists in the graph (hence, nodes exist too).
 func (g *directedUnweightedGraph[N]) HasLink(source, destination N) bool {
 	_, has := g.adapter.hasLink(source.Id(), destination.Id())
 	return has
+}
+
+////////////////////////////////
+// DIRECTED UNWEIGHTED GRAPHS //
+////////////////////////////////
+
+type directedWeightedGraph[N Node, V any] struct {
+	adapter localGraph[N, V]
+}
+
+func NewDWGraph[N Node, V any]() DWGraph[N, V] {
+	return &directedWeightedGraph[N, V]{
+		adapter: newLocalGraph[N, V](),
+	}
+}
+
+// SetNode adds a node to the graph or change its status.
+// It does not raise any error.
+func (g *directedWeightedGraph[N, V]) SetNode(node N) error {
+	return g.adapter.upsertNode(node)
+}
+
+// RemoveNode removes the node by id.
+// It raises an error if the node does not exist.
+func (g *directedWeightedGraph[N, V]) RemoveNode(node N) error {
+	return g.adapter.removeNode(node.Id())
+}
+
+// Nodes iterates over all the nodes.
+// It guarantees that the nodes are returned once only.
+func (g *directedWeightedGraph[N, V]) Nodes() iter.Seq[N] {
+	return g.adapter.nodesIterator()
+}
+
+// HasNode returns true if the node exists in the graph (based on id).
+func (g *directedWeightedGraph[N, V]) HasNode(node N) bool {
+	return g.adapter.hasNode(node.Id())
+}
+
+// Link adds a link (if no one existed) between two nodes with given value.
+// It returns an error if the nodes do not exist.
+// It has no effect if the link already exists.
+func (g *directedWeightedGraph[N, V]) Link(source N, destination N, value V) error {
+	return g.adapter.linkNodes(source.Id(), destination.Id(), value)
+}
+
+// Unlink removes a link between two nodes if any.
+// It returns an error if the nodes do not exist.
+func (g *directedWeightedGraph[N, V]) Unlink(source, destination N) error {
+	return g.adapter.unlinkNodes(source.Id(), destination.Id())
+}
+
+// Successors returns the successors of the node and edges values.
+// It performs a defensive copy to avoid locking while iterating.
+func (g *directedWeightedGraph[N, V]) Successors(source N) iter.Seq2[N, V] {
+	return g.adapter.valuedNeighbors(source.Id())
+}
+
+// HasLink returns true if the link exists in the graph (hence, nodes exist too).
+func (g *directedWeightedGraph[N, V]) HasLink(source, destination N) (V, bool) {
+	return g.adapter.hasLink(source.Id(), destination.Id())
 }
