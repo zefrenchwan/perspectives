@@ -23,7 +23,9 @@ type readOnlyEdge[N Node, V any] struct {
 	value       V
 }
 
-// localGraph is a graph implementation that stores edges and nodes locally as a map of edges and nodes
+// localGraph is a graph implementation that stores edges and nodes locally as a map of edges and nodes.
+// Implementation is in memory, thread-safe, and defensive (copies on read).
+// Its purpose is more to validate the graph interface, and should not be used in production for large graphs.
 type localGraph[N Node, V any] struct {
 	// synchronizer is used as a read-write lock to ensure thread safety when accessing the graph
 	synchronizer sync.RWMutex
