@@ -93,3 +93,25 @@ func TestRemoveElements(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestGraphsErrors(t *testing.T) {
+	node := graphs.IdentifiableNode{Identifer: "node"}
+	other := graphs.IdentifiableNode{Identifer: "other"}
+	last := graphs.IdentifiableNode{Identifer: "last"}
+
+	gr := graphs.NewDGraph[graphs.IdentifiableNode]()
+	gr.SetNode(node)
+	if err := gr.Link(node, other); err == nil {
+		t.Log("node failure : failed to add link with missing node")
+		t.Fail()
+	} else if err := gr.Link(last, node); err == nil {
+		t.Log("node failure : failed to add link with missing node")
+		t.Fail()
+	} else if err := gr.Unlink(node, last); err == nil {
+		t.Log("node failure : failed to remove link with missing node")
+		t.Fail()
+	} else if err := gr.Unlink(other, node); err == nil {
+		t.Log("node failure : failed to remove link with missing node")
+		t.Fail()
+	}
+}
