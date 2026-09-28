@@ -94,6 +94,35 @@ func TestRemoveElements(t *testing.T) {
 	}
 }
 
+func TestRemoveAndReAdd(t *testing.T) {
+	a, b := graphs.IdentifiableNode{Identifer: "a"}, graphs.IdentifiableNode{Identifer: "b"}
+	g := graphs.NewDGraph[graphs.IdentifiableNode]()
+	g.SetNode(a)
+	g.SetNode(b)
+	g.Link(a, b)
+
+	g.RemoveNode(a)
+	g.SetNode(a)
+	g.Link(a, b)
+
+	if !g.HasLink(a, b) {
+		t.Log("link failure : should have link")
+		t.Fail()
+	}
+
+	g.RemoveNode(a)
+	g.RemoveNode(b)
+
+	g.SetNode(a)
+	g.SetNode(b)
+	g.Link(a, b)
+
+	if !g.HasLink(a, b) {
+		t.Log("link failure : should have link")
+		t.Fail()
+	}
+}
+
 func TestGraphsErrors(t *testing.T) {
 	node := graphs.IdentifiableNode{Identifer: "node"}
 	other := graphs.IdentifiableNode{Identifer: "other"}
