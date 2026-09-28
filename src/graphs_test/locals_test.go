@@ -165,12 +165,25 @@ func TestValuedGraph(t *testing.T) {
 		t.Fail()
 	}
 
+	// set a different value
+	g.Link(node, other, 2)
+	if v, has := g.HasLink(node, other); !has {
+		t.Log("link failure : failed to add link")
+		t.Fail()
+	} else if v != 2 {
+		t.Log("link failure : failed to add link with correct value")
+		t.Fail()
+	} else if _, has := g.HasLink(other, node); has {
+		t.Log("link failure : should not have link")
+		t.Fail()
+	}
+
 	// go for walkthrough from an existing node
 	for v, e := range g.Successors(node) {
 		if v.Id() != other.Id() {
 			t.Log("walkthrough failure : failed to walk through successors")
 			t.Fail()
-		} else if e != 1 {
+		} else if e != 2 {
 			t.Log("walkthrough failure : failed to walk through successors with correct value")
 			t.Fail()
 		}
@@ -187,4 +200,12 @@ func TestValuedGraph(t *testing.T) {
 		t.Log("walkthrough failure : not in graph", v.Id(), e)
 		t.Fail()
 	}
+
+	// remove the link
+	g.Unlink(node, other)
+	for v, e := range g.Successors(node) {
+		t.Log("walkthrough failure : no more node in graph", v.Id(), e)
+		t.Fail()
+	}
+
 }
