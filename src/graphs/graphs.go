@@ -10,7 +10,6 @@ type Graph[N Node] interface {
 	// If node already exists, it changes its value.
 	SetNode(N) error
 	// RemoveNode a node and all its links around.
-	// If node does not exist, it raises an error.
 	RemoveNode(N) error
 	// Nodes return the nodes within the graph
 	Nodes() iter.Seq[N]
@@ -37,7 +36,7 @@ type DGraph[N Node] interface {
 
 // DWGraph is the implementation for a graph with values linked to the edges.
 // Values may be anything (a reducer will manage int or float values).
-type DWGraph[N Node, V any] interface {
+type DWGraph[N Node, V Value] interface {
 	// Graph defines the generic graph interface: manage nodes.
 	Graph[N]
 	// Link adds a value for a couple of nodes.
