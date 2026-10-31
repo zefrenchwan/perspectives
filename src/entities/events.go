@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/zefrenchwan/perspectives.git/commons"
+	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
 // Event is any change of state in the system.
@@ -20,6 +21,8 @@ type Event interface {
 type baseEvent struct {
 	// eventId is the unique identifier of the event
 	eventId string
+	// entityId to get the id of the entity to change
+	entityId string
 	// creationDate is the date when the event was created
 	creationDate time.Time
 }
@@ -34,28 +37,35 @@ func (e baseEvent) CreationDate() time.Time {
 	return e.creationDate
 }
 
-// EventNewEntity is an event that represents the creation of a new entity.
-// We know the id of the entity we want to create
-type EventNewEntity struct {
-	// baseEvent to implement the Event interface
-	baseEvent
-	// entityId is the unique identifier of the entity (immutable)
-	entityId string
-}
-
-// EntityId returns the immutable id of the entity
-func (e EventNewEntity) EntityId() string {
+// EntityId returns the id of the entity that event applies to.
+// The event id is for the event, the entity id is for the entity to change.
+func (e baseEvent) EntityId() string {
 	return e.entityId
 }
 
-// BuildEventNewEntity creates a new event that represents the creation of a new entity.
-// Parameter entityId is the unique identifier of the entity (immutable)
-func BuildEventNewEntity(entityId string) EventNewEntity {
-	return EventNewEntity{
+// EventChangeActivity changes the activity of an entity.
+// For a new entity, it creates the entity with that activity
+type EventChangeActivity struct {
+	// baseEvent to share main elements
+	baseEvent
+	// activity is the new activity of the entity
+	activity periods.Period
+}
+
+// Activity returns the new activity of the entity.
+// Once event is processed, the entity will have this activity
+func (e EventChangeActivity) Activity() periods.Period {
+	return e.activity
+}
+
+// BuildEventChangeActivity builds a new event to change the activity of an entity.
+func BuildEventChangeActivity(entityId string, newActivity periods.Period) EventChangeActivity {
+	return EventChangeActivity{
 		baseEvent: baseEvent{
 			eventId:      commons.NewId(),
+			entityId:     entityId,
 			creationDate: time.Now(),
 		},
-		entityId: entityId,
+		activity: newActivity,
 	}
 }
