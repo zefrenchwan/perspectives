@@ -7,13 +7,15 @@ import (
 	"github.com/zefrenchwan/perspectives.git/periods"
 )
 
-// Event is any change of state in the system.
-// It is an immutable object.
-type Event interface {
+// LocalEvent is any change of state in the system on a given entity.
+// It is an immutable object by design
+type LocalEvent interface {
 	// Identifiable to get the event id
 	commons.Identifiable
 	// CreationDate to get the date when the event was created
 	CreationDate() time.Time
+	// EntityId to get the local object it applies to
+	EntityId() string
 }
 
 // baseEvent is the event skeleton to manage common event properties :
@@ -43,6 +45,15 @@ func (e baseEvent) EntityId() string {
 	return e.entityId
 }
 
+// buildBaseEvent builds a new base event, to reuse for every decoration
+func buildBaseEvent(entityId string) baseEvent {
+	return baseEvent{
+		entityId:     entityId,
+		creationDate: time.Now(),
+		eventId:      commons.NewId(),
+	}
+}
+
 // EventChangeActivity changes the activity of an entity.
 // For a new entity, it creates the entity with that activity
 type EventChangeActivity struct {
@@ -61,11 +72,7 @@ func (e EventChangeActivity) Activity() periods.Period {
 // BuildEventChangeActivity builds a new event to change the activity of an entity.
 func BuildEventChangeActivity(entityId string, newActivity periods.Period) EventChangeActivity {
 	return EventChangeActivity{
-		baseEvent: baseEvent{
-			eventId:      commons.NewId(),
-			entityId:     entityId,
-			creationDate: time.Now(),
-		},
-		activity: newActivity,
+		baseEvent: buildBaseEvent(entityId),
+		activity:  newActivity,
 	}
 }
