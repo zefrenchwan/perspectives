@@ -41,10 +41,12 @@ type ActivityChange struct {
 	active bool
 }
 
+// Active returns true if element becomes active (true) or becomes inactive (false)
 func (ac ActivityChange) Active() bool {
 	return ac.active
 }
 
+// CreateActivityChange produces a new changes to set the element as active at that time (included or not)
 func CreateActivityChange(targetId string, active bool, actualDate time.Time, included bool) ActivityChange {
 	return ActivityChange{
 		active: active,
