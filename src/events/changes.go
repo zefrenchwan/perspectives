@@ -3,6 +3,7 @@ package events
 import (
 	"github.com/zefrenchwan/perspectives.git/commons"
 	"github.com/zefrenchwan/perspectives.git/periods"
+	"github.com/zefrenchwan/perspectives.git/values"
 )
 
 // Change is any state change within the system
@@ -56,5 +57,46 @@ func CreateActivityChange(targetId string, activity periods.Period) ActivityChan
 			targetId: targetId,
 		},
 		activity: activity,
+	}
+}
+
+// PropertyChange changes the value of that property for that target.
+// For instance, set name of element ... to be "John", valid since 2020
+type PropertyChange struct {
+	// baseChange to get id and target
+	baseChange
+	// propertyName is the name of the property to change
+	propertyName string
+	// propertyValue is the value to set
+	propertyValue values.PrimitiveValue
+	// validity is the validity of the change
+	validity periods.Period
+}
+
+// PropertyName returns the name of the property to set
+func (p PropertyChange) PropertyName() string {
+	return p.propertyName
+}
+
+// PropertyValue returns the value to set
+func (p PropertyChange) PropertyValue() values.PrimitiveValue {
+	return p.propertyValue
+}
+
+// Validity returns the validity of the mapping name => value
+func (p PropertyChange) Validity() periods.Period {
+	return p.validity
+}
+
+// CreatePropertyChange creates a new change to set a property value (by name), valid during a period.
+func CreatePropertyChange(targetId string, propertyName string, propertyValue values.PrimitiveValue, validity periods.Period) PropertyChange {
+	return PropertyChange{
+		baseChange: baseChange{
+			changeId: commons.NewId(),
+			targetId: targetId,
+		},
+		propertyName:  propertyName,
+		propertyValue: propertyValue,
+		validity:      validity,
 	}
 }
