@@ -100,3 +100,44 @@ func CreatePropertyChange(targetId string, propertyName string, propertyValue va
 		validity:      validity,
 	}
 }
+
+// LinkChange is the change to add, to a given element,
+// an element linked for a given role, during a given time.
+type LinkChange struct {
+	// baseChange contains TargetId
+	baseChange
+	// roleName is the name of the role
+	roleName string
+	// linkDestination is the destination of the link
+	linkDestination values.ReferenceValue
+	// validity is the period the link is active for that destination
+	validity periods.Period
+}
+
+// RoleName is the name of the role for the link
+func (l LinkChange) RoleName() string {
+	return l.roleName
+}
+
+// LinkDestination is the reference to the element to link
+func (l LinkChange) LinkDestination() values.ReferenceValue {
+	return l.linkDestination
+}
+
+// Validity is the duration the element is linked to
+func (l LinkChange) Validity() periods.Period {
+	return l.validity
+}
+
+// CreateLinkChange creates a change to link an element for that role during that validity
+func CreateLinkChange(elementId, roleName, linkDestination string, validity periods.Period) LinkChange {
+	return LinkChange{
+		baseChange: baseChange{
+			changeId: commons.NewId(),
+			targetId: elementId,
+		},
+		roleName:        roleName,
+		linkDestination: values.NewReference(linkDestination),
+		validity:        validity,
+	}
+}
