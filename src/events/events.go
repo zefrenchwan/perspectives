@@ -35,7 +35,12 @@ func (e Event) Changes() iter.Seq[Change] {
 
 // CreateBaseEvent creates a new event that regroups all the changes
 func CreateBaseEvent(changes []Change) Event {
-	result := Event{eventId: commons.NewId(), eventCreationDate: time.Now()}
+	return CreateBaseEventAt(time.Now(), changes)
+}
+
+// CreateBaseEventAt creates a new event that regroups all the changes at a given time
+func CreateBaseEventAt(moment time.Time, changes []Change) Event {
+	result := Event{eventId: commons.NewId(), eventCreationDate: moment}
 	result.changes = append(result.changes, changes...)
 	return result
 }
